@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemoryForge — Memory Training</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="description" content="Speed memory training — digits, letters, words, sentences, scripture. No accounts, no servers, all local.">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title">MemoryForge</h1>
+    <nav class="app-nav">
+      <button class="nav-btn active" data-view="drill">Drill</button>
+      <button class="nav-btn" data-view="stats">Stats</button>
+      <button class="nav-btn" data-view="data">Data</button>
+    </nav>
+  </header>
+
+  <main class="app-main">
+    <!-- ═══ DRILL VIEW ═══ -->
+    <section id="view-drill" class="view active">
+      <!-- Config panel -->
+      <div class="drill-config" id="drill-config">
+        <h2 class="section-title">Configure Drill</h2>
+
+        <div class="field-group">
+          <label class="field-label" for="drill-type">Type</label>
+          <select id="drill-type" class="field-input">
+            <option value="digits">Digits (0-9)</option>
+            <option value="letters">Letters (A-Z)</option>
+            <option value="words">Words</option>
+            <option value="text">Custom Text</option>
+          </select>
+        </div>
+
+        <div class="field-group" id="length-group">
+          <label class="field-label" for="drill-length">Length</label>
+          <input id="drill-length" type="number" class="field-input" value="6" min="1" max="200">
+        </div>
+
+        <div class="field-group" id="custom-text-group" style="display: none;">
+          <label class="field-label" for="custom-text">Paste Text</label>
+          <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="exposure-time">Exposure (seconds)</label>
+          <input id="exposure-time" type="number" class="field-input" value="5" min="1" max="120">
+          <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary btn-lg">Start Drill</button>
+      </div>
+
+      <!-- Presentation panel -->
+      <div class="drill-present" id="drill-present" style="display: none;">
+        <div class="timer-bar" id="timer-bar">
+          <div class="timer-fill" id="timer-fill"></div>
+        </div>
+        <div class="material-display" id="material-display"></div>
+        <button id="btn-hide" class="btn btn-secondary">I've got it</button>
+      </div>
+
+      <!-- Recall panel -->
+      <div class="drill-recall" id="drill-recall" style="display: none;">
+        <h2 class="section-title">Recall</h2>
+        <textarea id="recall-input" class="field-input field-textarea recall-area" rows="3" placeholder="Type what you remember..." autofocus></textarea>
+        <button id="btn-submit" class="btn btn-primary btn-lg">Submit</button>
+      </div>
+
+      <!-- Score panel -->
+      <div class="drill-score" id="drill-score" style="display: none;">
+        <div class="score-circle" id="score-circle">
+          <span class="score-value" id="score-value">0</span>
+          <span class="score-label">%</span>
+        </div>
+        <div class="score-diff" id="score-diff"></div>
+        <div class="score-actions">
+          <button id="btn-again" class="btn btn-primary">Drill Again</button>
+          <button id="btn-new" class="btn btn-secondary">New Config</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STATS VIEW ═══ -->
+    <section id="view-stats" class="view">
+      <h2 class="section-title">Statistics</h2>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Drills</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-avg">0%</div>
+          <div class="stat-label">Average Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-best">0%</div>
+          <div class="stat-label">Best Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-today">0</div>
+          <div class="stat-label">Today</div>
+        </div>
+      </div>
+      <div id="stats-by-type" class="stats-types"></div>
+    </section>
+
+    <!-- ═══ DATA VIEW ═══ -->
+    <section id="view-data" class="view">
+      <h2 class="section-title">Data Management</h2>
+      <div class="data-actions">
+        <button id="btn-export" class="btn btn-primary">Export Data (JSON)</button>
+        <button id="btn-import" class="btn btn-secondary">Import Data</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;">
+      </div>
+      <div class="data-info">
+        <p>Your data is stored locally in your browser. Nothing is sent to any server.</p>
+        <p>Export regularly to back up your training history.</p>
+      </div>
+      <div class="data-danger">
+        <button id="btn-clear" class="btn btn-danger">Clear All Data</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

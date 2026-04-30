@@ -1,0 +1,18 @@
+{
+  "name": "memoryforge",
+  "version": "1.0.0",
+  "description": "Memory training app — drills for digits, letters, words, and scripture",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "npx serve docs"
+  },
+  "keywords": ["memory", "training", "bible", "memorization"],
+  "author": "Joshua Wink",
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.5"
+  }
+}
