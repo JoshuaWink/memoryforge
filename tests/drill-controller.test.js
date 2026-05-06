@@ -146,4 +146,106 @@ describe('DrillController', () => {
     ctrl.start({ type: 'digits', length: 4, exposureMs: 5000 });
     expect(ctrl.recallDelaySec).toBe(0);
   });
+
+  // ── Technique Tagging ──
+
+  it('records technique in drill result', () => {
+    ctrl.start({ type: 'digits', length: 6, exposureMs: 5000, technique: 'major' });
+    ctrl.hide();
+    const result = ctrl.submit(ctrl.material);
+    expect(result.technique).toBe('major');
+  });
+
+  it('defaults technique to "none"', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000 });
+    ctrl.hide();
+    const result = ctrl.submit(ctrl.material);
+    expect(result.technique).toBe('none');
+  });
+
+  // ── Chunked Display ──
+
+  it('provides chunked material when chunkSize is set', () => {
+    ctrl.start({ type: 'digits', length: 6, exposureMs: 5000, chunkSize: 2 });
+    expect(ctrl.chunkedMaterial).toBeTruthy();
+    const chunks = ctrl.chunkedMaterial.split(' ');
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns unchunked material when chunkSize is 0', () => {
+    ctrl.start({ type: 'digits', length: 6, exposureMs: 5000, chunkSize: 0 });
+    expect(ctrl.chunkedMaterial).toBe(ctrl.material);
+  });
+
+  it('returns raw material when not digits', () => {
+    ctrl.start({ type: 'words', length: 3, exposureMs: 5000, chunkSize: 2 });
+    expect(ctrl.chunkedMaterial).toBe(ctrl.material);
+  });
+
+  // ── Encode Mode ──
+
+  it('supports encode drill mode', () => {
+    ctrl.startEncode({ type: 'digits', length: 4 });
+    expect(ctrl.state).toBe('presenting');
+    expect(ctrl.drillMode).toBe('encode');
+    expect(ctrl.material).toBeTruthy();
+  });
+
+  it('encode mode: submit scores word against expected encoding', () => {
+    ctrl.startEncode({ type: 'digits', length: 2, _forceMaterial: '43' });
+    ctrl.hide();
+    const result = ctrl.submit('ram');
+    expect(result.drillMode).toBe('encode');
+    expect(result.score).toBe(100);
+  });
+
+  it('encode mode: wrong word scores 0', () => {
+    ctrl.startEncode({ type: 'digits', length: 2, _forceMaterial: '43' });
+    ctrl.hide();
+    const result = ctrl.submit('cat');
+    expect(result.score).toBe(0);
+  });
+
+  // ── Decode Mode ──
+
+  it('supports decode drill mode', () => {
+    ctrl.startDecode({ type: 'digits', length: 2 });
+    expect(ctrl.state).toBe('presenting');
+    expect(ctrl.drillMode).toBe('decode');
+    // Material should be a word, not digits
+    expect(ctrl.material).toBeTruthy();
+  });
+
+  it('decode mode: submit scores digits against expected', () => {
+    ctrl.startDecode({ type: 'digits', length: 2, _forceMaterial: '43' });
+    ctrl.hide();
+    // Material shown is the word (e.g. 'ram'), user types back '43'
+    const result = ctrl.submit('43');
+    expect(result.score).toBe(100);
+  });
+
+  it('decode mode: wrong digits scores 0', () => {
+    ctrl.startDecode({ type: 'digits', length: 2, _forceMaterial: '43' });
+    ctrl.hide();
+    const result = ctrl.submit('99');
+    expect(result.score).toBe(0);
+  });
+
+  // ── Learn Mode ──
+
+  it('supports learn drill mode for number-shape', () => {
+    ctrl.startLearn({ system: 'number-shape' });
+    expect(ctrl.state).toBe('presenting');
+    expect(ctrl.drillMode).toBe('learn');
+    // Should present a digit and its association
+    expect(ctrl.learnItem).toBeDefined();
+    expect(ctrl.learnItem.digit).toBeDefined();
+  });
+
+  it('learn mode: submit scores correctness of association recall', () => {
+    ctrl.startLearn({ system: 'number-shape', _forceDigit: 2 });
+    ctrl.hide();
+    const result = ctrl.submit('swan');
+    expect(result.score).toBe(100);
+  });
 });

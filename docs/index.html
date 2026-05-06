@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MemoryForge — Memory Training</title>
+  <title>MemoryForge — Memory Athlete Training</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a1a2e">
-  <meta name="description" content="Speed memory training — digits, letters, words, sentences, scripture. No accounts, no servers, all local.">
+  <meta name="description" content="Memory athlete training — chunking, Major System, PAO, linking. Master competitive memory techniques with progressive drills.">
 </head>
 <body>
   <header class="app-header">
     <h1 class="app-title">MemoryForge</h1>
     <nav class="app-nav">
       <button class="nav-btn active" data-view="drill">Drill</button>
+      <button class="nav-btn" data-view="learn">Learn</button>
       <button class="nav-btn" data-view="stats">Stats</button>
       <button class="nav-btn" data-view="data">Data</button>
     </nav>
@@ -27,6 +28,15 @@
         <h2 class="section-title">Configure Drill</h2>
 
         <div class="field-group">
+          <label class="field-label" for="drill-mode">Drill Mode</label>
+          <select id="drill-mode" class="field-input">
+            <option value="recall">Recall (see → remember → type)</option>
+            <option value="encode">Encode (digits → type the word)</option>
+            <option value="decode">Decode (word → type the digits)</option>
+          </select>
+        </div>
+
+        <div class="field-group" id="type-group">
           <label class="field-label" for="drill-type">Type</label>
           <select id="drill-type" class="field-input">
             <option value="digits">Digits (0-9)</option>
@@ -46,16 +56,37 @@
           <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
         </div>
 
-        <div class="field-group">
+        <div class="field-group" id="technique-group">
+          <label class="field-label" for="drill-technique">Technique</label>
+          <select id="drill-technique" class="field-input">
+            <option value="none">None (raw recall)</option>
+            <option value="chunking">Chunking</option>
+            <option value="number-shape">Number-Shape</option>
+            <option value="number-rhyme">Number-Rhyme</option>
+            <option value="major">Major System</option>
+            <option value="linking">Linking / Story</option>
+          </select>
+        </div>
+
+        <div class="field-group" id="chunk-group" style="display: none;">
+          <label class="field-label" for="chunk-size">Chunk Size</label>
+          <select id="chunk-size" class="field-input">
+            <option value="2">Pairs (2)</option>
+            <option value="3" selected>Triples (3)</option>
+            <option value="4">Quads (4)</option>
+          </select>
+        </div>
+
+        <div class="field-group" id="exposure-group">
           <label class="field-label" for="exposure-time">Exposure (seconds)</label>
-          <input id="exposure-time" type="number" class="field-input" value="5" min="1" max="120">
+          <input id="exposure-time" type="number" class="field-input" value="5" min="0" max="120">
           <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
         </div>
 
         <div class="field-group">
           <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
           <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
-          <div class="field-hint">Wait time before you can type. Forces you to hold it in memory.</div>
+          <div class="field-hint">Forces you to hold info in memory before typing. Use as encoding time.</div>
         </div>
 
         <button id="btn-start" class="btn btn-primary btn-lg">Start Drill</button>
@@ -66,16 +97,23 @@
         <div class="timer-bar" id="timer-bar">
           <div class="timer-fill" id="timer-fill"></div>
         </div>
+        <!-- Technique hint banner -->
+        <div class="technique-hint" id="technique-hint" style="display: none;"></div>
         <div class="material-display" id="material-display"></div>
+        <!-- Reference card toggle -->
+        <div class="ref-card-container" id="ref-card-container" style="display: none;">
+          <button id="btn-ref-toggle" class="btn btn-sm btn-ghost">Show Reference Card</button>
+          <div class="ref-card" id="ref-card" style="display: none;"></div>
+        </div>
         <button id="btn-hide" class="btn btn-secondary">I've got it</button>
       </div>
 
       <!-- Recall panel -->
       <div class="drill-recall" id="drill-recall" style="display: none;">
-        <h2 class="section-title">Recall</h2>
+        <h2 class="section-title" id="recall-title">Recall</h2>
         <div class="recall-delay-overlay" id="recall-delay-overlay" style="display: none;">
           <div class="recall-delay-count" id="recall-delay-count">3</div>
-          <p class="recall-delay-msg">Hold it in memory...</p>
+          <p class="recall-delay-msg" id="recall-delay-msg">Hold it in memory...</p>
         </div>
         <textarea id="recall-input" class="field-input field-textarea recall-area" rows="3" placeholder="Type what you remember..." autofocus></textarea>
         <button id="btn-submit" class="btn btn-primary btn-lg">Submit</button>
@@ -92,6 +130,94 @@
           <button id="btn-again" class="btn btn-primary">Drill Again</button>
           <button id="btn-new" class="btn btn-secondary">New Config</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ LEARN VIEW ═══ -->
+    <section id="view-learn" class="view">
+      <h2 class="section-title">Learn Techniques</h2>
+
+      <div class="learn-grid" id="learn-grid">
+        <div class="learn-card" data-technique="chunking">
+          <div class="learn-card__level">Level 0</div>
+          <h3>Chunking</h3>
+          <p>Group digits into smaller chunks to reduce cognitive load.</p>
+          <button class="btn btn-sm btn-primary" data-action="read-chunking">Read Guide</button>
+        </div>
+
+        <div class="learn-card" data-technique="number-shape">
+          <div class="learn-card__level">Level 0</div>
+          <h3>Number-Shape</h3>
+          <p>Each digit looks like a physical shape. Visualize to remember.</p>
+          <div class="learn-card__actions">
+            <button class="btn btn-sm btn-primary" data-action="read-number-shape">Read Guide</button>
+            <button class="btn btn-sm btn-secondary" data-action="drill-number-shape">Drill</button>
+          </div>
+        </div>
+
+        <div class="learn-card" data-technique="number-rhyme">
+          <div class="learn-card__level">Level 0</div>
+          <h3>Number-Rhyme</h3>
+          <p>Each digit rhymes with a word. An alternative peg system.</p>
+          <div class="learn-card__actions">
+            <button class="btn btn-sm btn-primary" data-action="read-number-rhyme">Read Guide</button>
+            <button class="btn btn-sm btn-secondary" data-action="drill-number-rhyme">Drill</button>
+          </div>
+        </div>
+
+        <div class="learn-card" data-technique="major">
+          <div class="learn-card__level">Level 1</div>
+          <h3>Major System</h3>
+          <p>Convert digits to consonant sounds, then to words. The backbone of competitive memory.</p>
+          <div class="learn-card__actions">
+            <button class="btn btn-sm btn-primary" data-action="read-major">Read Guide</button>
+            <button class="btn btn-sm btn-secondary" data-action="drill-major-table">Learn Table</button>
+          </div>
+        </div>
+
+        <div class="learn-card" data-technique="linking">
+          <div class="learn-card__level">Level 1</div>
+          <h3>Linking / Story</h3>
+          <p>Chain items into a vivid narrative for ordered recall.</p>
+          <button class="btn btn-sm btn-primary" data-action="read-linking">Read Guide</button>
+        </div>
+
+        <div class="learn-card" data-technique="peg">
+          <div class="learn-card__level">Level 1</div>
+          <h3>Peg System</h3>
+          <p>100 permanent anchor words for instant ordered recall.</p>
+          <div class="learn-card__actions">
+            <button class="btn btn-sm btn-primary" data-action="read-peg">Read Guide</button>
+            <button class="btn btn-sm btn-secondary" data-action="show-pegs">View Pegs</button>
+          </div>
+        </div>
+
+        <div class="learn-card" data-technique="pao">
+          <div class="learn-card__level">Level 2</div>
+          <h3>PAO System</h3>
+          <p>Person-Action-Object: compress 6 digits into one vivid image.</p>
+          <button class="btn btn-sm btn-primary" data-action="read-pao">Read Guide</button>
+        </div>
+      </div>
+
+      <!-- Technique detail panel (shown when reading a guide) -->
+      <div class="technique-detail" id="technique-detail" style="display: none;">
+        <button id="btn-back-learn" class="btn btn-sm btn-ghost">← Back to techniques</button>
+        <div class="technique-content" id="technique-content"></div>
+      </div>
+
+      <!-- Major System reference table -->
+      <div class="major-table-panel" id="major-table-panel" style="display: none;">
+        <button id="btn-back-major" class="btn btn-sm btn-ghost">← Back to techniques</button>
+        <h3>Major System — Full 00-99 Word Table</h3>
+        <div class="major-table" id="major-table"></div>
+      </div>
+
+      <!-- Peg list panel -->
+      <div class="peg-list-panel" id="peg-list-panel" style="display: none;">
+        <button id="btn-back-pegs" class="btn btn-sm btn-ghost">← Back to techniques</button>
+        <h3>100-Peg Reference List</h3>
+        <div class="peg-list" id="peg-list"></div>
       </div>
     </section>
 
@@ -116,7 +242,12 @@
           <div class="stat-label">Today</div>
         </div>
       </div>
+      <h3 class="stats-section-title">By Type</h3>
       <div id="stats-by-type" class="stats-types"></div>
+      <h3 class="stats-section-title">By Technique</h3>
+      <div id="stats-by-technique" class="stats-types"></div>
+      <h3 class="stats-section-title">By Drill Mode</h3>
+      <div id="stats-by-mode" class="stats-types"></div>
     </section>
 
     <!-- ═══ DATA VIEW ═══ -->
@@ -137,6 +268,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -51,4 +51,42 @@ describe('computeStats', () => {
     expect(stats.today.count).toBe(2);
     expect(stats.today.avgScore).toBe(90);
   });
+
+  // ── Technique Stats ──
+
+  it('groups by technique', () => {
+    const drills = [
+      { type: 'digits', score: 60, timestamp: 1, technique: 'none' },
+      { type: 'digits', score: 90, timestamp: 2, technique: 'major' },
+      { type: 'digits', score: 85, timestamp: 3, technique: 'major' },
+      { type: 'digits', score: 70, timestamp: 4, technique: 'chunking' },
+    ];
+    const stats = computeStats(drills);
+    expect(stats.byTechnique).toBeDefined();
+    expect(stats.byTechnique['major'].count).toBe(2);
+    expect(stats.byTechnique['major'].avgScore).toBe(88);
+    expect(stats.byTechnique['none'].count).toBe(1);
+    expect(stats.byTechnique['chunking'].count).toBe(1);
+  });
+
+  it('handles drills without technique field', () => {
+    const drills = [
+      { type: 'digits', score: 80, timestamp: 1 },
+    ];
+    const stats = computeStats(drills);
+    expect(stats.byTechnique['none'].count).toBe(1);
+  });
+
+  it('groups by drill mode', () => {
+    const drills = [
+      { type: 'digits', score: 80, timestamp: 1, drillMode: 'recall' },
+      { type: 'digits', score: 90, timestamp: 2, drillMode: 'encode' },
+      { type: 'digits', score: 100, timestamp: 3, drillMode: 'decode' },
+    ];
+    const stats = computeStats(drills);
+    expect(stats.byMode).toBeDefined();
+    expect(stats.byMode['recall'].count).toBe(1);
+    expect(stats.byMode['encode'].count).toBe(1);
+    expect(stats.byMode['decode'].count).toBe(1);
+  });
 });

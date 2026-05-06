@@ -448,3 +448,171 @@ body {
     flex-direction: column;
   }
 }
+
+/* ═══ Technique Hint Banner ═══ */
+.technique-hint {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-warning);
+  background: rgba(255, 167, 38, 0.08);
+  border: 1px solid rgba(255, 167, 38, 0.2);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  margin-bottom: var(--cup-space-md);
+  text-align: center;
+}
+
+/* ═══ Reference Card ═══ */
+.ref-card-container {
+  text-align: center;
+  margin-bottom: var(--cup-space-md);
+}
+
+.ref-card {
+  margin-top: var(--cup-space-sm);
+  background: var(--cup-color-surface-alt);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-md);
+  overflow-x: auto;
+}
+
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--cup-font-size-sm);
+}
+
+.ref-table th,
+.ref-table td {
+  padding: var(--cup-space-xs) var(--cup-space-sm);
+  text-align: left;
+  border-bottom: 1px solid var(--cup-color-border);
+}
+
+.ref-table th {
+  color: var(--cup-color-primary);
+  font-weight: var(--cup-font-weight-medium);
+}
+
+/* ═══ Digit Chunks ═══ */
+.digit-chunk {
+  display: inline-block;
+  padding: var(--cup-space-xs) var(--cup-space-sm);
+  background: rgba(79, 195, 247, 0.1);
+  border-radius: var(--cup-radius-sm);
+  margin: 0 var(--cup-space-xs);
+}
+
+/* ═══ Button Variants ═══ */
+.btn-sm {
+  padding: var(--cup-space-xs) var(--cup-space-md);
+  font-size: var(--cup-font-size-sm);
+  min-height: 32px;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--cup-color-secondary);
+  border: none;
+  padding: var(--cup-space-xs) var(--cup-space-sm);
+}
+.btn-ghost:hover { color: var(--cup-color-primary); }
+
+/* ═══ Learn View ═══ */
+.learn-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--cup-space-md);
+}
+
+.learn-card {
+  background: var(--cup-color-surface-alt);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-lg);
+  transition: border-color var(--cup-transition-fast);
+}
+.learn-card:hover {
+  border-color: var(--cup-color-primary);
+}
+
+.learn-card h3 {
+  font-size: var(--cup-font-size-lg);
+  font-weight: var(--cup-font-weight-bold);
+  margin-bottom: var(--cup-space-xs);
+}
+
+.learn-card p {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-secondary);
+  margin-bottom: var(--cup-space-md);
+}
+
+.learn-card__level {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-primary);
+  font-weight: var(--cup-font-weight-medium);
+  margin-bottom: var(--cup-space-xs);
+}
+
+.learn-card__actions {
+  display: flex;
+  gap: var(--cup-space-sm);
+  flex-wrap: wrap;
+}
+
+/* ═══ Technique Detail ═══ */
+.technique-content {
+  margin-top: var(--cup-space-lg);
+  line-height: 1.7;
+}
+
+.technique-content h3 {
+  font-size: var(--cup-font-size-xl);
+  margin-bottom: var(--cup-space-md);
+}
+
+.technique-content h4 {
+  font-size: var(--cup-font-size-lg);
+  color: var(--cup-color-primary);
+  margin: var(--cup-space-lg) 0 var(--cup-space-sm);
+}
+
+.technique-content p {
+  margin-bottom: var(--cup-space-md);
+}
+
+.technique-content ul,
+.technique-content ol {
+  margin-left: var(--cup-space-lg);
+  margin-bottom: var(--cup-space-md);
+}
+
+.technique-content li {
+  margin-bottom: var(--cup-space-xs);
+}
+
+/* ═══ Major Table Panel / Peg List ═══ */
+.major-table-panel h3,
+.peg-list-panel h3 {
+  margin: var(--cup-space-lg) 0 var(--cup-space-md);
+}
+
+.major-table,
+.peg-list {
+  overflow-x: auto;
+}
+
+/* ═══ Stats Section Titles ═══ */
+.stats-section-title {
+  font-size: var(--cup-font-size-base);
+  font-weight: var(--cup-font-weight-medium);
+  color: var(--cup-color-secondary);
+  margin: var(--cup-space-lg) 0 var(--cup-space-sm);
+}
+
+@media (min-width: 600px) {
+  .learn-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

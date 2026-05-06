@@ -40,6 +40,42 @@ export function computeStats(drills) {
     delete byType[type].totalScore;
   }
 
+  // Group by technique
+  const byTechnique = {};
+  for (const d of drills) {
+    const tech = d.technique || 'none';
+    if (!byTechnique[tech]) {
+      byTechnique[tech] = { count: 0, totalScore: 0, bestScore: 0 };
+    }
+    byTechnique[tech].count++;
+    byTechnique[tech].totalScore += d.score;
+    if (d.score > byTechnique[tech].bestScore) {
+      byTechnique[tech].bestScore = d.score;
+    }
+  }
+  for (const tech of Object.keys(byTechnique)) {
+    byTechnique[tech].avgScore = Math.round(byTechnique[tech].totalScore / byTechnique[tech].count);
+    delete byTechnique[tech].totalScore;
+  }
+
+  // Group by drill mode
+  const byMode = {};
+  for (const d of drills) {
+    const mode = d.drillMode || 'recall';
+    if (!byMode[mode]) {
+      byMode[mode] = { count: 0, totalScore: 0, bestScore: 0 };
+    }
+    byMode[mode].count++;
+    byMode[mode].totalScore += d.score;
+    if (d.score > byMode[mode].bestScore) {
+      byMode[mode].bestScore = d.score;
+    }
+  }
+  for (const mode of Object.keys(byMode)) {
+    byMode[mode].avgScore = Math.round(byMode[mode].totalScore / byMode[mode].count);
+    delete byMode[mode].totalScore;
+  }
+
   // Today's stats
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -52,5 +88,5 @@ export function computeStats(drills) {
       : 0,
   };
 
-  return { totalDrills, averageScore, bestScore, byType, today };
+  return { totalDrills, averageScore, bestScore, byType, byTechnique, byMode, today };
 }
