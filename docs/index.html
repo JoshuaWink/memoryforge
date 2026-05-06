@@ -171,7 +171,8 @@
           <p>Convert digits to consonant sounds, then to words. The backbone of competitive memory.</p>
           <div class="learn-card__actions">
             <button class="btn btn-sm btn-primary" data-action="read-major">Read Guide</button>
-            <button class="btn btn-sm btn-secondary" data-action="drill-major-table">Learn Table</button>
+            <button class="btn btn-sm btn-secondary" data-action="drill-major-table">View Table</button>
+            <button class="btn btn-sm btn-accent" data-action="train-major">Train →</button>
           </div>
         </div>
 
@@ -218,6 +219,54 @@
         <button id="btn-back-pegs" class="btn btn-sm btn-ghost">← Back to techniques</button>
         <h3>100-Peg Reference List</h3>
         <div class="peg-list" id="peg-list"></div>
+      </div>
+
+      <!-- Major System Trainer -->
+      <div class="trainer-panel" id="trainer-panel" style="display: none;">
+        <button id="btn-back-trainer" class="btn btn-sm btn-ghost">← Back to techniques</button>
+        <h3 id="trainer-title">Major System Trainer</h3>
+        <div class="trainer-progress" id="trainer-progress">
+          <div class="trainer-progress__bar">
+            <div class="trainer-progress__fill" id="trainer-progress-fill" style="width: 0%"></div>
+          </div>
+          <span class="trainer-progress__text" id="trainer-progress-text">0% Complete</span>
+        </div>
+
+        <!-- Phase 1: Lesson content -->
+        <div class="trainer-lesson" id="trainer-lesson" style="display: none;">
+          <div class="trainer-lesson__story" id="lesson-story"></div>
+          <div class="trainer-lesson__examples" id="lesson-examples"></div>
+          <button id="btn-start-quiz" class="btn btn-primary">Take Quiz →</button>
+        </div>
+
+        <!-- Phase 1 Quiz / Phase 2 Sprint -->
+        <div class="trainer-quiz" id="trainer-quiz" style="display: none;">
+          <div class="trainer-quiz__prompt" id="quiz-prompt"></div>
+          <div class="trainer-quiz__options" id="quiz-options"></div>
+          <div class="trainer-quiz__feedback" id="quiz-feedback" style="display: none;"></div>
+        </div>
+
+        <!-- Phase 3: Free Recall -->
+        <div class="trainer-free" id="trainer-free" style="display: none;">
+          <div class="trainer-free__prompt" id="free-prompt"></div>
+          <input type="text" class="field-input" id="free-input" placeholder="Type the sounds..." autocomplete="off">
+          <button id="btn-free-submit" class="btn btn-primary">Check</button>
+          <div class="trainer-free__feedback" id="free-feedback" style="display: none;"></div>
+        </div>
+
+        <!-- Phase 4: Word Builder -->
+        <div class="trainer-word" id="trainer-word" style="display: none;">
+          <div class="trainer-word__prompt" id="word-prompt"></div>
+          <input type="text" class="field-input" id="word-input" placeholder="Type any word..." autocomplete="off">
+          <button id="btn-word-submit" class="btn btn-primary">Check</button>
+          <div class="trainer-word__feedback" id="word-feedback" style="display: none;"></div>
+        </div>
+
+        <!-- Quiz/Sprint result summary -->
+        <div class="trainer-result" id="trainer-result" style="display: none;">
+          <div class="trainer-result__score" id="trainer-score"></div>
+          <button id="btn-trainer-next" class="btn btn-primary">Continue</button>
+        </div>
       </div>
     </section>
 

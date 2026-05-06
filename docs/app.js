@@ -584,7 +584,7 @@ window.addEventListener('popstate', (e) => {
     }
     if (e.state.view === 'learn') {
       // If popping back to a state without a learn sub-panel, reset to grid
-      const learnPanels = ['detail', 'major-table', 'peg-list'];
+      const learnPanels = ['detail', 'major-table', 'peg-list', 'trainer'];
       if (!learnPanels.includes(e.state.panel)) {
         returnToLearnGrid();
       }
@@ -1047,6 +1047,8 @@ $$('[data-action]').forEach(btn => {
       showMajorTable();
     } else if (action === 'show-pegs') {
       showPegList();
+    } else if (action === 'train-major') {
+      openMajorTrainer();
     }
   });
 });
@@ -1068,6 +1070,7 @@ function returnToLearnGrid() {
   $('#technique-detail').style.display = 'none';
   $('#major-table-panel').style.display = 'none';
   $('#peg-list-panel').style.display = 'none';
+  $('#trainer-panel').style.display = 'none';
   $('#learn-grid').style.display = '';
 }
 
@@ -1147,6 +1150,450 @@ function startLearnDrill(system) {
   $('#ref-card-container').style.display = 'none';
   $('#timer-fill').style.width = '0%'; // no timer
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  INLINE: LeitnerBox (spaced repetition)
+// ═══════════════════════════════════════════════════════════════════
+const LEITNER_INTERVALS = [0, 1, 2, 4, 8];
+const LEITNER_MAX = 4;
+
+class LeitnerBox {
+  constructor(items, savedState = {}) {
+    this._items = {};
+    for (const id of items) {
+      if (savedState[id]) {
+        this._items[id] = { ...savedState[id], times: savedState[id].times || [] };
+      } else {
+        this._items[id] = { box: 0, lastSeen: 0, times: [] };
+      }
+    }
+  }
+  getBox(id) { return this._items[id] ? this._items[id].box : 0; }
+  recordAnswer(id, correct, timeMs, session = 0) {
+    const item = this._items[id];
+    if (!item) return;
+    item.times.push(timeMs);
+    item.lastSeen = session;
+    item.box = correct ? Math.min(item.box + 1, LEITNER_MAX) : 1;
+  }
+  getAvgTime(id) {
+    const item = this._items[id];
+    if (!item || item.times.length === 0) return 0;
+    return Math.round(item.times.reduce((a, b) => a + b, 0) / item.times.length);
+  }
+  getDueItems(session) {
+    const due = [];
+    for (const [id, item] of Object.entries(this._items)) {
+      if (item.box === 0) { due.push({ id, box: item.box }); continue; }
+      const interval = LEITNER_INTERVALS[item.box] || 1;
+      if (session - item.lastSeen >= interval) due.push({ id, box: item.box });
+    }
+    due.sort((a, b) => a.box - b.box);
+    return due.map(d => d.id);
+  }
+  masteryPct() {
+    const ids = Object.keys(this._items);
+    if (ids.length === 0) return 100;
+    return Math.round((ids.filter(id => this._items[id].box >= LEITNER_MAX).length / ids.length) * 100);
+  }
+  isLearned(id) { return this._items[id] ? this._items[id].box >= 3 : false; }
+  export() {
+    const out = {};
+    for (const [id, item] of Object.entries(this._items)) {
+      out[id] = { box: item.box, lastSeen: item.lastSeen, times: item.times };
+    }
+    return out;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INLINE: MajorTrainer (lesson + quiz engine)
+// ═══════════════════════════════════════════════════════════════════
+const TRAINER_LESSONS = [
+  { digits: [0, 1],
+    stories: { 0: 'The digit 0 maps to <strong>S</strong> and <strong>Z</strong> sounds. Think: "Zero" starts with Z. A buzzing bee (zzz) circles a big zero.',
+               1: 'The digit 1 maps to <strong>T</strong> and <strong>D</strong> sounds. Think: A lowercase "t" has one downstroke, just like the number 1.' },
+    examples: { 0: ['sun', 'zoo', 'ice'], 1: ['tie', 'day', 'tea'] } },
+  { digits: [2, 3],
+    stories: { 2: 'The digit 2 maps to the <strong>N</strong> sound. A lowercase "n" has two downstrokes — two humps.',
+               3: 'The digit 3 maps to the <strong>M</strong> sound. A lowercase "m" has three downstrokes — three humps.' },
+    examples: { 2: ['noah', 'knee', 'hen'], 3: ['ma', 'ham', 'me'] } },
+  { digits: [4, 5],
+    stories: { 4: 'The digit 4 maps to the <strong>R</strong> sound. "fouR" — the last consonant sound is R.',
+               5: 'The digit 5 maps to the <strong>L</strong> sound. L is the Roman numeral for 50. Hold up your left hand — thumb and index make an L.' },
+    examples: { 4: ['rye', 'ore', 'row'], 5: ['law', 'ale', 'oil'] } },
+  { digits: [6, 7],
+    stories: { 6: 'The digit 6 maps to <strong>J</strong>, <strong>SH</strong>, and <strong>CH</strong> sounds. A "J" is a mirror image of 6.',
+               7: 'The digit 7 maps to <strong>K</strong> and hard-<strong>G</strong> sounds. Two 7s back-to-back form a sideways K.' },
+    examples: { 6: ['shoe', 'jaw', 'chai'], 7: ['key', 'go', 'cow'] } },
+  { digits: [8, 9],
+    stories: { 8: 'The digit 8 maps to <strong>F</strong> and <strong>V</strong> sounds. A cursive lowercase "f" looks like an 8.',
+               9: 'The digit 9 maps to <strong>P</strong> and <strong>B</strong> sounds. "P" is a mirror image of 9. Flip 9 and you see a "b".' },
+    examples: { 8: ['fee', 'ivy', 'foe'], 9: ['pie', 'boy', 'ape'] } },
+];
+
+function trainerPickRandom(arr, n) {
+  const copy = [...arr];
+  const picked = [];
+  for (let i = 0; i < n && copy.length > 0; i++) {
+    picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+  }
+  return picked;
+}
+function trainerShuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function trainerSoundDistractors(correct, digit) {
+  const all = Object.values(MAJOR_TABLE).filter(e => e.digit !== digit).map(e => e.sounds.join(', '));
+  return trainerShuffle([correct, ...trainerPickRandom(all, 2)]);
+}
+function trainerDigitDistractors(correct) {
+  const all = ['0','1','2','3','4','5','6','7','8','9'].filter(d => d !== correct);
+  return trainerShuffle([correct, ...trainerPickRandom(all, 2)]);
+}
+
+function generateLessonQuiz(lessonIndex) {
+  const lesson = TRAINER_LESSONS[lessonIndex];
+  if (!lesson) return [];
+  const questions = [];
+  for (const digit of lesson.digits) {
+    const entry = MAJOR_TABLE[digit];
+    const soundLabel = entry.sounds.join(', ');
+    questions.push({ direction: 'digit-to-sound', question: `What sounds does digit ${digit} make?`, correct: soundLabel, options: trainerSoundDistractors(soundLabel, digit) });
+    questions.push({ direction: 'sound-to-digit', question: `Which digit maps to "${soundLabel}"?`, correct: String(digit), options: trainerDigitDistractors(String(digit)) });
+  }
+  return questions;
+}
+
+function generateSprint(count) {
+  const items = [];
+  const digits = [0,1,2,3,4,5,6,7,8,9];
+  for (let i = 0; i < count; i++) {
+    const d = digits[i % digits.length];
+    const entry = MAJOR_TABLE[d];
+    const soundLabel = entry.sounds.join(', ');
+    if (i % 2 === 0) {
+      items.push({ prompt: `Digit ${d} → ?`, correct: soundLabel, options: trainerSoundDistractors(soundLabel, d) });
+    } else {
+      items.push({ prompt: `"${soundLabel}" → ?`, correct: String(d), options: trainerDigitDistractors(String(d)) });
+    }
+  }
+  return items;
+}
+
+function generateFreeRecall(count) {
+  const items = [];
+  const digits = [0,1,2,3,4,5,6,7,8,9];
+  for (let i = 0; i < count; i++) {
+    const d = digits[i % digits.length];
+    items.push({ prompt: `Digit ${d} → sounds?`, answer: MAJOR_TABLE[d].sounds.join(', ') });
+  }
+  return items;
+}
+
+function generateWordChallenge(count) {
+  const pairs = Object.keys(majorWords);
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const pair = pairs[i % pairs.length];
+    items.push({ digits: pair, defaultWord: majorWords[pair] });
+  }
+  return items;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Major Trainer UI Controller
+// ═══════════════════════════════════════════════════════════════════
+const TRAINER_STATE_KEY = 'memoryforge_trainer';
+let trainerState = null;
+let trainerQuizItems = [];
+let trainerQuizIndex = 0;
+let trainerQuizCorrect = 0;
+let trainerPhase = 'lessons'; // lessons | quiz | sprint | free | word | result
+
+function loadTrainerState() {
+  try {
+    const raw = localStorage.getItem(TRAINER_STATE_KEY);
+    if (raw) {
+      trainerState = JSON.parse(raw);
+    } else {
+      trainerState = { lessonsComplete: [false, false, false, false, false] };
+    }
+  } catch {
+    trainerState = { lessonsComplete: [false, false, false, false, false] };
+  }
+}
+
+function saveTrainerState() {
+  try {
+    localStorage.setItem(TRAINER_STATE_KEY, JSON.stringify(trainerState));
+  } catch { /* storage full — ignore */ }
+}
+
+function trainerProgressPct() {
+  const done = trainerState.lessonsComplete.filter(Boolean).length;
+  return Math.round((done / 5) * 100);
+}
+
+function trainerNextLesson() {
+  return trainerState.lessonsComplete.indexOf(false);
+}
+
+function updateTrainerProgress() {
+  const pct = trainerProgressPct();
+  $('#trainer-progress-fill').style.width = pct + '%';
+  $('#trainer-progress-text').textContent = pct + '% Complete';
+}
+
+function hideAllTrainerPanels() {
+  ['trainer-lesson', 'trainer-quiz', 'trainer-free', 'trainer-word', 'trainer-result'].forEach(id => {
+    $('#' + id).style.display = 'none';
+  });
+}
+
+function openMajorTrainer() {
+  loadTrainerState();
+  $('#learn-grid').style.display = 'none';
+  $('#trainer-panel').style.display = '';
+  history.pushState({ view: 'learn', panel: 'trainer' }, '', '#learn');
+  updateTrainerProgress();
+
+  const next = trainerNextLesson();
+  if (next === -1) {
+    // All lessons done — go to sprint
+    startTrainerSprint();
+  } else {
+    showTrainerLesson(next);
+  }
+}
+
+function showTrainerLesson(index) {
+  hideAllTrainerPanels();
+  trainerPhase = 'lessons';
+  const lesson = TRAINER_LESSONS[index];
+  if (!lesson) return;
+  $('#trainer-title').textContent = `Lesson ${index + 1} of 5: Digits ${lesson.digits.join(' & ')}`;
+
+  let storyHtml = '';
+  let examplesHtml = '';
+  for (const digit of lesson.digits) {
+    storyHtml += `<h4>Digit ${digit}</h4><p>${lesson.stories[digit]}</p>`;
+    examplesHtml += `<p><strong>Example words for ${digit}:</strong></p><div class="example-list">`;
+    for (const w of lesson.examples[digit]) {
+      examplesHtml += `<span class="example-chip">${escapeHtml(w)}</span>`;
+    }
+    examplesHtml += '</div>';
+  }
+  $('#lesson-story').innerHTML = storyHtml;
+  $('#lesson-examples').innerHTML = examplesHtml;
+  $('#trainer-lesson').style.display = '';
+
+  // Store current lesson index for quiz
+  trainerQuizIndex = 0;
+  trainerQuizCorrect = 0;
+  trainerQuizItems = generateLessonQuiz(index);
+  // Tag so we know which lesson this quiz is for
+  trainerQuizItems._lessonIndex = index;
+}
+
+function startTrainerQuiz() {
+  hideAllTrainerPanels();
+  trainerPhase = 'quiz';
+  trainerQuizIndex = 0;
+  trainerQuizCorrect = 0;
+  $('#trainer-quiz').style.display = '';
+  showTrainerQuizItem();
+}
+
+function showTrainerQuizItem() {
+  if (trainerQuizIndex >= trainerQuizItems.length) {
+    showTrainerResult();
+    return;
+  }
+  const item = trainerQuizItems[trainerQuizIndex];
+  const prompt = item.question || item.prompt;
+  $('#quiz-prompt').textContent = prompt;
+  $('#quiz-feedback').style.display = 'none';
+
+  const optionsEl = $('#quiz-options');
+  optionsEl.innerHTML = '';
+  for (const opt of item.options) {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => handleQuizAnswer(btn, opt, item.correct));
+    optionsEl.appendChild(btn);
+  }
+}
+
+function handleQuizAnswer(btn, chosen, correct) {
+  // Disable all options
+  const buttons = $$('.quiz-option');
+  buttons.forEach(b => { b.style.pointerEvents = 'none'; });
+
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    trainerQuizCorrect++;
+    $('#quiz-feedback').textContent = 'Correct!';
+    $('#quiz-feedback').style.color = 'var(--cup-color-success)';
+  } else {
+    btn.classList.add('wrong');
+    // Highlight correct
+    buttons.forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+    $('#quiz-feedback').textContent = `The answer was: ${correct}`;
+    $('#quiz-feedback').style.color = 'var(--cup-color-error)';
+  }
+  $('#quiz-feedback').style.display = '';
+
+  setTimeout(() => {
+    trainerQuizIndex++;
+    showTrainerQuizItem();
+  }, 1200);
+}
+
+function showTrainerResult() {
+  hideAllTrainerPanels();
+  trainerPhase = 'result';
+  const total = trainerQuizItems.length;
+  const pct = total > 0 ? Math.round((trainerQuizCorrect / total) * 100) : 0;
+  $('#trainer-score').textContent = `${pct}% (${trainerQuizCorrect}/${total})`;
+  $('#trainer-result').style.display = '';
+
+  // If this was a lesson quiz and they got 100%, mark lesson complete
+  if (trainerQuizItems._lessonIndex !== undefined && pct === 100) {
+    trainerState.lessonsComplete[trainerQuizItems._lessonIndex] = true;
+    saveTrainerState();
+    updateTrainerProgress();
+  }
+}
+
+function trainerContinue() {
+  const next = trainerNextLesson();
+  if (next === -1) {
+    startTrainerSprint();
+  } else {
+    // If last quiz wasn't 100%, retry same lesson
+    if (trainerQuizItems._lessonIndex !== undefined && !trainerState.lessonsComplete[trainerQuizItems._lessonIndex]) {
+      showTrainerLesson(trainerQuizItems._lessonIndex);
+    } else {
+      showTrainerLesson(next);
+    }
+  }
+}
+
+function startTrainerSprint() {
+  hideAllTrainerPanels();
+  trainerPhase = 'sprint';
+  $('#trainer-title').textContent = 'Sound Sprint — All 10 Digits';
+  trainerQuizItems = generateSprint(10);
+  trainerQuizIndex = 0;
+  trainerQuizCorrect = 0;
+  $('#trainer-quiz').style.display = '';
+  showTrainerQuizItem();
+}
+
+function startTrainerFreeRecall() {
+  hideAllTrainerPanels();
+  trainerPhase = 'free';
+  $('#trainer-title').textContent = 'Free Recall — Type the Sounds';
+  const items = generateFreeRecall(10);
+  trainerQuizItems = items;
+  trainerQuizIndex = 0;
+  trainerQuizCorrect = 0;
+  showFreeRecallItem();
+}
+
+function showFreeRecallItem() {
+  if (trainerQuizIndex >= trainerQuizItems.length) {
+    showTrainerResult();
+    return;
+  }
+  $('#trainer-free').style.display = '';
+  const item = trainerQuizItems[trainerQuizIndex];
+  $('#free-prompt').textContent = item.prompt;
+  $('#free-input').value = '';
+  $('#free-feedback').style.display = 'none';
+  $('#free-input').focus();
+}
+
+function checkFreeRecall() {
+  const item = trainerQuizItems[trainerQuizIndex];
+  const answer = $('#free-input').value.trim().toLowerCase();
+  const correct = item.answer.toLowerCase();
+  if (answer === correct) {
+    trainerQuizCorrect++;
+    $('#free-feedback').textContent = 'Correct!';
+    $('#free-feedback').style.color = 'var(--cup-color-success)';
+  } else {
+    $('#free-feedback').textContent = `Answer: ${item.answer}`;
+    $('#free-feedback').style.color = 'var(--cup-color-error)';
+  }
+  $('#free-feedback').style.display = '';
+  setTimeout(() => {
+    trainerQuizIndex++;
+    $('#trainer-free').style.display = 'none';
+    showFreeRecallItem();
+  }, 1200);
+}
+
+function startTrainerWordBuilder() {
+  hideAllTrainerPanels();
+  trainerPhase = 'word';
+  $('#trainer-title').textContent = 'Word Builder — Encode Digit Pairs';
+  trainerQuizItems = generateWordChallenge(10);
+  trainerQuizIndex = 0;
+  trainerQuizCorrect = 0;
+  showWordBuilderItem();
+}
+
+function showWordBuilderItem() {
+  if (trainerQuizIndex >= trainerQuizItems.length) {
+    showTrainerResult();
+    return;
+  }
+  $('#trainer-word').style.display = '';
+  const item = trainerQuizItems[trainerQuizIndex];
+  $('#word-prompt').textContent = `Digits: ${item.digits}`;
+  $('#word-input').value = '';
+  $('#word-feedback').style.display = 'none';
+  $('#word-input').focus();
+}
+
+function checkWordBuilder() {
+  const item = trainerQuizItems[trainerQuizIndex];
+  const answer = $('#word-input').value.trim();
+  if (answer && consonantsMatchDigits(answer, item.digits)) {
+    trainerQuizCorrect++;
+    $('#word-feedback').textContent = `"${escapeHtml(answer)}" is valid! Default: ${item.defaultWord}`;
+    $('#word-feedback').style.color = 'var(--cup-color-success)';
+  } else {
+    $('#word-feedback').textContent = `Not a match. Try: ${item.defaultWord}`;
+    $('#word-feedback').style.color = 'var(--cup-color-error)';
+  }
+  $('#word-feedback').style.display = '';
+  setTimeout(() => {
+    trainerQuizIndex++;
+    $('#trainer-word').style.display = 'none';
+    showWordBuilderItem();
+  }, 1500);
+}
+
+// ── Trainer event listeners ──
+$('#btn-start-quiz').addEventListener('click', startTrainerQuiz);
+$('#btn-trainer-next').addEventListener('click', trainerContinue);
+$('#btn-back-trainer').addEventListener('click', returnToLearnGrid);
+$('#btn-free-submit').addEventListener('click', checkFreeRecall);
+$('#btn-word-submit').addEventListener('click', checkWordBuilder);
+
+// Enter key for free recall and word builder
+$('#free-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkFreeRecall(); });
+$('#word-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkWordBuilder(); });
 
 // ═══════════════════════════════════════════════════════════════════
 //  Stats
