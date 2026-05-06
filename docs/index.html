@@ -171,7 +171,9 @@
           <p>Convert digits to consonant sounds, then to words. The backbone of competitive memory.</p>
           <div class="learn-card__actions">
             <button class="btn btn-sm btn-primary" data-action="read-major">Read Guide</button>
-            <button class="btn btn-sm btn-secondary" data-action="drill-major-table">View Table</button>
+            <button class="btn btn-sm btn-secondary" data-action="show-bridge">Bridge</button>
+            <button class="btn btn-sm btn-secondary" data-action="show-flashcards">Flashcards</button>
+            <button class="btn btn-sm btn-secondary" data-action="drill-major-table">Table</button>
             <button class="btn btn-sm btn-accent" data-action="train-major">Train →</button>
           </div>
         </div>
@@ -227,6 +229,38 @@
         <h3>The Bridge — Shape & Rhyme → Major System</h3>
         <p class="bridge-intro">You already know the shapes and rhymes. Each story below connects what you know to the Major System sound. Read each one — the familiar image anchors the new sound.</p>
         <div class="bridge-cards" id="bridge-cards"></div>
+      </div>
+
+
+      <!-- Flashcards — spaced repetition flip cards -->
+      <div class="flashcard-panel" id="flashcard-panel" style="display: none;">
+        <button id="btn-back-flash" class="btn btn-sm btn-ghost">&larr; Back to techniques</button>
+        <h3>Major System Flashcards</h3>
+        <div class="flashcard-progress" id="flash-progress">
+          <span id="flash-count">0 / 10</span>
+          <span id="flash-mastery">0% mastered</span>
+        </div>
+        <div class="flashcard-container" id="flash-container">
+          <div class="flashcard" id="flashcard" tabindex="0">
+            <div class="flashcard__front" id="flash-front">
+              <div class="flashcard__digit" id="flash-digit">0</div>
+              <div class="flashcard__hint" id="flash-hint">ball / hero</div>
+              <p class="flashcard__tap">Tap to reveal</p>
+            </div>
+            <div class="flashcard__back" id="flash-back" style="display: none;">
+              <div class="flashcard__sounds" id="flash-sounds">s, z</div>
+              <div class="flashcard__bridge" id="flash-bridge"></div>
+            </div>
+          </div>
+        </div>
+        <div class="flashcard-actions" id="flash-actions" style="display: none;">
+          <button id="btn-flash-miss" class="btn btn-sm btn-danger">Again</button>
+          <button id="btn-flash-hit" class="btn btn-sm btn-success">Got it</button>
+        </div>
+        <div class="flashcard-done" id="flash-done" style="display: none;">
+          <p class="flashcard-done__msg" id="flash-done-msg">Session complete!</p>
+          <button id="btn-flash-restart" class="btn btn-primary">Practice Again</button>
+        </div>
       </div>
 
       <!-- Major System Trainer -->

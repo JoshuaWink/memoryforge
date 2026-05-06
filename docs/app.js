@@ -600,7 +600,7 @@ window.addEventListener('popstate', (e) => {
     }
     if (e.state.view === 'learn') {
       // If popping back to a state without a learn sub-panel, reset to grid
-      const learnPanels = ['detail', 'major-table', 'peg-list', 'trainer'];
+      const learnPanels = ['detail', 'major-table', 'peg-list', 'bridge', 'flashcards', 'trainer'];
       if (!learnPanels.includes(e.state.panel)) {
         returnToLearnGrid();
       }
@@ -1063,6 +1063,10 @@ $$('[data-action]').forEach(btn => {
       showMajorTable();
     } else if (action === 'show-pegs') {
       showPegList();
+    } else if (action === 'show-bridge') {
+      showBridgePanel();
+    } else if (action === 'show-flashcards') {
+      showFlashcards();
     } else if (action === 'train-major') {
       openMajorTrainer();
     }
@@ -1086,6 +1090,8 @@ function returnToLearnGrid() {
   $('#technique-detail').style.display = 'none';
   $('#major-table-panel').style.display = 'none';
   $('#peg-list-panel').style.display = 'none';
+  $('#bridge-panel').style.display = 'none';
+  $('#flashcard-panel').style.display = 'none';
   $('#trainer-panel').style.display = 'none';
   $('#learn-grid').style.display = '';
 }
@@ -1132,6 +1138,158 @@ function showPegList() {
 $('#btn-back-pegs').addEventListener('click', () => {
   returnToLearnGrid();
 });
+
+// ── Bridge Reference Panel ──
+function showBridgePanel() {
+  $('#learn-grid').style.display = 'none';
+  $('#bridge-panel').style.display = '';
+  history.pushState({ view: 'learn', panel: 'bridge' }, '', '#learn');
+
+  let html = '';
+  for (let d = 0; d <= 9; d++) {
+    const b = BRIDGE_MAP[d];
+    html += '<div class="bridge-card">' +
+      '<div class="bridge-card__header">' +
+        '<span class="bridge-card__digit">' + d + '</span>' +
+        '<div class="bridge-card__pegs">' +
+          '<span class="bridge-card__peg">Shape: ' + escapeHtml(b.shape) + '</span>' +
+          '<span class="bridge-card__peg">Rhyme: ' + escapeHtml(b.rhyme) + '</span>' +
+        '</div>' +
+        '<span class="bridge-card__sounds">' + escapeHtml(b.sounds) + '</span>' +
+      '</div>' +
+      '<div class="bridge-card__story">' + escapeHtml(b.bridge) + '</div>' +
+    '</div>';
+  }
+  $('#bridge-cards').innerHTML = html;
+}
+
+$('#btn-back-bridge').addEventListener('click', () => {
+  returnToLearnGrid();
+});
+
+// ── Flashcards (spaced repetition flip cards) ──
+const FLASH_STATE_KEY = 'memoryforge_flashcards';
+let flashLeitner = null;
+let flashDeck = [];
+let flashIndex = 0;
+let flashSession = 0;
+let flashFlipped = false;
+
+function loadFlashState() {
+  try {
+    const raw = localStorage.getItem(FLASH_STATE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      flashSession = saved.session || 0;
+      flashLeitner = new LeitnerBox(
+        ['0','1','2','3','4','5','6','7','8','9'],
+        saved.leitner || {}
+      );
+    } else {
+      flashSession = 0;
+      flashLeitner = new LeitnerBox(['0','1','2','3','4','5','6','7','8','9']);
+    }
+  } catch (e) {
+    flashSession = 0;
+    flashLeitner = new LeitnerBox(['0','1','2','3','4','5','6','7','8','9']);
+  }
+}
+
+function saveFlashState() {
+  try {
+    localStorage.setItem(FLASH_STATE_KEY, JSON.stringify({
+      session: flashSession,
+      leitner: flashLeitner.export(),
+    }));
+  } catch (e) { /* storage full */ }
+}
+
+function showFlashcards() {
+  loadFlashState();
+  $('#learn-grid').style.display = 'none';
+  $('#flashcard-panel').style.display = '';
+  history.pushState({ view: 'learn', panel: 'flashcards' }, '', '#learn');
+  startFlashSession();
+}
+
+function startFlashSession() {
+  flashSession++;
+  var due = flashLeitner.getDueItems(flashSession);
+  if (due.length === 0) {
+    due = ['0','1','2','3','4','5','6','7','8','9'];
+  }
+  flashDeck = due.slice();
+  for (var i = flashDeck.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = flashDeck[i]; flashDeck[i] = flashDeck[j]; flashDeck[j] = tmp;
+  }
+  flashIndex = 0;
+  $('#flash-done').style.display = 'none';
+  $('#flash-container').style.display = '';
+  updateFlashProgress();
+  showFlashCard();
+}
+
+function updateFlashProgress() {
+  $('#flash-count').textContent = (flashIndex + 1) + ' / ' + flashDeck.length;
+  $('#flash-mastery').textContent = flashLeitner.masteryPct() + '% mastered';
+}
+
+function showFlashCard() {
+  if (flashIndex >= flashDeck.length) {
+    showFlashDone();
+    return;
+  }
+  flashFlipped = false;
+  var digitStr = flashDeck[flashIndex];
+  var d = parseInt(digitStr);
+  var b = BRIDGE_MAP[d];
+
+  $('#flash-digit').textContent = d;
+  $('#flash-hint').textContent = b.shape + ' / ' + b.rhyme;
+  $('#flash-sounds').textContent = b.sounds.toUpperCase();
+  $('#flash-bridge').textContent = b.bridge;
+
+  $('#flash-front').style.display = '';
+  $('#flash-back').style.display = 'none';
+  $('#flash-actions').style.display = 'none';
+  updateFlashProgress();
+}
+
+function flipFlashCard() {
+  if (flashFlipped) return;
+  flashFlipped = true;
+  $('#flash-front').style.display = 'none';
+  $('#flash-back').style.display = '';
+  $('#flash-actions').style.display = '';
+}
+
+function flashAnswer(correct) {
+  flashLeitner.recordAnswer(flashDeck[flashIndex], correct, 1000, flashSession);
+  saveFlashState();
+  flashIndex++;
+  showFlashCard();
+}
+
+function showFlashDone() {
+  $('#flash-container').style.display = 'none';
+  $('#flash-actions').style.display = 'none';
+  $('#flash-done').style.display = '';
+  var pct = flashLeitner.masteryPct();
+  var learned = ['0','1','2','3','4','5','6','7','8','9']
+    .filter(function(d) { return flashLeitner.isLearned(d); }).length;
+  $('#flash-done-msg').textContent = 'Session done! ' + learned + '/10 learned, ' + pct + '% mastered';
+  $('#flash-mastery').textContent = pct + '% mastered';
+}
+
+$('#flashcard').addEventListener('click', flipFlashCard);
+$('#flashcard').addEventListener('keydown', function(e) {
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipFlashCard(); }
+});
+$('#btn-flash-hit').addEventListener('click', function() { flashAnswer(true); });
+$('#btn-flash-miss').addEventListener('click', function() { flashAnswer(false); });
+$('#btn-flash-restart').addEventListener('click', startFlashSession);
+$('#btn-back-flash').addEventListener('click', returnToLearnGrid);
 
 // ── Learn Drill (flash-card) ──
 function startLearnDrill(system) {
@@ -1398,6 +1556,7 @@ function showTrainerLesson(index) {
 
   let storyHtml = '';
   let examplesHtml = '';
+  let bridgeHtml = '<div class="trainer-lesson__bridge"><h4>Bridge \u2014 Connect What You Know</h4>';
   for (const digit of lesson.digits) {
     storyHtml += `<h4>Digit ${digit}</h4><p>${lesson.stories[digit]}</p>`;
     examplesHtml += `<p><strong>Example words for ${digit}:</strong></p><div class="example-list">`;
@@ -1405,9 +1564,14 @@ function showTrainerLesson(index) {
       examplesHtml += `<span class="example-chip">${escapeHtml(w)}</span>`;
     }
     examplesHtml += '</div>';
+    var b = BRIDGE_MAP[digit];
+    if (b) {
+      bridgeHtml += '<p><strong>' + digit + ':</strong> Shape = ' + escapeHtml(b.shape) + ', Rhyme = ' + escapeHtml(b.rhyme) + ' \u2192 <em>' + escapeHtml(b.bridge) + '</em></p>';
+    }
   }
+  bridgeHtml += '</div>';
   $('#lesson-story').innerHTML = storyHtml;
-  $('#lesson-examples').innerHTML = examplesHtml;
+  $('#lesson-examples').innerHTML = examplesHtml + bridgeHtml;
   $('#trainer-lesson').style.display = '';
 
   // Store current lesson index for quiz
