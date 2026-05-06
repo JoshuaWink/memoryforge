@@ -557,16 +557,43 @@ let currentExpectedAnswer = null; // for decode mode
 let timerInterval = null;
 const majorWords = getDefaultWords();
 
-// ── Navigation ──
+// ── Navigation (with history for Android back button) ──
+let currentView = 'drill';
+let currentPanel = 'config'; // drill sub-panel: config|present|recall|score
+
+function navigateTo(view, { pushState = true } = {}) {
+  $$('.nav-btn').forEach(b => b.classList.remove('active'));
+  $$('.nav-btn').forEach(b => { if (b.dataset.view === view) b.classList.add('active'); });
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $(`#view-${view}`).classList.add('active');
+  currentView = view;
+  if (pushState) history.pushState({ view, panel: 'config' }, '', `#${view}`);
+  if (view === 'stats') refreshStats();
+}
+
 $$('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.nav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $(`#view-${btn.dataset.view}`).classList.add('active');
-    if (btn.dataset.view === 'stats') refreshStats();
-  });
+  btn.addEventListener('click', () => navigateTo(btn.dataset.view));
 });
+
+// Handle Android back button / browser back
+window.addEventListener('popstate', (e) => {
+  if (e.state && e.state.view) {
+    navigateTo(e.state.view, { pushState: false });
+    if (e.state.view === 'drill' && e.state.panel) {
+      showPanel(e.state.panel);
+    }
+    if (e.state.view === 'learn' && !e.state.panel) {
+      returnToLearnGrid();
+    }
+  } else {
+    // No more history — go to drill config (prevents app close on first back)
+    navigateTo('drill', { pushState: false });
+    showPanel('config');
+  }
+});
+
+// Replace initial state so first back doesn't exit
+history.replaceState({ view: 'drill', panel: 'config' }, '', '#drill');
 
 // ── Config toggles ──
 $('#drill-mode').addEventListener('change', updateConfigVisibility);
@@ -989,6 +1016,13 @@ function showPanel(name) {
   ['config', 'present', 'recall', 'score'].forEach(p => {
     $(`#drill-${p}`).style.display = p === name ? '' : 'none';
   });
+  // Push drill panel state so Android back navigates within the drill
+  if (currentView === 'drill' && name !== currentPanel) {
+    currentPanel = name;
+    if (name !== 'config') {
+      history.pushState({ view: 'drill', panel: name }, '', '#drill');
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1019,17 +1053,25 @@ function showTechniqueGuide(tech) {
   $('#learn-grid').style.display = 'none';
   $('#technique-detail').style.display = '';
   $('#technique-content').innerHTML = info.instructions;
+  history.pushState({ view: 'learn', panel: 'detail' }, '', '#learn');
 }
 
 $('#btn-back-learn').addEventListener('click', () => {
-  $('#technique-detail').style.display = 'none';
-  $('#learn-grid').style.display = '';
+  returnToLearnGrid();
 });
+
+function returnToLearnGrid() {
+  $('#technique-detail').style.display = 'none';
+  $('#major-table-panel').style.display = 'none';
+  $('#peg-list-panel').style.display = 'none';
+  $('#learn-grid').style.display = '';
+}
 
 function showMajorTable() {
   $('#learn-grid').style.display = 'none';
   const panel = $('#major-table-panel');
   panel.style.display = '';
+  history.pushState({ view: 'learn', panel: 'major-table' }, '', '#learn');
   const table = $('#major-table');
 
   let html = '<table class="ref-table"><tr><th>#</th><th>Word</th><th>Sounds</th></tr>';
@@ -1046,14 +1088,14 @@ function showMajorTable() {
 }
 
 $('#btn-back-major').addEventListener('click', () => {
-  $('#major-table-panel').style.display = 'none';
-  $('#learn-grid').style.display = '';
+  returnToLearnGrid();
 });
 
 function showPegList() {
   $('#learn-grid').style.display = 'none';
   const panel = $('#peg-list-panel');
   panel.style.display = '';
+  history.pushState({ view: 'learn', panel: 'peg-list' }, '', '#learn');
   const pegs = getPegList();
 
   let html = '<table class="ref-table"><tr><th>#</th><th>Peg Word</th></tr>';
@@ -1065,8 +1107,7 @@ function showPegList() {
 }
 
 $('#btn-back-pegs').addEventListener('click', () => {
-  $('#peg-list-panel').style.display = 'none';
-  $('#learn-grid').style.display = '';
+  returnToLearnGrid();
 });
 
 // ── Learn Drill (flash-card) ──
