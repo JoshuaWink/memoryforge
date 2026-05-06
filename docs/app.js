@@ -582,8 +582,12 @@ window.addEventListener('popstate', (e) => {
     if (e.state.view === 'drill' && e.state.panel) {
       showPanel(e.state.panel);
     }
-    if (e.state.view === 'learn' && !e.state.panel) {
-      returnToLearnGrid();
+    if (e.state.view === 'learn') {
+      // If popping back to a state without a learn sub-panel, reset to grid
+      const learnPanels = ['detail', 'major-table', 'peg-list'];
+      if (!learnPanels.includes(e.state.panel)) {
+        returnToLearnGrid();
+      }
     }
   } else {
     // No more history — go to drill config (prevents app close on first back)
