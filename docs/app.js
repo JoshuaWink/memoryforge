@@ -258,7 +258,42 @@ function hideAndRecall() {
   showPanel('recall');
   const input = $('#recall-input');
   input.value = '';
-  input.focus();
+
+  // Set inputmode based on drill type (numpad for digits on mobile)
+  if (currentConfig.type === 'digits') {
+    input.setAttribute('inputmode', 'numeric');
+    input.setAttribute('pattern', '[0-9]*');
+  } else {
+    input.setAttribute('inputmode', 'text');
+    input.removeAttribute('pattern');
+  }
+
+  const delaySec = parseInt($('#recall-delay').value, 10) || 0;
+
+  if (delaySec > 0) {
+    // Show delay overlay, disable input
+    const overlay = $('#recall-delay-overlay');
+    const countEl = $('#recall-delay-count');
+    input.disabled = true;
+    overlay.style.display = '';
+    countEl.textContent = delaySec;
+
+    let remaining = delaySec;
+    const delayTimer = setInterval(() => {
+      remaining--;
+      countEl.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(delayTimer);
+        overlay.style.display = 'none';
+        input.disabled = false;
+        input.focus();
+      }
+    }, 1000);
+  } else {
+    $('#recall-delay-overlay').style.display = 'none';
+    input.disabled = false;
+    input.focus();
+  }
 }
 
 // ── Submit Answer ──

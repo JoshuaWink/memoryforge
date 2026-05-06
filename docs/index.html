@@ -52,6 +52,12 @@
           <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
         </div>
 
+        <div class="field-group">
+          <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
+          <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
+          <div class="field-hint">Wait time before you can type. Forces you to hold it in memory.</div>
+        </div>
+
         <button id="btn-start" class="btn btn-primary btn-lg">Start Drill</button>
       </div>
 
@@ -67,6 +73,10 @@
       <!-- Recall panel -->
       <div class="drill-recall" id="drill-recall" style="display: none;">
         <h2 class="section-title">Recall</h2>
+        <div class="recall-delay-overlay" id="recall-delay-overlay" style="display: none;">
+          <div class="recall-delay-count" id="recall-delay-count">3</div>
+          <p class="recall-delay-msg">Hold it in memory...</p>
+        </div>
         <textarea id="recall-input" class="field-input field-textarea recall-area" rows="3" placeholder="Type what you remember..." autofocus></textarea>
         <button id="btn-submit" class="btn btn-primary btn-lg">Submit</button>
       </div>

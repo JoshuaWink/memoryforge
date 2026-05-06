@@ -1,6 +1,6 @@
 /**
  * Drill controller — manages the state machine for a single drill session.
- * States: idle → presenting → recalling → scored
+ * States: idle → presenting → delaying → recalling → scored
  */
 import { generateDigits, generateLetters, generateWords } from './drill-generator.js';
 import { scoreExact, scoreText } from './scoring.js';
@@ -15,10 +15,10 @@ export class DrillController {
 
   /**
    * Start a new drill.
-   * @param {{ type: 'digits'|'letters'|'words', length: number, exposureMs: number }} config
+   * @param {{ type: 'digits'|'letters'|'words', length: number, exposureMs: number, recallDelaySec?: number }} config
    */
   start(config) {
-    this._config = config;
+    this._config = { recallDelaySec: 0, ...config };
 
     switch (config.type) {
       case 'digits':
@@ -38,10 +38,22 @@ export class DrillController {
     this._result = null;
   }
 
-  /** Hide the material — transition to recall phase. */
+  /** Hide the material — transition to delay or recall phase. */
   hide() {
     if (this.state !== 'presenting') {
       throw new Error(`Cannot hide in state: ${this.state}`);
+    }
+    if (this._config.recallDelaySec > 0) {
+      this.state = 'delaying';
+    } else {
+      this.state = 'recalling';
+    }
+  }
+
+  /** End the delay period — transition to recalling. */
+  endDelay() {
+    if (this.state !== 'delaying') {
+      throw new Error(`Cannot endDelay in state: ${this.state}`);
     }
     this.state = 'recalling';
   }
@@ -82,5 +94,16 @@ export class DrillController {
     this.material = null;
     this._config = null;
     this._result = null;
+  }
+
+  /** Get the recommended input mode for the current drill type. */
+  get inputMode() {
+    if (!this._config) return 'text';
+    return this._config.type === 'digits' ? 'numeric' : 'text';
+  }
+
+  /** Get the recall delay in seconds for the current config. */
+  get recallDelaySec() {
+    return this._config ? this._config.recallDelaySec : 0;
   }
 }

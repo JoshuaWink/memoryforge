@@ -79,4 +79,71 @@ describe('DrillController', () => {
     ctrl.start({ type: 'digits', length: 4, exposureMs: 5000 });
     expect(() => ctrl.submit('1234')).toThrow();
   });
+
+  // ── Recall Delay ──
+
+  it('transitions to delaying state when recallDelaySec > 0', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000, recallDelaySec: 3 });
+    ctrl.hide();
+    expect(ctrl.state).toBe('delaying');
+  });
+
+  it('transitions from delaying to recalling on endDelay()', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000, recallDelaySec: 5 });
+    ctrl.hide();
+    ctrl.endDelay();
+    expect(ctrl.state).toBe('recalling');
+  });
+
+  it('skips delaying when recallDelaySec is 0', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000, recallDelaySec: 0 });
+    ctrl.hide();
+    expect(ctrl.state).toBe('recalling');
+  });
+
+  it('throws if endDelay called when not delaying', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000 });
+    ctrl.hide(); // goes straight to recalling (no delay)
+    expect(() => ctrl.endDelay()).toThrow();
+  });
+
+  it('throws if submit called during delaying', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000, recallDelaySec: 3 });
+    ctrl.hide();
+    expect(ctrl.state).toBe('delaying');
+    expect(() => ctrl.submit('1234')).toThrow();
+  });
+
+  // ── Input Mode ──
+
+  it('returns numeric inputMode for digits', () => {
+    ctrl.start({ type: 'digits', length: 6, exposureMs: 5000 });
+    expect(ctrl.inputMode).toBe('numeric');
+  });
+
+  it('returns text inputMode for letters', () => {
+    ctrl.start({ type: 'letters', length: 6, exposureMs: 5000 });
+    expect(ctrl.inputMode).toBe('text');
+  });
+
+  it('returns text inputMode for words', () => {
+    ctrl.start({ type: 'words', length: 3, exposureMs: 5000 });
+    expect(ctrl.inputMode).toBe('text');
+  });
+
+  it('returns text inputMode when idle (no config)', () => {
+    expect(ctrl.inputMode).toBe('text');
+  });
+
+  // ── Recall Delay Getter ──
+
+  it('exposes recallDelaySec from config', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000, recallDelaySec: 7 });
+    expect(ctrl.recallDelaySec).toBe(7);
+  });
+
+  it('defaults recallDelaySec to 0', () => {
+    ctrl.start({ type: 'digits', length: 4, exposureMs: 5000 });
+    expect(ctrl.recallDelaySec).toBe(0);
+  });
 });

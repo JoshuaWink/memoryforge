@@ -267,6 +267,35 @@ body {
   min-height: 100px;
 }
 
+/* ── Recall Delay Overlay ── */
+.recall-delay-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cup-space-2xl) var(--cup-space-md);
+  margin-bottom: var(--cup-space-lg);
+}
+
+.recall-delay-count {
+  font-size: 4rem;
+  font-weight: var(--cup-font-weight-bold);
+  color: var(--cup-color-primary);
+  line-height: 1;
+  animation: pulse-count 1s ease-in-out infinite;
+}
+
+.recall-delay-msg {
+  font-size: var(--cup-font-size-lg);
+  color: var(--cup-color-secondary);
+  margin-top: var(--cup-space-md);
+}
+
+@keyframes pulse-count {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
 /* ── Score ── */
 .score-circle {
   width: 160px;
