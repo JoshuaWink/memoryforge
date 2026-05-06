@@ -762,3 +762,78 @@ body {
   padding: var(--cup-space-xs) var(--cup-space-sm);
   font-weight: var(--cup-font-weight-medium);
 }
+
+/* ═══ Bridge Reference Panel ═══ */
+.bridge-intro {
+  color: var(--cup-color-text-muted);
+  margin-bottom: var(--cup-space-lg);
+  line-height: 1.6;
+}
+
+.bridge-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cup-space-md);
+}
+
+.bridge-card {
+  background: var(--cup-color-surface);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-md);
+  border-left: 4px solid var(--cup-color-primary);
+}
+
+.bridge-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--cup-space-md);
+  margin-bottom: var(--cup-space-sm);
+  flex-wrap: wrap;
+}
+
+.bridge-card__digit {
+  font-size: var(--cup-font-size-xl);
+  font-weight: var(--cup-font-weight-bold);
+  color: var(--cup-color-primary);
+  min-width: 2ch;
+}
+
+.bridge-card__pegs {
+  display: flex;
+  gap: var(--cup-space-sm);
+}
+
+.bridge-card__peg {
+  font-size: var(--cup-font-size-sm);
+  padding: 2px 8px;
+  border-radius: var(--cup-radius-sm);
+  background: var(--cup-color-bg);
+}
+
+.bridge-card__sounds {
+  font-weight: var(--cup-font-weight-bold);
+  color: var(--cup-color-secondary);
+}
+
+.bridge-card__story {
+  margin-top: var(--cup-space-sm);
+  line-height: 1.6;
+  font-style: italic;
+  color: var(--cup-color-text);
+}
+
+.trainer-lesson__bridge {
+  background: var(--cup-color-bg);
+  border: 1px solid var(--cup-color-primary);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-md);
+  margin: var(--cup-space-md) 0;
+}
+
+.trainer-lesson__bridge h4 {
+  color: var(--cup-color-secondary);
+  margin-bottom: var(--cup-space-xs);
+  font-size: var(--cup-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
