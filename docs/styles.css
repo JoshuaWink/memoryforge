@@ -1822,3 +1822,33 @@ body {
   font-size: 0.7rem;
   font-weight: 600;
 }
+
+/* ── Import/Export Section ── */
+.scripture-tools {
+  margin-bottom: var(--cup-space-md);
+}
+.import-section {
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md, 6px);
+  background: var(--cup-color-surface-alt);
+}
+.import-section summary {
+  cursor: pointer;
+  list-style: none;
+  padding: var(--cup-space-sm) var(--cup-space-md);
+}
+.import-section summary::-webkit-details-marker { display: none; }
+.import-section__body {
+  padding: var(--cup-space-sm) var(--cup-space-md) var(--cup-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cup-space-sm);
+}
+.import-export-row {
+  display: flex;
+  gap: var(--cup-space-sm);
+  align-items: center;
+}
+.import-file-label {
+  cursor: pointer;
+}

@@ -303,6 +303,70 @@ function srReview(card, quality, now) {
   return u;
 }
 
+// -- Bible App Paste Parser --
+var BIBLE_REF_LINE_RE = /^(\d?\s?[A-Za-z][A-Za-z\s]+?)\s+(\d+:\d+(?:-\d+)?)\s*([A-Z]{2,5})?\s*$/;
+var BIBLE_URL_RE = /^https?:\/\//;
+var PLAIN_REF_RE = /^(\d?\s?[A-Za-z][A-Za-z\s]+?\s+\d+:\d+)\s*[-\u2013\u2014]\s*(.+)$/;
+
+function parseBiblePaste(input) {
+  if (!input || typeof input !== 'string') return [];
+  input = input.trim();
+  if (!input) return [];
+  var result = tryBibleAppFormat(input);
+  if (result.length > 0) return result;
+  result = tryPlainFormat(input);
+  return result;
+}
+
+function tryBibleAppFormat(input) {
+  var lines = input.split('\n');
+  var firstLine = lines[0].trim();
+  var refMatch = firstLine.match(BIBLE_REF_LINE_RE);
+  if (!refMatch) return [];
+  var book = refMatch[1].trim();
+  var chapterVerse = refMatch[2];
+  var translation = refMatch[3] || '';
+  var bodyLines = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (BIBLE_URL_RE.test(line)) continue;
+    if (line) bodyLines.push(line);
+  }
+  var body = bodyLines.join(' ').replace(/\s{2,}/g, ' ').trim();
+  if (!body) return [];
+  if (/\[\d+\]/.test(body)) {
+    return parseMultiVersePaste(book, chapterVerse, translation, body);
+  }
+  var text = body.replace(/^\[\d+\]\s*/, '').trim();
+  var cv = chapterVerse.indexOf('-') >= 0 ? chapterVerse.split('-')[0] : chapterVerse;
+  return [{ reference: book + ' ' + cv, text: text, translation: translation }];
+}
+
+function parseMultiVersePaste(book, chapterVerse, translation, body) {
+  var parts = body.split(/\[(\d+)\]\s*/);
+  var verses = [];
+  var chapterNum = chapterVerse.split(':')[0];
+  for (var i = 1; i < parts.length; i += 2) {
+    var verseNum = parts[i];
+    var text = (parts[i + 1] || '').trim();
+    if (!text) continue;
+    verses.push({ reference: book + ' ' + chapterNum + ':' + verseNum, text: text, translation: translation });
+  }
+  return verses;
+}
+
+function tryPlainFormat(input) {
+  var lines = input.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+  var results = [];
+  for (var i = 0; i < lines.length; i++) {
+    var match = lines[i].match(PLAIN_REF_RE);
+    if (match) {
+      results.push({ reference: match[1].trim(), text: match[2].trim(), translation: '' });
+    }
+  }
+  return results;
+}
+
 // -- Verse Library (localStorage) --
 var VERSE_STORAGE_KEY = 'mf_scripture_library';
 
@@ -355,7 +419,7 @@ function getDueVerses(lib, now) {
 var scriptureLib = loadVerseLibrary();
 var currentReviewQueue = [];
 var currentReviewIdx = 0;
-var currentDrillMode = 'first-letter';
+var scriptureDrillMode = 'first-letter';
 
 function renderVerseList() {
   var container = $('#scripture-list');
@@ -430,6 +494,31 @@ function handleAddVerse() {
   var text = ($('#verse-text') || {}).value || '';
   var translation = ($('#verse-translation') || {}).value || 'KJV';
   var notes = ($('#verse-notes') || {}).value || '';
+
+  // If text looks like a Bible app paste, try parsing it
+  if (text && !ref.trim()) {
+    var parsed = parseBiblePaste(text);
+    if (parsed.length > 0) {
+      // Bulk-add all parsed verses
+      var added = 0;
+      for (var p = 0; p < parsed.length; p++) {
+        var r = addVerse(scriptureLib, parsed[p].reference, parsed[p].text, parsed[p].translation || translation, notes);
+        if (r) added++;
+      }
+      if (added > 0) {
+        saveVerseLibrary(scriptureLib);
+        $('#verse-ref').value = '';
+        $('#verse-text').value = '';
+        $('#verse-notes').value = '';
+        hideChunkEditor();
+        renderVerseList();
+        return;
+      }
+      alert('Verses already exist or could not be parsed.');
+      return;
+    }
+  }
+
   if (!ref.trim() || !text.trim()) { alert('Reference and text are required.'); return; }
   var result = addVerse(scriptureLib, ref, text, translation, notes);
   if (!result) { alert('Verse already exists or invalid input.'); return; }
@@ -514,10 +603,10 @@ function startScriptureDrill(ref) {
   $('#btn-sdrill-next').style.display = 'none';
 
   var hintEl = $('#sdrill-hint');
-  if (currentDrillMode === 'first-letter') {
+  if (scriptureDrillMode === 'first-letter') {
     hintEl.textContent = fromFirstLetters(verse.text);
     hintEl.style.display = '';
-  } else if (currentDrillMode === 'chunk-recall') {
+  } else if (scriptureDrillMode === 'chunk-recall') {
     var drillChunks = verse.customChunks || verse.chunks;
     hintEl.innerHTML = drillChunks.map(function(ch, i) {
       return i === 0 ? '<strong>' + ch + '</strong>' : '<span style="opacity:0.3">[chunk ' + (i+1) + ']</span>';
@@ -629,14 +718,106 @@ function saveChunkEditorForVerse() {
   renderVerseList();
 }
 
+// -- Import/Export --
+function handleExportLibrary() {
+  var data = JSON.stringify(scriptureLib, null, 2);
+  var blob = new Blob([data], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'memoryforge-scripture-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function handleImportJSON(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (data.verses && Array.isArray(data.verses)) {
+        var added = 0;
+        for (var i = 0; i < data.verses.length; i++) {
+          var v = data.verses[i];
+          if (!scriptureLib.verses.some(function(x) { return x.reference === v.reference; })) {
+            scriptureLib.verses.push(v);
+            added++;
+          }
+        }
+        saveVerseLibrary(scriptureLib);
+        renderVerseList();
+        alert('Imported ' + added + ' new verses (' + (data.verses.length - added) + ' duplicates skipped).');
+      } else {
+        alert('Invalid file format.');
+      }
+    } catch (err) {
+      alert('Error reading file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleBulkPaste() {
+  var textarea = $('#bulk-paste-area');
+  if (!textarea) return;
+  var text = textarea.value.trim();
+  if (!text) { alert('Paste verse text first.'); return; }
+  var parsed = parseBiblePaste(text);
+  if (parsed.length === 0) { alert('Could not parse any verses from the pasted text.'); return; }
+  var added = 0;
+  for (var i = 0; i < parsed.length; i++) {
+    var r = addVerse(scriptureLib, parsed[i].reference, parsed[i].text, parsed[i].translation || 'KJV', '');
+    if (r) added++;
+  }
+  saveVerseLibrary(scriptureLib);
+  renderVerseList();
+  textarea.value = '';
+  alert('Added ' + added + ' verse(s)' + (parsed.length - added > 0 ? ' (' + (parsed.length - added) + ' duplicates skipped)' : '') + '.');
+}
+
 // -- Wire up Scripture events --
 (function initScripture() {
   $$('.scripture-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchScriptureTab(tab.dataset.stab); });
   });
 
-  // Show chunk editor when user types verse text
+  // Smart paste: detect Bible app format and auto-fill fields
   var verseTextArea = $('#verse-text');
+  if (verseTextArea) {
+    verseTextArea.addEventListener('paste', function(e) {
+      setTimeout(function() {
+        var pasted = verseTextArea.value.trim();
+        var parsed = parseBiblePaste(pasted);
+        if (parsed.length === 1) {
+          // Auto-fill reference and translation from parsed data
+          var refEl = $('#verse-ref');
+          var transEl = $('#verse-translation');
+          if (refEl && !refEl.value.trim()) refEl.value = parsed[0].reference;
+          if (transEl && parsed[0].translation) {
+            // Set translation if option exists, else select Other
+            var opts = Array.from(transEl.options).map(function(o) { return o.value; });
+            if (opts.indexOf(parsed[0].translation) >= 0) {
+              transEl.value = parsed[0].translation;
+            } else {
+              transEl.value = 'Other';
+            }
+          }
+          // Replace textarea with just the verse text
+          verseTextArea.value = parsed[0].text;
+          // Trigger chunk editor
+          chunkEditingRef = null;
+          showChunkEditor(parsed[0].text);
+        } else if (parsed.length > 1) {
+          // Multi-verse paste: show a toast/hint
+          verseTextArea.setAttribute('placeholder', parsed.length + ' verses detected. Click Add to import all.');
+        }
+      }, 50);
+    });
+  }
   if (verseTextArea) {
     var debounceTimer = null;
     verseTextArea.addEventListener('input', function() {
@@ -681,7 +862,7 @@ function saveChunkEditorForVerse() {
     btn.addEventListener('click', function() {
       $$('.scripture-mode').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      currentDrillMode = btn.dataset.mode;
+      scriptureDrillMode = btn.dataset.mode;
     });
   });
 
@@ -701,6 +882,14 @@ function saveChunkEditorForVerse() {
     if (idx < p.options.length - 1) { p.selectedIndex = idx + 1; startScriptureDrill(p.value); }
     else { p.selectedIndex = 0; $('#scripture-drill-area').style.display = 'none'; }
   });
+
+  // Import/Export listeners
+  var exportBtn = $('#btn-export-json');
+  if (exportBtn) exportBtn.addEventListener('click', handleExportLibrary);
+  var importFile = $('#import-json-file');
+  if (importFile) importFile.addEventListener('change', handleImportJSON);
+  var bulkBtn = $('#btn-bulk-import');
+  if (bulkBtn) bulkBtn.addEventListener('click', handleBulkPaste);
 
   renderVerseList();
 })();

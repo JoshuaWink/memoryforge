@@ -403,6 +403,7 @@
               <option value="ESV">ESV</option>
               <option value="NASB">NASB</option>
               <option value="NIV">NIV</option>
+              <option value="NLT">NLT</option>
               <option value="NKJV">NKJV</option>
               <option value="Other">Other</option>
             </select>
@@ -426,6 +427,27 @@
             <textarea id="verse-notes" class="field-input" rows="2" placeholder="Your imagery, scenes, memory aids..."></textarea>
           </div>
           <button id="btn-add-verse" class="btn btn-primary">Add Verse</button>
+        </div>
+
+        <!-- Import/Export Tools -->
+        <div class="scripture-tools">
+          <details class="import-section">
+            <summary class="btn btn-sm btn-secondary">Import / Export</summary>
+            <div class="import-section__body">
+              <div class="field-group">
+                <label class="field-label" for="bulk-paste-area">Bulk Paste (Bible app format)</label>
+                <textarea id="bulk-paste-area" class="field-input scripture-textarea" rows="4" placeholder="Paste from Bible app — e.g. Romans 1:1 NLT&#10;[1] This letter is from Paul...&#10;&#10;https://bible.com/..."></textarea>
+                <button id="btn-bulk-import" class="btn btn-sm btn-primary">Import Pasted Verses</button>
+              </div>
+              <div class="import-export-row">
+                <button id="btn-export-json" class="btn btn-sm btn-secondary">Export JSON</button>
+                <label class="btn btn-sm btn-secondary import-file-label">
+                  Import JSON
+                  <input type="file" id="import-json-file" accept=".json" hidden>
+                </label>
+              </div>
+            </div>
+          </details>
         </div>
 
         <div class="scripture-list" id="scripture-list">
