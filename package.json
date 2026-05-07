@@ -8,11 +8,18 @@
     "test:watch": "vitest",
     "dev": "npx serve docs"
   },
-  "keywords": ["memory", "training", "bible", "memorization"],
+  "keywords": [
+    "memory",
+    "training",
+    "bible",
+    "memorization"
+  ],
   "author": "Joshua Wink",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "jsdom": "^29.1.1",
+    "serve": "^14.2.6",
     "vitest": "^4.1.5"
   }
 }
