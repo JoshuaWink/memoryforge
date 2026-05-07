@@ -2055,13 +2055,59 @@ function loadTimerState() {
   } catch(e) {}
 }
 
-// -- Notification permission --
-function requestNotificationPermission() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    Notification.requestPermission();
+// -- Notification permission system --
+function getNotifPermissionState() {
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission; // 'default', 'granted', 'denied'
+}
+
+function showNotifBanner() {
+  var state = getNotifPermissionState();
+  var banner = $('#notif-banner');
+  if (!banner) return;
+  // Show if: API exists, not yet granted, not dismissed this session
+  var dismissed = false;
+  try { dismissed = sessionStorage.getItem('mf_notif_dismissed') === '1'; } catch(e) {}
+  if (state === 'default' && !dismissed) {
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
   }
 }
+
+function requestNotificationPermission() {
+  if (!('Notification' in window)) return Promise.resolve('unsupported');
+  if (Notification.permission === 'granted') return Promise.resolve('granted');
+  if (Notification.permission === 'denied') return Promise.resolve('denied');
+  return Notification.requestPermission().then(function(result) {
+    $('#notif-banner').style.display = 'none';
+    return result;
+  });
+}
+
+// Enable button
+$('#btn-enable-notif').addEventListener('click', function() {
+  requestNotificationPermission().then(function(result) {
+    if (result === 'granted') {
+      // Also register for background via service worker push (if available)
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(function(reg) {
+          // Ensure SW can show notifications
+          return reg.active;
+        });
+      }
+    }
+  });
+});
+
+// Dismiss button
+$('#btn-dismiss-notif').addEventListener('click', function() {
+  $('#notif-banner').style.display = 'none';
+  try { sessionStorage.setItem('mf_notif_dismissed', '1'); } catch(e) {}
+});
+
+// Show banner on load if needed
+showNotifBanner();
 
 function sendNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;

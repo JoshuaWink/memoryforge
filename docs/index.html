@@ -22,6 +22,18 @@
 
   <main class="app-main">
 
+    <!-- ═══ NOTIFICATION PERMISSION BANNER ═══ -->
+    <div id="notif-banner" class="notif-banner" style="display: none;">
+      <div class="notif-banner__text">
+        <span class="notif-banner__icon">&#128276;</span>
+        <span>Enable notifications to get recall alerts even when the app is in the background.</span>
+      </div>
+      <div class="notif-banner__actions">
+        <button id="btn-enable-notif" class="btn btn-primary btn-sm">Enable</button>
+        <button id="btn-dismiss-notif" class="btn btn-secondary btn-sm">Not now</button>
+      </div>
+    </div>
+
     <!-- ═══ TIMER BAR (floating, always visible when active) ═══ -->
     <div id="timer-bar" class="timer-bar" style="display: none;">
       <div class="timer-bar__info">

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'memoryforge-v1';
+const CACHE_NAME = 'memoryforge-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -43,3 +43,32 @@ self.addEventListener('notificationclick', (e) => {
     })
   );
 });
+
+// Periodic background sync — fires recall check even when app is closed
+// (Chromium-based browsers on Android support this)
+self.addEventListener('periodicsync', (e) => {
+  if (e.tag === 'recall-check') {
+    e.waitUntil(checkPendingRecall());
+  }
+});
+
+async function checkPendingRecall() {
+  // Read timer state from the cache or a stored value
+  // If a timer has expired, show a notification
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    // We can't read localStorage from SW, but we can use the client to message
+    const allClients = await clients.matchAll({ includeUncontrolled: true });
+    if (allClients.length === 0) {
+      // App is fully closed — show a generic "come back and practice" notification
+      await self.registration.showNotification('MemoryForge', {
+        body: 'Time to check your recall! Open the app.',
+        icon: 'icons/icon-192.png',
+        tag: 'memoryforge-periodic',
+        requireInteraction: false,
+      });
+    }
+  } catch (err) {
+    // Silently fail — periodic sync is best-effort
+  }
+}

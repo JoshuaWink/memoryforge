@@ -1439,3 +1439,40 @@ body {
   color: var(--cup-color-error);
   border-color: var(--cup-color-error);
 }
+
+
+/* ═══ Notification Permission Banner ═══ */
+.notif-banner {
+  background: linear-gradient(135deg, rgba(255, 167, 38, 0.12) 0%, rgba(255, 167, 38, 0.04) 100%);
+  border: 1px solid rgba(255, 167, 38, 0.3);
+  border-radius: var(--cup-radius-md);
+  padding: var(--cup-space-md);
+  margin-bottom: var(--cup-space-md);
+  animation: timer-bar-in 0.3s ease;
+}
+
+.notif-banner__text {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-sm);
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-on-surface);
+  line-height: 1.5;
+}
+
+.notif-banner__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.notif-banner__actions {
+  display: flex;
+  gap: var(--cup-space-sm);
+}
+
+.btn-sm {
+  padding: var(--cup-space-xs) var(--cup-space-md);
+  font-size: var(--cup-font-size-sm);
+  min-height: 36px;
+}
