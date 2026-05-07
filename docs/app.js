@@ -2198,7 +2198,17 @@ function stopTimerTick() {
 }
 
 function onTimerExpired() {
+  // Cancel the SW scheduled notification since we're handling it in-page
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'cancel-notification',
+      tag: 'memoryforge-recall'
+    });
+  }
+  // Still send the notification (visible in shade even if app is focused)
   sendNotification("Time\u2019s Up!", "What were you memorizing? Tap to recall.");
+  // In-app alert: vibrate the device if Vibration API is available
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
   showRecallPanel();
 }
 
@@ -2233,6 +2243,18 @@ function startRecallTimer(ms) {
   recallTimer.start(ms, challenge);
   saveTimerState();
   startTimerTick();
+
+  // Schedule SW-based notification as fallback for when phone is locked
+  // (setInterval gets throttled/killed when Android locks the screen)
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'schedule-notification',
+      delay: ms,
+      title: "Time\u2019s Up!",
+      body: "What were you memorizing? Tap to recall.",
+      tag: 'memoryforge-recall'
+    });
+  }
   $$('.view').forEach(function(v) { v.style.display = 'none'; });
   var drillView = $('#view-drill');
   if (drillView) drillView.style.display = '';
@@ -2357,6 +2379,21 @@ if (recallTimer.isActive()) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Restore timer state when returning from background/lock screen
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') {
+    // Check if timer expired while we were away
+    if (recallTimer.isExpired()) {
+      stopTimerTick();
+      $('#timer-bar').style.display = 'none';
+      showRecallPanel();
+    } else if (recallTimer.isActive()) {
+      // Restart tick in case setInterval was killed
+      startTimerTick();
+    }
+  }
+});
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

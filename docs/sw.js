@@ -1,4 +1,4 @@
-const CACHE_NAME = 'memoryforge-v3';
+const CACHE_NAME = 'memoryforge-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -44,6 +44,59 @@ self.addEventListener('notificationclick', (e) => {
   );
 });
 
+// -- Scheduled notification from page --
+// Page posts { type: 'schedule-notification', delay: ms, title, body, tag }
+// SW uses setTimeout inside waitUntil to fire even when page is backgrounded
+let scheduledTimers = {};
+
+self.addEventListener('message', (e) => {
+  const data = e.data;
+  if (!data || !data.type) return;
+
+  if (data.type === 'schedule-notification') {
+    const id = data.tag || 'memoryforge-scheduled';
+    // Cancel any existing timer with this tag
+    if (scheduledTimers[id]) clearTimeout(scheduledTimers[id]);
+
+    // Use waitUntil to keep SW alive during the delay
+    const delay = Math.max(0, data.delay || 0);
+    const promise = new Promise((resolve) => {
+      scheduledTimers[id] = setTimeout(async () => {
+        delete scheduledTimers[id];
+        try {
+          await self.registration.showNotification(data.title || 'MemoryForge', {
+            body: data.body || 'Timer expired!',
+            icon: 'icon-192.png',
+            badge: 'icon-192.png',
+            tag: id,
+            renotify: true,
+            requireInteraction: true,
+            silent: false,
+            vibrate: [200, 100, 200, 100, 200],
+            data: { action: 'recall' },
+            actions: [
+              { action: 'open', title: 'Open App' },
+              { action: 'dismiss', title: 'Dismiss' }
+            ]
+          });
+        } catch (err) {
+          // SW may have been killed — best effort
+        }
+        resolve();
+      }, delay);
+    });
+    // Keep SW alive for the duration (Chrome allows ~5 min max)
+    e.waitUntil(promise);
+
+  } else if (data.type === 'cancel-notification') {
+    const id = data.tag || 'memoryforge-scheduled';
+    if (scheduledTimers[id]) {
+      clearTimeout(scheduledTimers[id]);
+      delete scheduledTimers[id];
+    }
+  }
+});
+
 // Periodic background sync — fires recall check even when app is closed
 // (Chromium-based browsers on Android support this)
 self.addEventListener('periodicsync', (e) => {
@@ -63,7 +116,7 @@ async function checkPendingRecall() {
       // App is fully closed — show a generic "come back and practice" notification
       await self.registration.showNotification('MemoryForge', {
         body: 'Time to check your recall! Open the app.',
-        icon: 'icons/icon-192.png',
+        icon: 'icon-192.png',
         tag: 'memoryforge-periodic',
         requireInteraction: false,
       });
