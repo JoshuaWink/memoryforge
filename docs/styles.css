@@ -23,6 +23,11 @@
   --cup-color-disabled:     #555555;
   --cup-color-placeholder:  #888888;
 
+  /* Semantic aliases used by drill modes */
+  --cup-color-text:         #e0e0e0;
+  --cup-color-text-muted:   #9e9e9e;
+  --cup-color-bg:           #16213e;
+
   --cup-space-xs:  0.25rem;
   --cup-space-sm:  0.5rem;
   --cup-space-md:  1rem;
@@ -146,6 +151,7 @@ body {
   width: 100%;
   padding: var(--cup-space-sm) var(--cup-space-md);
   background: var(--cup-color-surface-alt);
+  color: var(--cup-color-on-surface);
   border: 1px solid var(--cup-color-border);
   border-radius: var(--cup-radius-md);
   color: var(--cup-color-on-surface);
@@ -183,6 +189,8 @@ body {
   cursor: pointer;
   border: 1px solid transparent;
   min-height: var(--cup-touch-min);
+  color: var(--cup-color-on-surface);
+  background: transparent;
   transition: background var(--cup-transition-fast), transform var(--cup-transition-fast);
 }
 .btn:active { transform: scale(0.98); }
@@ -1647,9 +1655,15 @@ body {
   margin-top: var(--cup-space-xs);
 }
 
+.scripture-mode {
+  color: var(--cup-color-secondary);
+  border-color: var(--cup-color-border);
+}
+
 .scripture-mode.active {
   background: var(--cup-color-primary);
   color: var(--cup-color-on-primary);
+  border-color: var(--cup-color-primary);
 }
 
 .drill-verse-select {
@@ -1938,7 +1952,8 @@ body {
 .chunk-pill {
   display: inline-block;
   padding: var(--cup-space-xs) var(--cup-space-md);
-  background: var(--cup-color-surface);
+  background: var(--cup-color-surface-alt);
+  color: var(--cup-color-on-surface);
   border: 1px solid var(--cup-color-border);
   border-radius: var(--cup-radius-full);
   cursor: pointer;
@@ -2045,7 +2060,8 @@ body {
 .word-option {
   display: inline-block;
   padding: var(--cup-space-xs) var(--cup-space-md);
-  background: var(--cup-color-surface);
+  background: var(--cup-color-surface-alt);
+  color: var(--cup-color-on-surface);
   border: 1px solid var(--cup-color-border);
   border-radius: var(--cup-radius-full);
   cursor: pointer;
