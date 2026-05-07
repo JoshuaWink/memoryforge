@@ -1847,6 +1847,42 @@ $('#import-file').addEventListener('change', async (e) => {
   }
 });
 
+// -- Test Notification (debug) --
+$('#btn-test-notif').addEventListener('click', function() {
+  var state = ('Notification' in window) ? Notification.permission : 'unsupported';
+  console.log('[MF] Notification permission:', state);
+  console.log('[MF] SW controller:', !!navigator.serviceWorker.controller);
+
+  if (state !== 'granted') {
+    alert('Notification permission: ' + state + '\nTap Enable in the banner first.');
+    return;
+  }
+
+  navigator.serviceWorker.ready.then(function(reg) {
+    console.log('[MF] SW ready, showing notification...');
+    return reg.showNotification('MemoryForge Test', {
+      body: 'If you see this on your lock screen, notifications work!',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      tag: 'memoryforge-test-' + Date.now(),
+      renotify: true,
+      requireInteraction: true,
+      silent: false,
+      vibrate: [200, 100, 200, 100, 200],
+      actions: [
+        { action: 'open', title: 'Open' },
+        { action: 'dismiss', title: 'OK' }
+      ]
+    });
+  }).then(function() {
+    console.log('[MF] Notification shown successfully');
+    alert('Notification fired! Check your notification shade / lock screen.');
+  }).catch(function(err) {
+    console.error('[MF] Notification error:', err);
+    alert('Error: ' + err.message);
+  });
+});
+
 $('#btn-clear').addEventListener('click', async () => {
   if (!confirm('Delete ALL training data? This cannot be undone.')) return;
   try {
