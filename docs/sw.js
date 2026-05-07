@@ -1,9 +1,10 @@
-const CACHE_NAME = 'memoryforge-v5';
+const CACHE_NAME = 'memoryforge-v6';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './scripture.js',
   './manifest.json',
 ];
 

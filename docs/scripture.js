@@ -757,7 +757,7 @@ function startChunkOrder(verse) {
   selectedEl.innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
 
   bankEl.innerHTML = scrambled.map(function(ch, i) {
-    return '<button class="chunk-pill" data-chunk-idx="' + i + '" data-chunk-text="' + escapeHtml(ch) + '">' + escapeHtml(ch) + '</button>';
+    return '<button class="chunk-pill" data-chunk-idx="' + i + '" data-chunk-text="' + escapeHtmlScripture(ch) + '">' + escapeHtmlScripture(ch) + '</button>';
   }).join('');
 
   bankEl.querySelectorAll('.chunk-pill').forEach(function(pill) {
@@ -765,7 +765,7 @@ function startChunkOrder(verse) {
   });
 }
 
-function escapeHtml(s) {
+function escapeHtmlScripture(s) {
   var div = document.createElement('div');
   div.textContent = s;
   return div.innerHTML;
@@ -789,7 +789,7 @@ function tapChunkPill(pill) {
 
   if (!isCorrect) {
     var resultEl = document.getElementById('chunk-order-result');
-    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong order! The next chunk was: <strong>' + escapeHtml(chunkOrderCorrect[idx]) + '</strong></div>';
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong order! The next chunk was: <strong>' + escapeHtmlScripture(chunkOrderCorrect[idx]) + '</strong></div>';
     document.getElementById('btn-chunk-order-reset').style.display = '';
     drillUpdateSR(drillCurrentVerse.reference, 2);
     return;
@@ -855,10 +855,10 @@ function renderFillBlank() {
   for (var i = 0; i < fillBlankItems.length; i++) {
     var it = fillBlankItems[i];
     if (!it.blanked) {
-      html += escapeHtml(it.word) + ' ';
+      html += escapeHtmlScripture(it.word) + ' ';
     } else if (it.filled) {
       var cls = it.correct ? 'blank-slot blank-slot--filled blank-slot--correct' : 'blank-slot blank-slot--filled blank-slot--wrong';
-      html += '<span class="' + cls + '">' + escapeHtml(it.filledWord || '') + '</span> ';
+      html += '<span class="' + cls + '">' + escapeHtmlScripture(it.filledWord || '') + '</span> ';
     } else if (i === fillBlankCurrentIdx) {
       html += '<span class="blank-slot" id="current-blank">___</span> ';
     } else {
@@ -871,7 +871,7 @@ function renderFillBlank() {
   fillBlankItems.forEach(function(it) { if (it.filled && it.bankUsed !== undefined) usedWords[it.bankUsed] = true; });
   bankEl.innerHTML = fillBlankBankWords.map(function(w, idx) {
     var usedClass = usedWords[idx] ? ' word-option--used' : '';
-    return '<button class="word-option' + usedClass + '" data-bank-idx="' + idx + '">' + escapeHtml(w) + '</button>';
+    return '<button class="word-option' + usedClass + '" data-bank-idx="' + idx + '">' + escapeHtmlScripture(w) + '</button>';
   }).join('');
 
   bankEl.querySelectorAll('.word-option').forEach(function(btn) {
@@ -939,7 +939,7 @@ function renderFlTap() {
   var html = '';
   for (var i = 0; i < flTapWords.length; i++) {
     if (i < flTapCurrentIdx) {
-      html += '<span class="word-correct">' + escapeHtml(flTapWords[i]) + '</span> ';
+      html += '<span class="word-correct">' + escapeHtmlScripture(flTapWords[i]) + '</span> ';
     } else if (i === flTapCurrentIdx) {
       html += '<span class="word-current">?</span> ';
     } else {
@@ -969,7 +969,7 @@ function renderFlTap() {
   options = drillShuffle(options);
 
   bankEl.innerHTML = options.map(function(w) {
-    return '<button class="word-option" data-fl-word="' + escapeHtml(w) + '">' + escapeHtml(w) + '</button>';
+    return '<button class="word-option" data-fl-word="' + escapeHtmlScripture(w) + '">' + escapeHtmlScripture(w) + '</button>';
   }).join('');
 
   bankEl.querySelectorAll('.word-option').forEach(function(btn) {
