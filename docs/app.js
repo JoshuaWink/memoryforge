@@ -1250,8 +1250,7 @@ function showFlashCard() {
   $('#flash-sounds').textContent = b.sounds.toUpperCase();
   $('#flash-bridge').textContent = b.bridge;
 
-  $('#flash-front').style.display = '';
-  $('#flash-back').style.display = 'none';
+  $('#flashcard').classList.remove('flipped');
   $('#flash-actions').style.display = 'none';
   updateFlashProgress();
 }
@@ -1259,8 +1258,7 @@ function showFlashCard() {
 function flipFlashCard() {
   if (flashFlipped) return;
   flashFlipped = true;
-  $('#flash-front').style.display = 'none';
-  $('#flash-back').style.display = '';
+  $('#flashcard').classList.add('flipped');
   $('#flash-actions').style.display = '';
 }
 
