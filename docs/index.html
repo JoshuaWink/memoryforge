@@ -38,6 +38,17 @@
       <div class="drill-config" id="drill-config">
         <h2 class="section-title">Configure Drill</h2>
 
+        <!-- Saved Configs -->
+        <div class="config-presets" id="config-presets">
+          <div class="config-presets__row">
+            <select id="config-preset-select" class="field-input config-presets__select">
+              <option value="">Saved Configs...</option>
+            </select>
+            <button id="btn-save-config" class="btn btn-secondary config-presets__save" title="Save current config">Save</button>
+            <button id="btn-delete-config" class="btn config-presets__delete" title="Delete selected config">&times;</button>
+          </div>
+        </div>
+
         <div class="field-group">
           <label class="field-label" for="drill-mode">Drill Mode</label>
           <select id="drill-mode" class="field-input">

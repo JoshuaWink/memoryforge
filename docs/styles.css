@@ -1397,3 +1397,45 @@ body {
   text-align: center;
   line-height: 1.5;
 }
+
+
+/* ═══ Config Presets ═══ */
+.config-presets {
+  margin-bottom: var(--cup-space-lg);
+}
+
+.config-presets__row {
+  display: flex;
+  gap: var(--cup-space-xs);
+  align-items: stretch;
+}
+
+.config-presets__select {
+  flex: 1;
+  min-width: 0;
+}
+
+.config-presets__save {
+  white-space: nowrap;
+  padding-left: var(--cup-space-md);
+  padding-right: var(--cup-space-md);
+}
+
+.config-presets__delete {
+  background: none;
+  border: 1px solid var(--cup-color-border);
+  color: var(--cup-color-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  border-radius: var(--cup-radius-md);
+  min-width: var(--cup-touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.config-presets__delete:hover {
+  color: var(--cup-color-error);
+  border-color: var(--cup-color-error);
+}

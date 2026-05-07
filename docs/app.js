@@ -1862,6 +1862,115 @@ $('#btn-clear').addEventListener('click', async () => {
 //  PWA Service Worker
 
 
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  DRILL CONFIG PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════
+
+var CONFIG_FIELDS = ['drill-mode', 'drill-type', 'drill-length', 'drill-technique',
+  'chunk-size', 'exposure-time', 'recall-delay', 'custom-text'];
+
+function readConfig() {
+  var cfg = {};
+  CONFIG_FIELDS.forEach(function(id) {
+    var el = $('#' + id);
+    if (el) cfg[id] = el.value;
+  });
+  return cfg;
+}
+
+function applyConfig(cfg) {
+  if (!cfg) return;
+  CONFIG_FIELDS.forEach(function(id) {
+    var el = $('#' + id);
+    if (el && cfg[id] !== undefined) {
+      el.value = cfg[id];
+      // Fire change event so conditional UI updates
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
+// -- Auto-cache last used config --
+function cacheLastConfig() {
+  try { localStorage.setItem('mf_last_config', JSON.stringify(readConfig())); } catch(e) {}
+}
+
+function loadLastConfig() {
+  try {
+    var s = localStorage.getItem('mf_last_config');
+    if (s) applyConfig(JSON.parse(s));
+  } catch(e) {}
+}
+
+// -- Named presets --
+function getSavedConfigs() {
+  try {
+    var s = localStorage.getItem('mf_saved_configs');
+    return s ? JSON.parse(s) : [];
+  } catch(e) { return []; }
+}
+
+function setSavedConfigs(arr) {
+  try { localStorage.setItem('mf_saved_configs', JSON.stringify(arr)); } catch(e) {}
+}
+
+function renderConfigPresets() {
+  var select = $('#config-preset-select');
+  var configs = getSavedConfigs();
+  // Clear all options except the first placeholder
+  while (select.options.length > 1) select.remove(1);
+  configs.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = c.name;
+    select.appendChild(opt);
+  });
+}
+
+// Load preset when selected
+$('#config-preset-select').addEventListener('change', function() {
+  var name = this.value;
+  if (!name) return;
+  var configs = getSavedConfigs();
+  var found = configs.find(function(c) { return c.name === name; });
+  if (found) applyConfig(found.config);
+});
+
+// Save current config as named preset
+$('#btn-save-config').addEventListener('click', function() {
+  var name = prompt('Name this config:');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  var configs = getSavedConfigs();
+  // Overwrite if same name exists
+  configs = configs.filter(function(c) { return c.name !== name; });
+  configs.push({ name: name, config: readConfig() });
+  setSavedConfigs(configs);
+  renderConfigPresets();
+  $('#config-preset-select').value = name;
+});
+
+// Delete selected preset
+$('#btn-delete-config').addEventListener('click', function() {
+  var name = $('#config-preset-select').value;
+  if (!name) return;
+  var configs = getSavedConfigs().filter(function(c) { return c.name !== name; });
+  setSavedConfigs(configs);
+  renderConfigPresets();
+});
+
+// -- Hook into drill start to auto-cache --
+(function() {
+  var origStart = $('#btn-start');
+  origStart.addEventListener('click', cacheLastConfig, true); // capture phase, runs first
+})();
+
+// -- Init: load last config + render presets --
+loadLastConfig();
+renderConfigPresets();
+
 // ═══════════════════════════════════════════════════════════════════
 //  RECALL TIMER & NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════
