@@ -450,9 +450,28 @@
           </details>
         </div>
 
+        <!-- Passage Creation -->
+        <div class="passage-create" id="passage-create-section">
+          <details class="import-section">
+            <summary class="btn btn-sm btn-secondary">Create Passage (Chapter)</summary>
+            <div class="import-section__body">
+              <div class="field-group">
+                <label class="field-label" for="passage-ref">Passage Name</label>
+                <input type="text" id="passage-ref" class="field-input" placeholder="e.g. Romans 8 or Psalm 23">
+              </div>
+              <p class="field-label">Select verses (in order):</p>
+              <div id="passage-verse-checkboxes" class="passage-verse-list"></div>
+              <button id="btn-create-passage" class="btn btn-sm btn-primary">Create Passage</button>
+            </div>
+          </details>
+        </div>
+
         <div class="scripture-list" id="scripture-list">
           <p class="empty-state">No verses yet. Add your first verse above.</p>
         </div>
+
+        <!-- Passage List -->
+        <div class="passage-list" id="passage-list"></div>
       </div>
 
       <!-- REVIEW panel (spaced repetition queue) -->
@@ -484,6 +503,24 @@
 
       <!-- DRILL panel -->
       <div class="scripture-panel" id="sp-drill" style="display:none;">
+        <!-- Scale Selector -->
+        <div class="drill-scale-select">
+          <label class="field-label">Scale</label>
+          <div class="drill-scale-btns">
+            <button class="btn btn-sm drill-scale active" data-scale="verse">Verse</button>
+            <button class="btn btn-sm drill-scale" data-scale="section">Section</button>
+            <button class="btn btn-sm drill-scale" data-scale="chapter">Chapter</button>
+          </div>
+        </div>
+
+        <!-- Passage Picker (for section/chapter scale) -->
+        <div class="drill-passage-select" id="drill-passage-select" style="display:none;">
+          <label class="field-label" for="drill-passage-picker">Passage</label>
+          <select id="drill-passage-picker" class="field-input">
+            <option value="">Select a passage...</option>
+          </select>
+        </div>
+
         <div class="drill-mode-select">
           <label class="field-label">Drill Mode</label>
           <div class="drill-mode-btns">
@@ -549,6 +586,28 @@
             <p class="field-label">Tap the next word:</p>
             <div class="drill-fl-tap__bank" id="fl-tap-bank"></div>
             <div id="fl-tap-result"></div>
+          </div>
+
+          <!-- Bridge Drill (passage scale) -->
+          <div class="drill-bridge" id="drill-bridge" style="display:none;">
+            <p class="field-label">What verse comes after this?</p>
+            <div class="drill-bridge__prompt" id="bridge-prompt"></div>
+            <div class="drill-bridge__bank" id="bridge-bank"></div>
+            <div id="bridge-result"></div>
+          </div>
+
+          <!-- Chapter Chunk Order (hard mode) -->
+          <div class="drill-chapter-chunks" id="drill-chapter-chunks" style="display:none;">
+            <p class="field-label">Tap ALL chunks in order (Hard Mode):</p>
+            <div class="drill-progress" id="chapter-chunks-progress">
+              <div class="drill-progress__bar"><div class="drill-progress__fill" id="chapter-chunks-fill" style="width:0%"></div></div>
+              <p class="drill-progress__label" id="chapter-chunks-label"></p>
+            </div>
+            <div class="drill-chunk-order__selected" id="chapter-chunks-selected"></div>
+            <p class="field-label" style="margin-top:var(--cup-space-sm)">Available chunks:</p>
+            <div class="drill-chunk-order__bank" id="chapter-chunks-bank"></div>
+            <div id="chapter-chunks-result"></div>
+            <button id="btn-chapter-chunks-reset" class="btn btn-secondary" style="display:none;margin-top:var(--cup-space-sm)">Reset</button>
           </div>
 
           <!-- Legacy typing modes -->

@@ -2178,3 +2178,173 @@ body {
 .drill-mode-btns {
   flex-wrap: wrap;
 }
+
+
+/* ═══ PASSAGE / CHAPTER SCALE ═══ */
+
+/* Scale selector buttons */
+.drill-scale-select {
+  margin-bottom: var(--cup-space-md);
+}
+
+.drill-scale-btns {
+  display: flex;
+  gap: var(--cup-space-xs);
+  margin-top: var(--cup-space-xs);
+}
+
+.drill-scale {
+  color: var(--cup-color-secondary);
+  border-color: var(--cup-color-border);
+}
+
+.drill-scale.active {
+  background: var(--cup-color-warning);
+  color: #1a1a2e;
+  border-color: var(--cup-color-warning);
+}
+
+/* Passage picker */
+.drill-passage-select {
+  margin-bottom: var(--cup-space-md);
+}
+
+/* Passage creation in library */
+.passage-create {
+  margin-bottom: var(--cup-space-lg);
+}
+
+.passage-verse-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--cup-space-sm);
+  background: var(--cup-color-surface-alt);
+  border-radius: var(--cup-radius-md);
+  border: 1px solid var(--cup-color-border);
+  margin-bottom: var(--cup-space-sm);
+}
+
+.passage-verse-list label {
+  display: block;
+  padding: var(--cup-space-xs) 0;
+  color: var(--cup-color-on-surface);
+  cursor: pointer;
+  font-size: var(--cup-font-size-sm);
+}
+
+.passage-verse-list label:hover {
+  color: var(--cup-color-primary);
+}
+
+.passage-verse-list input[type="checkbox"] {
+  margin-right: var(--cup-space-sm);
+}
+
+/* Passage list cards */
+.passage-list {
+  margin-top: var(--cup-space-lg);
+}
+
+.passage-card {
+  padding: var(--cup-space-md);
+  background: var(--cup-color-surface-alt);
+  border-radius: var(--cup-radius-md);
+  border: 1px solid var(--cup-color-border);
+  margin-bottom: var(--cup-space-sm);
+}
+
+.passage-card__ref {
+  font-weight: 600;
+  color: var(--cup-color-warning);
+  margin-bottom: var(--cup-space-xs);
+}
+
+.passage-card__meta {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+  margin-bottom: var(--cup-space-sm);
+}
+
+.passage-card__seams {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--cup-space-sm);
+  height: 8px;
+}
+
+.seam-bar {
+  flex: 1;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.seam-bar--weak { background: var(--cup-color-error); }
+.seam-bar--medium { background: var(--cup-color-warning); }
+.seam-bar--strong { background: var(--cup-color-success); }
+
+.passage-card__actions {
+  display: flex;
+  gap: var(--cup-space-xs);
+  flex-wrap: wrap;
+}
+
+/* Bridge drill */
+.drill-bridge {
+  padding: var(--cup-space-md);
+}
+
+.drill-bridge__prompt {
+  font-size: var(--cup-font-size-lg);
+  line-height: 1.8;
+  color: var(--cup-color-text);
+  padding: var(--cup-space-md);
+  background: var(--cup-color-bg);
+  border-radius: var(--cup-radius-md);
+  border: 1px dashed var(--cup-color-border);
+  margin-bottom: var(--cup-space-lg);
+  font-style: italic;
+}
+
+.drill-bridge__bank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-md);
+}
+
+.bridge-option {
+  display: block;
+  width: 100%;
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  background: var(--cup-color-surface-alt);
+  color: var(--cup-color-on-surface);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md);
+  cursor: pointer;
+  font-size: var(--cup-font-size-base);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.bridge-option:hover {
+  border-color: var(--cup-color-primary);
+  background: rgba(79, 195, 247, 0.1);
+}
+
+.bridge-option--correct {
+  background: rgba(0, 206, 100, 0.15);
+  border-color: var(--cup-color-success);
+  color: var(--cup-color-success);
+}
+
+.bridge-option--wrong {
+  background: rgba(255, 71, 87, 0.15);
+  border-color: var(--cup-color-error);
+  color: var(--cup-color-error);
+  animation: shake 0.3s ease;
+}
+
+/* Chapter chunk order uses same styles as verse chunk-order */
+.drill-chapter-chunks {
+  padding: var(--cup-space-md);
+}

@@ -484,8 +484,8 @@ function switchScriptureTab(tab) {
   var panel = $('#sp-' + tab);
   if (panel) panel.style.display = '';
   if (tab === 'review') updateReviewStatus();
-  if (tab === 'drill') populateDrillPicker();
-  if (tab === 'library') renderVerseList();
+  if (tab === 'drill') { populateDrillPicker(); populatePassagePicker(); }
+  if (tab === 'library') { renderVerseList(); renderPassageList(); populatePassageCheckboxes(); }
 }
 
 // -- Add Verse --
@@ -650,9 +650,14 @@ var fillBlankBankWords = [];
 var fillBlankCurrentIdx = 0;
 var flTapWords = [];
 var flTapCurrentIdx = 0;
+var scriptureDrillScale = 'verse';
+var drillCurrentPassage = null;
+var bridgeCurrentIdx = 0;
+var chapterChunksCorrect = [];
+var chapterChunksSelected = [];
 
 function hideAllDrillSubs() {
-  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area'];
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area', 'drill-bridge', 'drill-chapter-chunks'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -1135,6 +1140,327 @@ function handleBulkPaste() {
 }
 
 // -- Wire up Scripture events --
+
+// ======================================================================
+//  PASSAGE / CHAPTER SCALE LOGIC
+// ======================================================================
+
+function createPassageFromVerses(name, refs) {
+  var verses = refs.map(function(ref) {
+    return scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  }).filter(Boolean);
+  if (verses.length === 0) return null;
+  var verseRefs = verses.map(function(v) { return v.reference; });
+  var seams = {};
+  for (var i = 0; i < verses.length - 1; i++) {
+    var key = verses[i].reference + '\u2192' + verses[i + 1].reference;
+    seams[key] = { strength: 0, attempts: 0 };
+  }
+  var sections = [];
+  var sz = 5;
+  for (var s = 0; s < verses.length; s += sz) {
+    var end = Math.min(s + sz - 1, verses.length - 1);
+    var label = verses[s].reference;
+    if (end !== s) label += ' \u2013 ' + verses[end].reference;
+    sections.push({ label: label, range: [s, end] });
+  }
+  return {
+    reference: name,
+    verseRefs: verseRefs,
+    sections: sections,
+    seams: seams,
+    card: { layer: 0, streak: 0, ease: 2.5, interval: 0, nextReview: 0 }
+  };
+}
+
+function savePassage(passage) {
+  if (!passage) return;
+  if (!scriptureLib.passages) scriptureLib.passages = [];
+  var idx = scriptureLib.passages.findIndex(function(p) { return p.reference === passage.reference; });
+  if (idx >= 0) scriptureLib.passages[idx] = passage;
+  else scriptureLib.passages.push(passage);
+  saveVerseLibrary(scriptureLib);
+}
+
+function removePassage(ref) {
+  if (!scriptureLib.passages) return;
+  scriptureLib.passages = scriptureLib.passages.filter(function(p) { return p.reference !== ref; });
+  saveVerseLibrary(scriptureLib);
+}
+
+function getPassageVerses(passage) {
+  return passage.verseRefs.map(function(ref) {
+    return scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  }).filter(Boolean);
+}
+
+function populatePassagePicker() {
+  var picker = document.getElementById('drill-passage-picker');
+  if (!picker) return;
+  var opts = '<option value="">Select a passage...</option>';
+  (scriptureLib.passages || []).forEach(function(p) {
+    opts += '<option value="' + escapeHtmlScripture(p.reference) + '">' + escapeHtmlScripture(p.reference) + ' (' + p.verseRefs.length + ' verses)</option>';
+  });
+  picker.innerHTML = opts;
+}
+
+function populatePassageCheckboxes() {
+  var container = document.getElementById('passage-verse-checkboxes');
+  if (!container) return;
+  if (scriptureLib.verses.length === 0) {
+    container.innerHTML = '<p class="empty-state" style="padding:var(--cup-space-sm)">Add verses first</p>';
+    return;
+  }
+  container.innerHTML = scriptureLib.verses.map(function(v) {
+    return '<label><input type="checkbox" value="' + escapeHtmlScripture(v.reference) + '"> ' + escapeHtmlScripture(v.reference) + '</label>';
+  }).join('');
+}
+
+function renderPassageList() {
+  var container = document.getElementById('passage-list');
+  if (!container) return;
+  var passages = scriptureLib.passages || [];
+  if (passages.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = '<h3 style="color:var(--cup-color-warning);margin-bottom:var(--cup-space-sm)">Passages</h3>' +
+    passages.map(function(p) {
+      var seamKeys = Object.keys(p.seams);
+      var seamBars = seamKeys.map(function(k) {
+        var s = p.seams[k].strength;
+        var cls = s < 0.4 ? 'seam-bar--weak' : s < 0.7 ? 'seam-bar--medium' : 'seam-bar--strong';
+        return '<div class="seam-bar ' + cls + '" title="' + escapeHtmlScripture(k) + ': ' + Math.round(s * 100) + '%"></div>';
+      }).join('');
+      return '<div class="passage-card">' +
+        '<p class="passage-card__ref">' + escapeHtmlScripture(p.reference) + '</p>' +
+        '<p class="passage-card__meta">' + p.verseRefs.length + ' verses \u00b7 ' + p.sections.length + ' section' + (p.sections.length !== 1 ? 's' : '') + '</p>' +
+        (seamBars ? '<div class="passage-card__seams">' + seamBars + '</div>' : '') +
+        '<div class="passage-card__actions">' +
+        '<button class="btn btn-sm btn-secondary" data-action="drill-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Drill</button>' +
+        '<button class="btn btn-sm btn-danger" data-action="remove-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Remove</button>' +
+        '</div></div>';
+    }).join('');
+
+  container.querySelectorAll('[data-action="drill-passage"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      switchScriptureTab('drill');
+      setDrillScale('chapter');
+      var ppicker = document.getElementById('drill-passage-picker');
+      if (ppicker) ppicker.value = btn.dataset.ref;
+      startPassageDrill(btn.dataset.ref);
+    });
+  });
+  container.querySelectorAll('[data-action="remove-passage"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (confirm('Remove passage ' + btn.dataset.ref + '?')) {
+        removePassage(btn.dataset.ref);
+        renderPassageList();
+      }
+    });
+  });
+}
+
+function setDrillScale(scale) {
+  scriptureDrillScale = scale;
+  $$('.drill-scale').forEach(function(b) { b.classList.toggle('active', b.dataset.scale === scale); });
+  var versePicker = document.querySelector('.drill-verse-select');
+  var passagePickerDiv = document.getElementById('drill-passage-select');
+  if (scale === 'verse') {
+    if (versePicker) versePicker.style.display = '';
+    if (passagePickerDiv) passagePickerDiv.style.display = 'none';
+  } else {
+    if (versePicker) versePicker.style.display = 'none';
+    if (passagePickerDiv) passagePickerDiv.style.display = '';
+    populatePassagePicker();
+  }
+  document.getElementById('scripture-drill-area').style.display = 'none';
+}
+
+function startPassageDrill(ref) {
+  var passage = (scriptureLib.passages || []).find(function(p) { return p.reference === ref; });
+  if (!passage) { document.getElementById('scripture-drill-area').style.display = 'none'; return; }
+  drillCurrentPassage = passage;
+  var verses = getPassageVerses(passage);
+  if (verses.length === 0) return;
+  document.getElementById('scripture-drill-area').style.display = '';
+  document.getElementById('sdrill-ref').textContent = passage.reference + ' (' + verses.length + ' verses)';
+  document.getElementById('btn-sdrill-next').style.display = 'none';
+  hideAllDrillSubs();
+
+  if (scriptureDrillMode === 'self-check') {
+    startPassageSelfCheck(passage, verses);
+  } else if (scriptureDrillMode === 'chunk-order') {
+    startChapterChunkOrder(passage, verses);
+  } else if (scriptureDrillMode === 'fill-blank') {
+    startBridgeDrill(passage, verses);
+  } else if (scriptureDrillMode === 'fl-tap') {
+    startPassageFlTap(passage, verses);
+  } else {
+    startBridgeDrill(passage, verses);
+  }
+}
+
+function startPassageSelfCheck(passage, verses) {
+  document.getElementById('drill-self-check').style.display = '';
+  var fullText = verses.map(function(v) { return v.text; }).join(' ');
+  document.getElementById('flashcard-text').textContent = fullText;
+  document.getElementById('flashcard-reveal').style.display = 'none';
+  document.getElementById('btn-flashcard-reveal').style.display = '';
+  document.getElementById('flashcard-rating').style.display = 'none';
+}
+
+function startBridgeDrill(passage, verses) {
+  document.getElementById('drill-bridge').style.display = '';
+  bridgeCurrentIdx = 0;
+  showBridgeQuestion(passage, verses, 0);
+}
+
+function showBridgeQuestion(passage, verses, idx) {
+  if (idx >= verses.length - 1) {
+    document.getElementById('bridge-prompt').innerHTML = '';
+    document.getElementById('bridge-bank').innerHTML = '';
+    document.getElementById('bridge-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>All transitions drilled!</p></div>';
+    document.getElementById('btn-sdrill-next').style.display = '';
+    return;
+  }
+  bridgeCurrentIdx = idx;
+  var fromVerse = verses[idx];
+  var chunks = fromVerse.chunks || [fromVerse.text];
+  var prompt = chunks[chunks.length - 1];
+  document.getElementById('bridge-prompt').innerHTML = '<p>\u201c...' + escapeHtmlScripture(prompt) + '\u201d</p><p style="color:var(--cup-color-text-muted);font-size:var(--cup-font-size-sm);margin-top:var(--cup-space-xs)">' + escapeHtmlScripture(fromVerse.reference) + '</p>';
+  document.getElementById('bridge-result').innerHTML = '';
+
+  var nextRef = verses[idx + 1].reference;
+  var pool = [];
+  for (var i = 0; i < verses.length; i++) {
+    if (i !== idx && i !== idx + 1) pool.push(verses[i].reference);
+  }
+  for (var j = pool.length - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = pool[j]; pool[j] = pool[k]; pool[k] = tmp;
+  }
+  var distractors = pool.slice(0, 3);
+  var options = [nextRef].concat(distractors);
+  for (var m = options.length - 1; m > 0; m--) {
+    var n = Math.floor(Math.random() * (m + 1));
+    var t = options[m]; options[m] = options[n]; options[n] = t;
+  }
+
+  document.getElementById('bridge-bank').innerHTML = options.map(function(ref) {
+    return '<button class="bridge-option" data-ref="' + escapeHtmlScripture(ref) + '">' + escapeHtmlScripture(ref) + '</button>';
+  }).join('');
+
+  document.getElementById('bridge-bank').querySelectorAll('.bridge-option').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var picked = btn.dataset.ref;
+      var seamKey = fromVerse.reference + '\u2192' + nextRef;
+      if (picked === nextRef) {
+        btn.classList.add('bridge-option--correct');
+        if (passage.seams[seamKey]) {
+          passage.seams[seamKey].attempts++;
+          passage.seams[seamKey].strength = Math.min(1, passage.seams[seamKey].strength + 0.15);
+        }
+        savePassage(passage);
+        setTimeout(function() { showBridgeQuestion(passage, verses, idx + 1); }, 600);
+      } else {
+        btn.classList.add('bridge-option--wrong');
+        if (passage.seams[seamKey]) {
+          passage.seams[seamKey].attempts++;
+          passage.seams[seamKey].strength = Math.max(0, passage.seams[seamKey].strength - 0.2);
+        }
+        savePassage(passage);
+        document.getElementById('bridge-bank').querySelectorAll('.bridge-option').forEach(function(b) {
+          if (b.dataset.ref === nextRef) b.classList.add('bridge-option--correct');
+        });
+        setTimeout(function() { showBridgeQuestion(passage, verses, idx + 1); }, 1200);
+      }
+      document.getElementById('bridge-bank').querySelectorAll('.bridge-option').forEach(function(b) {
+        b.style.pointerEvents = 'none';
+      });
+    });
+  });
+}
+
+function startChapterChunkOrder(passage, verses) {
+  document.getElementById('drill-chapter-chunks').style.display = '';
+  chapterChunksCorrect = [];
+  verses.forEach(function(v) {
+    (v.chunks || [v.text]).forEach(function(ch) { chapterChunksCorrect.push(ch); });
+  });
+  chapterChunksSelected = [];
+  var scrambled = chapterChunksCorrect.slice();
+  for (var i = scrambled.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = scrambled[i]; scrambled[i] = scrambled[j]; scrambled[j] = tmp;
+  }
+  var same = scrambled.every(function(c, idx) { return c === chapterChunksCorrect[idx]; });
+  if (same && scrambled.length > 1) { var t2 = scrambled[0]; scrambled[0] = scrambled[1]; scrambled[1] = t2; }
+  renderChapterChunks(scrambled);
+  updateChapterChunksProgress();
+  document.getElementById('chapter-chunks-result').innerHTML = '';
+  document.getElementById('btn-chapter-chunks-reset').style.display = 'none';
+}
+
+function renderChapterChunks(scrambled) {
+  var bank = document.getElementById('chapter-chunks-bank');
+  bank.innerHTML = scrambled.map(function(ch, i) {
+    return '<button class="chunk-pill" data-idx="' + i + '">' + escapeHtmlScripture(ch) + '</button>';
+  }).join('');
+  document.getElementById('chapter-chunks-selected').innerHTML = '';
+
+  bank.querySelectorAll('.chunk-pill').forEach(function(pill) {
+    pill.addEventListener('click', function() {
+      if (pill.classList.contains('chunk-pill--used')) return;
+      var text = pill.textContent;
+      chapterChunksSelected.push(text);
+      pill.classList.add('chunk-pill--used');
+      var sel = document.getElementById('chapter-chunks-selected');
+      var sp = document.createElement('span');
+      sp.className = 'chunk-pill chunk-pill--selected';
+      sp.textContent = text;
+      sel.appendChild(sp);
+      updateChapterChunksProgress();
+
+      if (chapterChunksSelected.length === chapterChunksCorrect.length) {
+        var allRight = chapterChunksSelected.every(function(c, ci) { return c === chapterChunksCorrect[ci]; });
+        if (allRight) {
+          document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>Perfect! Every chunk in order.</p></div>';
+          document.getElementById('btn-sdrill-next').style.display = '';
+        } else {
+          var firstWrong = -1;
+          for (var w = 0; w < chapterChunksCorrect.length; w++) {
+            if (chapterChunksSelected[w] !== chapterChunksCorrect[w]) { firstWrong = w; break; }
+          }
+          document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--retry"><p>Wrong order at chunk ' + (firstWrong + 1) + '. Try again!</p></div>';
+          document.getElementById('btn-chapter-chunks-reset').style.display = '';
+        }
+      }
+    });
+  });
+}
+
+function updateChapterChunksProgress() {
+  var pct = chapterChunksCorrect.length > 0 ? Math.round((chapterChunksSelected.length / chapterChunksCorrect.length) * 100) : 0;
+  var fill = document.getElementById('chapter-chunks-fill');
+  var label = document.getElementById('chapter-chunks-label');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = chapterChunksSelected.length + ' / ' + chapterChunksCorrect.length;
+}
+
+function resetChapterChunks() {
+  if (drillCurrentPassage) {
+    var verses = getPassageVerses(drillCurrentPassage);
+    startChapterChunkOrder(drillCurrentPassage, verses);
+  }
+}
+
+function startPassageFlTap(passage, verses) {
+  var allText = verses.map(function(v) { return v.text; }).join(' ');
+  var words = allText.split(/\s+/).filter(Boolean);
+  flTapWords = words;
+  flTapCurrentIdx = 0;
+  document.getElementById('drill-fl-tap').style.display = '';
+  renderFlTapStep();
+}
+
 (function initScripture() {
   $$('.scripture-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchScriptureTab(tab.dataset.stab); });
@@ -1263,5 +1589,43 @@ function handleBulkPaste() {
   var bulkBtn = $('#btn-bulk-import');
   if (bulkBtn) bulkBtn.addEventListener('click', handleBulkPaste);
 
+  // -- Scale selector --
+  $$('.drill-scale').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setDrillScale(btn.dataset.scale);
+    });
+  });
+
+  // -- Passage picker --
+  var passagePickerEl = document.getElementById('drill-passage-picker');
+  if (passagePickerEl) passagePickerEl.addEventListener('change', function() {
+    if (passagePickerEl.value) startPassageDrill(passagePickerEl.value);
+    else document.getElementById('scripture-drill-area').style.display = 'none';
+  });
+
+  // -- Create passage --
+  var createPassageBtn = document.getElementById('btn-create-passage');
+  if (createPassageBtn) createPassageBtn.addEventListener('click', function() {
+    var nameEl = document.getElementById('passage-ref');
+    var name = (nameEl ? nameEl.value : '').trim();
+    if (!name) { alert('Enter a passage name'); return; }
+    var checkboxes = document.querySelectorAll('#passage-verse-checkboxes input[type="checkbox"]:checked');
+    var refs = [];
+    checkboxes.forEach(function(cb) { refs.push(cb.value); });
+    if (refs.length < 2) { alert('Select at least 2 verses'); return; }
+    var passage = createPassageFromVerses(name, refs);
+    if (!passage) { alert('Could not create passage'); return; }
+    savePassage(passage);
+    if (nameEl) nameEl.value = '';
+    checkboxes.forEach(function(cb) { cb.checked = false; });
+    renderPassageList();
+  });
+
+  // -- Chapter chunks reset --
+  var ccResetBtn = document.getElementById('btn-chapter-chunks-reset');
+  if (ccResetBtn) ccResetBtn.addEventListener('click', resetChapterChunks);
+
   renderVerseList();
+  renderPassageList();
+  populatePassageCheckboxes();
 })();
