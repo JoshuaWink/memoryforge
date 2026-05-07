@@ -16,6 +16,7 @@
       <button class="nav-btn active" data-view="drill">Drill</button>
       <button class="nav-btn" data-view="learn">Learn</button>
       <button class="nav-btn" data-view="stats">Stats</button>
+      <button class="nav-btn" data-view="scripture">Scripture</button>
       <button class="nav-btn" data-view="data">Data</button>
     </nav>
   </header>
@@ -376,6 +377,106 @@
       <div id="stats-by-mode" class="stats-types"></div>
     </section>
 
+
+    <!-- ═══ SCRIPTURE MEMORIZATION VIEW ═══ -->
+    <section id="view-scripture" class="view">
+      <h2 class="section-title">Scripture</h2>
+
+      <!-- Sub-navigation -->
+      <div class="scripture-tabs">
+        <button class="scripture-tab active" data-stab="library">Library</button>
+        <button class="scripture-tab" data-stab="review">Review</button>
+        <button class="scripture-tab" data-stab="drill">Drill</button>
+      </div>
+
+      <!-- LIBRARY panel -->
+      <div class="scripture-panel" id="sp-library">
+        <div class="scripture-add">
+          <div class="field-group">
+            <label class="field-label" for="verse-ref">Reference</label>
+            <input type="text" id="verse-ref" class="field-input" placeholder="e.g. John 3:16">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="verse-translation">Translation</label>
+            <select id="verse-translation" class="field-input">
+              <option value="KJV">KJV</option>
+              <option value="ESV">ESV</option>
+              <option value="NASB">NASB</option>
+              <option value="NIV">NIV</option>
+              <option value="NKJV">NKJV</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="verse-text">Text</label>
+            <textarea id="verse-text" class="field-input scripture-textarea" rows="3" placeholder="Type or paste the verse text..."></textarea>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="verse-notes">Story Notes (optional)</label>
+            <textarea id="verse-notes" class="field-input" rows="2" placeholder="Your imagery, scenes, memory aids..."></textarea>
+          </div>
+          <button id="btn-add-verse" class="btn btn-primary">Add Verse</button>
+        </div>
+
+        <div class="scripture-list" id="scripture-list">
+          <p class="empty-state">No verses yet. Add your first verse above.</p>
+        </div>
+      </div>
+
+      <!-- REVIEW panel (spaced repetition queue) -->
+      <div class="scripture-panel" id="sp-review" style="display:none;">
+        <div class="review-status" id="review-status">
+          <p class="review-count"><span id="review-due-count">0</span> verses due for review</p>
+          <button id="btn-start-review" class="btn btn-primary">Start Review</button>
+        </div>
+        <div class="review-card" id="review-card" style="display:none;">
+          <p class="review-reference" id="review-ref"></p>
+          <p class="review-layer" id="review-layer"></p>
+          <div class="review-input-area">
+            <textarea id="review-input" class="field-input scripture-textarea" rows="4" placeholder="Type the verse from memory..."></textarea>
+            <button id="btn-check-review" class="btn btn-primary">Check</button>
+          </div>
+          <div class="review-diff" id="review-diff" style="display:none;"></div>
+          <div class="review-actions" id="review-actions" style="display:none;">
+            <p class="review-score-label">How well did you recall it?</p>
+            <div class="review-quality-btns">
+              <button class="btn btn-sm review-q" data-q="1">Blank</button>
+              <button class="btn btn-sm review-q" data-q="2">Hard</button>
+              <button class="btn btn-sm review-q" data-q="3">OK</button>
+              <button class="btn btn-sm review-q" data-q="4">Good</button>
+              <button class="btn btn-sm review-q" data-q="5">Perfect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DRILL panel (first-letter, fill-in-blank) -->
+      <div class="scripture-panel" id="sp-drill" style="display:none;">
+        <div class="drill-mode-select">
+          <label class="field-label">Drill Mode</label>
+          <div class="drill-mode-btns">
+            <button class="btn btn-sm scripture-mode active" data-mode="first-letter">First Letter</button>
+            <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
+            <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
+          </div>
+        </div>
+        <div class="drill-verse-select">
+          <label class="field-label" for="drill-verse-picker">Verse</label>
+          <select id="drill-verse-picker" class="field-input">
+            <option value="">Select a verse...</option>
+          </select>
+        </div>
+        <div class="scripture-drill-area" id="scripture-drill-area" style="display:none;">
+          <p class="drill-reference" id="sdrill-ref"></p>
+          <div class="drill-hint" id="sdrill-hint"></div>
+          <textarea id="sdrill-input" class="field-input scripture-textarea" rows="4" placeholder="Type the verse..."></textarea>
+          <button id="btn-sdrill-check" class="btn btn-primary">Check</button>
+          <div class="drill-diff" id="sdrill-diff" style="display:none;"></div>
+          <button id="btn-sdrill-next" class="btn btn-secondary" style="display:none;">Next</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══ DATA VIEW ═══ -->
     <section id="view-data" class="view">
       <h2 class="section-title">Data Management</h2>
@@ -454,5 +555,6 @@
   </main>
 
   <script src="app.js"></script>
+  <script src="scripture.js"></script>
 </body>
 </html>
