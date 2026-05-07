@@ -1860,6 +1860,299 @@ $('#btn-clear').addEventListener('click', async () => {
 
 // ═══════════════════════════════════════════════════════════════════
 //  PWA Service Worker
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  RECALL TIMER & NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+// -- RecallTimer engine (inlined from src/recall-timer.js) --
+var recallTimer = (function() {
+  var _startedAt = null, _durationMs = 0, _challenge = null, _cancelled = false;
+  return {
+    start: function(durationMs, challenge) {
+      if (this.isActive()) throw new Error('Timer already active');
+      _startedAt = Date.now(); _durationMs = durationMs;
+      _challenge = challenge; _cancelled = false;
+    },
+    remaining: function() {
+      if (!_startedAt || _cancelled) return 0;
+      return Math.max(0, _durationMs - (Date.now() - _startedAt));
+    },
+    isActive: function() { return _startedAt !== null && !_cancelled && this.remaining() > 0; },
+    isExpired: function() { return _startedAt !== null && !_cancelled && this.remaining() === 0; },
+    getChallenge: function() { return _challenge; },
+    cancel: function() { _cancelled = true; },
+    formatRemaining: function() {
+      var ms = this.remaining();
+      var sec = Math.ceil(ms / 1000);
+      var h = Math.floor(sec / 3600);
+      var m = Math.floor((sec % 3600) / 60);
+      var s = sec % 60;
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    },
+    export: function() {
+      return { startedAt: _startedAt, durationMs: _durationMs, challenge: _challenge, cancelled: _cancelled };
+    },
+    restore: function(st) {
+      if (!st) return;
+      _startedAt = st.startedAt; _durationMs = st.durationMs;
+      _challenge = st.challenge; _cancelled = st.cancelled || false;
+    }
+  };
+})();
+
+// -- Reminder Scheduler --
+var reminderScheduler = (function() {
+  var _reminders = [], _nextId = 1;
+  return {
+    add: function(timeMs, label) {
+      var r = { id: _nextId++, time: timeMs, label: label };
+      _reminders.push(r); return r;
+    },
+    getAll: function() { return _reminders.slice(); },
+    remove: function(id) { _reminders = _reminders.filter(function(r) { return r.id !== id; }); },
+    getDue: function() {
+      var now = Date.now();
+      return _reminders.filter(function(r) { return r.time <= now; });
+    },
+    clearFired: function() {
+      var now = Date.now();
+      _reminders = _reminders.filter(function(r) { return r.time > now; });
+    },
+    export: function() { return _reminders.slice(); },
+    restore: function(arr) {
+      if (!arr) return;
+      _reminders = arr.slice();
+      _nextId = _reminders.length > 0
+        ? Math.max.apply(null, _reminders.map(function(r) { return r.id; })) + 1 : 1;
+    }
+  };
+})();
+
+// -- Persistence --
+function saveTimerState() {
+  try {
+    localStorage.setItem('mf_recall_timer', JSON.stringify(recallTimer.export()));
+    localStorage.setItem('mf_reminders', JSON.stringify(reminderScheduler.export()));
+  } catch(e) {}
+}
+function loadTimerState() {
+  try {
+    var ts = localStorage.getItem('mf_recall_timer');
+    if (ts) recallTimer.restore(JSON.parse(ts));
+    var rs = localStorage.getItem('mf_reminders');
+    if (rs) reminderScheduler.restore(JSON.parse(rs));
+  } catch(e) {}
+}
+
+// -- Notification permission --
+function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      reg.showNotification(title, {
+        body: body, icon: 'icons/icon-192.png',
+        tag: 'memoryforge-recall', requireInteraction: true,
+        data: { action: 'recall' }
+      });
+    }).catch(function() { new Notification(title, { body: body }); });
+  } else {
+    new Notification(title, { body: body });
+  }
+}
+
+// -- Timer tick --
+var timerTickInterval = null;
+
+function startTimerTick() {
+  stopTimerTick();
+  var bar = $('#timer-bar');
+  bar.style.display = '';
+  timerTickInterval = setInterval(function() {
+    if (recallTimer.isActive()) {
+      $('#timer-bar-countdown').textContent = recallTimer.formatRemaining();
+    } else if (recallTimer.isExpired()) {
+      stopTimerTick();
+      bar.style.display = 'none';
+      onTimerExpired();
+    } else {
+      stopTimerTick();
+      bar.style.display = 'none';
+    }
+  }, 250);
+}
+
+function stopTimerTick() {
+  if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
+}
+
+function onTimerExpired() {
+  sendNotification("Time\u2019s Up!", "What were you memorizing? Tap to recall.");
+  showRecallPanel();
+}
+
+// -- Timer setup panel --
+function showTimerSetup() {
+  var preview = currentMaterial || '(no material)';
+  $('#timer-preview-value').textContent = preview;
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  $('#timer-setup-panel').style.display = '';
+  history.pushState({ panel: 'timer-setup' }, '');
+}
+
+$$('.timer-preset').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    startRecallTimer(parseInt(btn.dataset.ms));
+  });
+});
+
+$('#btn-timer-custom-start').addEventListener('click', function() {
+  var min = parseInt($('#timer-custom-min').value);
+  if (!min || min < 1) return;
+  startRecallTimer(min * 60000);
+});
+
+function startRecallTimer(ms) {
+  requestNotificationPermission();
+  var challenge = {
+    type: 'drill',
+    prompt: currentMaterial || '',
+    mode: $('#drill-mode') ? $('#drill-mode').value : 'recall'
+  };
+  recallTimer.start(ms, challenge);
+  saveTimerState();
+  startTimerTick();
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  var drillView = $('#view-drill');
+  if (drillView) drillView.style.display = '';
+  showPanel('config');
+}
+
+// -- Recall panel --
+function showRecallPanel() {
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  $('#recall-panel').style.display = '';
+  var ch = recallTimer.getChallenge();
+  $('#recall-type').textContent = ch ? 'Mode: ' + (ch.mode || 'recall') : '';
+  $('#recall-input').value = '';
+  $('#recall-result').style.display = 'none';
+  $('#recall-input').focus();
+  history.pushState({ panel: 'recall' }, '');
+}
+
+$('#btn-recall-submit').addEventListener('click', function() {
+  var ch = recallTimer.getChallenge();
+  if (!ch) return;
+  var answer = $('#recall-input').value.trim();
+  var expected = ch.prompt || '';
+  var correct = answer.toLowerCase() === expected.toLowerCase();
+  $('#recall-verdict').textContent = correct ? 'Correct!' : 'Not quite.';
+  $('#recall-verdict').className = 'recall-result__verdict ' + (correct ? 'correct' : 'wrong');
+  $('#recall-expected').textContent = expected;
+  $('#recall-yours').textContent = answer;
+  $('#recall-result').style.display = '';
+});
+
+$('#btn-recall-done').addEventListener('click', function() {
+  recallTimer.cancel();
+  saveTimerState();
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  var drillView = $('#view-drill');
+  if (drillView) { drillView.style.display = ''; showPanel('config'); }
+});
+
+$('#btn-recall-timer').addEventListener('click', function() {
+  showTimerSetup();
+});
+
+$('#timer-bar-cancel').addEventListener('click', function() {
+  recallTimer.cancel(); saveTimerState(); stopTimerTick();
+  $('#timer-bar').style.display = 'none';
+});
+
+$('#btn-back-timer').addEventListener('click', function() {
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  var drillView = $('#view-drill');
+  if (drillView) { drillView.style.display = ''; showPanel('score'); }
+});
+
+// -- Reminders --
+function showRemindersPanel() {
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  $('#reminders-panel').style.display = '';
+  renderReminders();
+  history.pushState({ panel: 'reminders' }, '');
+}
+
+function renderReminders() {
+  var list = $('#reminder-list');
+  var all = reminderScheduler.getAll();
+  if (all.length === 0) {
+    list.innerHTML = '<p class="reminder-empty">No reminders set.</p>';
+    return;
+  }
+  list.innerHTML = all.map(function(r) {
+    var d = new Date(r.time);
+    var timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return '<div class="reminder-item">' +
+      '<span class="reminder-item__time">' + timeStr + '</span>' +
+      '<span class="reminder-item__label">' + escapeHtml(r.label) + '</span>' +
+      '<button class="reminder-item__remove" data-id="' + r.id + '">\u00d7</button>' +
+    '</div>';
+  }).join('');
+  list.querySelectorAll('.reminder-item__remove').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      reminderScheduler.remove(parseInt(btn.dataset.id));
+      saveTimerState(); renderReminders();
+    });
+  });
+}
+
+$('#btn-add-reminder').addEventListener('click', function() {
+  var timeInput = $('#reminder-time').value;
+  if (!timeInput) return;
+  requestNotificationPermission();
+  var parts = timeInput.split(':');
+  var now = new Date();
+  var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+    parseInt(parts[0]), parseInt(parts[1]));
+  if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+  reminderScheduler.add(target.getTime(), 'Practice memory drills');
+  saveTimerState(); renderReminders();
+  $('#reminder-time').value = '';
+});
+
+$('#btn-back-reminders').addEventListener('click', function() {
+  $$('.view').forEach(function(v) { v.style.display = 'none'; });
+  var drillView = $('#view-drill');
+  if (drillView) drillView.style.display = '';
+});
+
+// -- Reminder check loop --
+var reminderCheckInterval = setInterval(function() {
+  var due = reminderScheduler.getDue();
+  if (due.length > 0) {
+    due.forEach(function(r) { sendNotification('MemoryForge', r.label); });
+    reminderScheduler.clearFired(); saveTimerState();
+  }
+}, 30000);
+
+// -- Init timer on load --
+loadTimerState();
+if (recallTimer.isActive()) {
+  startTimerTick();
+} else if (recallTimer.isExpired()) {
+  showRecallPanel();
+}
+
 // ═══════════════════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

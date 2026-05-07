@@ -28,3 +28,18 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
+
+// Handle notification clicks — focus or open the app
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes('memoryforge') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow('./');
+    })
+  );
+});

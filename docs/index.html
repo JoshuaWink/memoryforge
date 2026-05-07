@@ -21,6 +21,17 @@
   </header>
 
   <main class="app-main">
+
+    <!-- ═══ TIMER BAR (floating, always visible when active) ═══ -->
+    <div id="timer-bar" class="timer-bar" style="display: none;">
+      <div class="timer-bar__info">
+        <span class="timer-bar__icon">&#9200;</span>
+        <span id="timer-bar-label" class="timer-bar__label">Recall in</span>
+        <span id="timer-bar-countdown" class="timer-bar__countdown">0:00:00</span>
+      </div>
+      <button id="timer-bar-cancel" class="timer-bar__cancel" aria-label="Cancel timer">&times;</button>
+    </div>
+
     <!-- ═══ DRILL VIEW ═══ -->
     <section id="view-drill" class="view active">
       <!-- Config panel -->
@@ -129,6 +140,7 @@
         <div class="score-actions">
           <button id="btn-again" class="btn btn-primary">Drill Again</button>
           <button id="btn-new" class="btn btn-secondary">New Config</button>
+          <button id="btn-recall-timer" class="btn btn-accent">Test Recall Later</button>
         </div>
       </div>
     </section>
@@ -357,6 +369,64 @@
         <button id="btn-clear" class="btn btn-danger">Clear All Data</button>
       </div>
     </section>
+
+    <!-- ═══ TIMER SETUP PANEL ═══ -->
+    <section id="timer-setup-panel" class="view timer-setup-panel" style="display: none;">
+      <button id="btn-back-timer" class="btn btn-secondary btn-back">&larr; Back</button>
+      <h2 class="section-title">Delayed Recall Challenge</h2>
+      <div class="timer-challenge-preview" id="timer-challenge-preview">
+        <p class="timer-challenge-preview__label">You memorized:</p>
+        <p class="timer-challenge-preview__value" id="timer-preview-value"></p>
+      </div>
+      <p class="timer-setup__instruction">How long before you recall?</p>
+      <div class="timer-presets" id="timer-presets">
+        <button class="btn timer-preset" data-ms="60000">1 min</button>
+        <button class="btn timer-preset" data-ms="300000">5 min</button>
+        <button class="btn timer-preset" data-ms="900000">15 min</button>
+        <button class="btn timer-preset" data-ms="1800000">30 min</button>
+        <button class="btn timer-preset" data-ms="3600000">1 hour</button>
+      </div>
+      <div class="timer-custom">
+        <label class="field-label" for="timer-custom-min">Custom (minutes)</label>
+        <div class="timer-custom__row">
+          <input id="timer-custom-min" type="number" class="field-input" min="1" max="480" placeholder="e.g. 10">
+          <button id="btn-timer-custom-start" class="btn btn-primary">Start</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ RECALL INPUT PANEL ═══ -->
+    <section id="recall-panel" class="view recall-panel" style="display: none;">
+      <h2 class="section-title">Time's Up! What Do You Remember?</h2>
+      <p class="recall-panel__type" id="recall-type"></p>
+      <div class="field-group">
+        <label class="field-label" for="recall-input">Your answer</label>
+        <input id="recall-input" type="text" class="field-input recall-input" autocomplete="off" placeholder="Type what you memorized...">
+      </div>
+      <button id="btn-recall-submit" class="btn btn-primary">Check</button>
+      <div id="recall-result" class="recall-result" style="display: none;">
+        <p class="recall-result__verdict" id="recall-verdict"></p>
+        <p class="recall-result__expected">Expected: <strong id="recall-expected"></strong></p>
+        <p class="recall-result__yours">You typed: <strong id="recall-yours"></strong></p>
+        <button id="btn-recall-done" class="btn btn-secondary">Done</button>
+      </div>
+    </section>
+
+    <!-- ═══ REMINDERS PANEL ═══ -->
+    <section id="reminders-panel" class="view reminders-panel" style="display: none;">
+      <button id="btn-back-reminders" class="btn btn-secondary btn-back">&larr; Back</button>
+      <h2 class="section-title">Practice Reminders</h2>
+      <div class="reminder-add">
+        <label class="field-label" for="reminder-time">Remind me at</label>
+        <div class="reminder-add__row">
+          <input id="reminder-time" type="time" class="field-input">
+          <button id="btn-add-reminder" class="btn btn-primary">Set</button>
+        </div>
+      </div>
+      <div id="reminder-list" class="reminder-list"></div>
+      <p class="reminder-note">Reminders use browser notifications. Keep the app open or installed as a PWA for best results.</p>
+    </section>
+
   </main>
 
   <script src="app.js"></script>
