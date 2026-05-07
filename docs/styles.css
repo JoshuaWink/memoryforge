@@ -992,3 +992,136 @@ body {
   color: var(--cup-color-primary);
   font-weight: 600;
 }
+
+
+/* ═══ Tablet & Up ═══
+ * Strategy: override tokens at breakpoint so sizing cascades to ALL components.
+ * Then add layout-specific rules for grids/columns. */
+
+/* ── Tablet portrait (768px+) ── */
+@media (min-width: 768px) {
+  :root {
+    --cup-space-md:  1.25rem;
+    --cup-space-lg:  2rem;
+    --cup-space-xl:  2.5rem;
+    --cup-space-2xl: 4rem;
+    --cup-font-size-base: 1.0625rem;
+    --cup-font-size-lg:   1.375rem;
+    --cup-font-size-xl:   1.75rem;
+    --cup-font-size-2xl:  2.25rem;
+  }
+
+  .app-main {
+    max-width: 720px;
+  }
+
+  /* Stats use the extra width */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Learn grid: 2 columns, tighter */
+  .learn-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--cup-space-md);
+  }
+
+  /* Bridge cards get more room */
+  .bridge-cards {
+    gap: var(--cup-space-lg);
+  }
+
+  .bridge-card {
+    padding: var(--cup-space-lg);
+  }
+
+  .bridge-card__header {
+    gap: var(--cup-space-lg);
+  }
+
+  /* Flashcard scales up */
+  .flashcard {
+    max-width: 420px;
+    min-height: 340px;
+  }
+
+  .flashcard__front,
+  .flashcard__back {
+    padding: 2.5rem 2rem;
+  }
+
+  .flashcard-actions {
+    gap: 2rem;
+  }
+
+  /* Quiz options can be wider */
+  .trainer-quiz__options {
+    max-width: 500px;
+  }
+
+  /* Trainer story blocks breathe */
+  .trainer-lesson__story {
+    padding: var(--cup-space-lg);
+  }
+
+  /* Data actions row */
+  .data-actions {
+    flex-wrap: nowrap;
+  }
+
+  /* Reference table */
+  .ref-table th,
+  .ref-table td {
+    padding: var(--cup-space-sm) var(--cup-space-md);
+  }
+}
+
+/* ── Tablet landscape / small desktop (1024px+) ── */
+@media (min-width: 1024px) {
+  :root {
+    --cup-space-lg:  2.25rem;
+    --cup-space-xl:  3rem;
+    --cup-space-2xl: 4.5rem;
+    --cup-font-size-lg:   1.5rem;
+    --cup-font-size-xl:   2rem;
+    --cup-font-size-2xl:  2.5rem;
+  }
+
+  .app-main {
+    max-width: 860px;
+  }
+
+  /* Learn grid: 3 columns at landscape */
+  .learn-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Stats: 3+ columns */
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Bridge cards: 2-column layout */
+  .bridge-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Quiz options: 2x2 grid */
+  .trainer-quiz__options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 600px;
+  }
+
+  /* Flashcard even bigger */
+  .flashcard {
+    max-width: 460px;
+    min-height: 360px;
+  }
+
+  /* Header nav spreads out */
+  .app-nav {
+    gap: var(--cup-space-sm);
+  }
+}
