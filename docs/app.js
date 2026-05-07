@@ -2111,16 +2111,28 @@ showNotifBanner();
 
 function sendNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+  var opts = {
+    body: body,
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    tag: 'memoryforge-recall',
+    renotify: true,
+    requireInteraction: true,
+    silent: false,
+    vibrate: [200, 100, 200, 100, 200],
+    data: { action: 'recall' },
+    actions: [
+      { action: 'open', title: 'Open App' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+  // Android requires ServiceWorker.showNotification — page-level Notification() is ignored
+  if (navigator.serviceWorker) {
     navigator.serviceWorker.ready.then(function(reg) {
-      reg.showNotification(title, {
-        body: body, icon: 'icons/icon-192.png',
-        tag: 'memoryforge-recall', requireInteraction: true,
-        data: { action: 'recall' }
-      });
-    }).catch(function() { new Notification(title, { body: body }); });
-  } else {
-    new Notification(title, { body: body });
+      reg.showNotification(title, opts);
+    }).catch(function(err) {
+      console.warn('SW notification failed:', err);
+    });
   }
 }
 
