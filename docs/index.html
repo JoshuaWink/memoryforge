@@ -482,12 +482,16 @@
         </div>
       </div>
 
-      <!-- DRILL panel (first-letter, fill-in-blank) -->
+      <!-- DRILL panel -->
       <div class="scripture-panel" id="sp-drill" style="display:none;">
         <div class="drill-mode-select">
           <label class="field-label">Drill Mode</label>
           <div class="drill-mode-btns">
-            <button class="btn btn-sm scripture-mode active" data-mode="first-letter">First Letter</button>
+            <button class="btn btn-sm scripture-mode active" data-mode="self-check">Self-Check</button>
+            <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
+            <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
+            <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
+            <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
             <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
             <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
           </div>
@@ -500,11 +504,62 @@
         </div>
         <div class="scripture-drill-area" id="scripture-drill-area" style="display:none;">
           <p class="drill-reference" id="sdrill-ref"></p>
-          <div class="drill-hint" id="sdrill-hint"></div>
-          <textarea id="sdrill-input" class="field-input scripture-textarea" rows="4" placeholder="Type the verse..."></textarea>
-          <button id="btn-sdrill-check" class="btn btn-primary">Check</button>
-          <div class="drill-diff" id="sdrill-diff" style="display:none;"></div>
-          <button id="btn-sdrill-next" class="btn btn-secondary" style="display:none;">Next</button>
+
+          <!-- Self-Check (flashcard) -->
+          <div class="drill-flashcard" id="drill-self-check" style="display:none;">
+            <p class="drill-flashcard__prompt">Recite from memory, then tap Reveal to check</p>
+            <div class="drill-flashcard__reveal" id="flashcard-reveal" style="display:none;">
+              <p class="drill-flashcard__text" id="flashcard-text"></p>
+            </div>
+            <button id="btn-flashcard-reveal" class="btn btn-primary">Reveal</button>
+            <div class="drill-flashcard__rating" id="flashcard-rating" style="display:none;">
+              <button class="btn rate-nailed" data-q="5">Nailed it</button>
+              <button class="btn rate-close" data-q="4">Close</button>
+              <button class="btn rate-struggled" data-q="2">Struggled</button>
+              <button class="btn rate-blank" data-q="1">Blank</button>
+            </div>
+          </div>
+
+          <!-- Chunk Ordering -->
+          <div class="drill-chunk-order" id="drill-chunk-order" style="display:none;">
+            <p class="field-label">Tap chunks in the correct order:</p>
+            <div class="drill-chunk-order__selected" id="chunk-order-selected"></div>
+            <p class="field-label" style="margin-top:var(--cup-space-sm)">Available chunks:</p>
+            <div class="drill-chunk-order__bank" id="chunk-order-bank"></div>
+            <div id="chunk-order-result"></div>
+            <button id="btn-chunk-order-reset" class="btn btn-secondary" style="display:none;margin-top:var(--cup-space-sm)">Reset</button>
+          </div>
+
+          <!-- Fill-in-the-Blank -->
+          <div class="drill-fill-blank" id="drill-fill-blank" style="display:none;">
+            <div class="drill-progress" id="fill-blank-progress">
+              <div class="drill-progress__bar"><div class="drill-progress__fill" id="fill-blank-fill" style="width:0%"></div></div>
+              <p class="drill-progress__label" id="fill-blank-label"></p>
+            </div>
+            <div class="drill-fill-blank__verse" id="fill-blank-verse"></div>
+            <p class="field-label">Tap the correct word:</p>
+            <div class="drill-fill-blank__bank" id="fill-blank-bank"></div>
+            <div id="fill-blank-result"></div>
+          </div>
+
+          <!-- First-Letter Tap -->
+          <div class="drill-fl-tap" id="drill-fl-tap" style="display:none;">
+            <div class="drill-fl-tap__hint" id="fl-tap-hint"></div>
+            <div class="drill-fl-tap__progress" id="fl-tap-progress"></div>
+            <p class="field-label">Tap the next word:</p>
+            <div class="drill-fl-tap__bank" id="fl-tap-bank"></div>
+            <div id="fl-tap-result"></div>
+          </div>
+
+          <!-- Legacy typing modes -->
+          <div id="drill-typing-area" style="display:none;">
+            <div class="drill-hint" id="sdrill-hint"></div>
+            <textarea id="sdrill-input" class="field-input scripture-textarea" rows="4" placeholder="Type the verse..."></textarea>
+            <button id="btn-sdrill-check" class="btn btn-primary">Check</button>
+            <div class="drill-diff" id="sdrill-diff" style="display:none;"></div>
+          </div>
+
+          <button id="btn-sdrill-next" class="btn btn-secondary" style="display:none;margin-top:var(--cup-space-md)">Next</button>
         </div>
       </div>
     </section>

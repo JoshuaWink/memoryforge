@@ -1852,3 +1852,313 @@ body {
 .import-file-label {
   cursor: pointer;
 }
+
+/* ═══ TAP DRILL MODES ═══ */
+
+/* Self-check (flashcard reveal) */
+.drill-flashcard {
+  text-align: center;
+  padding: var(--cup-space-xl);
+}
+
+.drill-flashcard__ref {
+  font-size: var(--cup-font-size-xl);
+  font-weight: 700;
+  color: var(--cup-color-primary);
+  margin-bottom: var(--cup-space-lg);
+}
+
+.drill-flashcard__prompt {
+  color: var(--cup-color-text-muted);
+  font-style: italic;
+  margin-bottom: var(--cup-space-lg);
+}
+
+.drill-flashcard__reveal {
+  min-height: 80px;
+  margin-bottom: var(--cup-space-lg);
+}
+
+.drill-flashcard__text {
+  font-size: var(--cup-font-size-lg);
+  line-height: 1.8;
+  color: var(--cup-color-text);
+  padding: var(--cup-space-md);
+  background: var(--cup-color-bg);
+  border-radius: var(--cup-radius-md);
+  border: 1px dashed var(--cup-color-border);
+}
+
+.drill-flashcard__rating {
+  display: flex;
+  gap: var(--cup-space-sm);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--cup-space-md);
+}
+
+.drill-flashcard__rating .btn {
+  min-width: 80px;
+}
+
+.rate-nailed { background: var(--cup-color-success); color: #fff; }
+.rate-close { background: #4a9; color: #fff; }
+.rate-struggled { background: var(--cup-color-warning); color: #1a1a2e; }
+.rate-blank { background: var(--cup-color-error); color: #fff; }
+
+/* Chunk ordering (tap to sequence) */
+.drill-chunk-order {
+  padding: var(--cup-space-md);
+}
+
+.drill-chunk-order__bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-lg);
+  min-height: 48px;
+  padding: var(--cup-space-sm);
+  background: var(--cup-color-bg);
+  border-radius: var(--cup-radius-md);
+  border: 1px dashed var(--cup-color-border);
+}
+
+.drill-chunk-order__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-md);
+  min-height: 48px;
+  padding: var(--cup-space-sm);
+  background: var(--cup-color-surface);
+  border-radius: var(--cup-radius-md);
+  border: 2px solid var(--cup-color-primary);
+}
+
+.chunk-pill {
+  display: inline-block;
+  padding: var(--cup-space-xs) var(--cup-space-md);
+  background: var(--cup-color-surface);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-full);
+  cursor: pointer;
+  font-size: var(--cup-font-size-sm);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.chunk-pill:hover {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+  border-color: var(--cup-color-primary);
+}
+
+.chunk-pill--selected {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+  border-color: var(--cup-color-primary);
+}
+
+.chunk-pill--correct {
+  background: var(--cup-color-success);
+  color: #fff;
+  border-color: var(--cup-color-success);
+}
+
+.chunk-pill--wrong {
+  background: var(--cup-color-error);
+  color: #fff;
+  border-color: var(--cup-color-error);
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.chunk-pill--used {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Fill-in-the-blank (tap word options) */
+.drill-fill-blank {
+  padding: var(--cup-space-md);
+}
+
+.drill-fill-blank__verse {
+  font-size: var(--cup-font-size-lg);
+  line-height: 2.2;
+  margin-bottom: var(--cup-space-lg);
+  color: var(--cup-color-text);
+}
+
+.blank-slot {
+  display: inline-block;
+  min-width: 60px;
+  padding: 2px var(--cup-space-sm);
+  border-bottom: 2px dashed var(--cup-color-primary);
+  color: var(--cup-color-primary);
+  cursor: pointer;
+  text-align: center;
+  margin: 0 2px;
+  border-radius: var(--cup-radius-sm);
+  transition: all 0.15s ease;
+}
+
+.blank-slot:hover {
+  background: rgba(108, 92, 231, 0.1);
+}
+
+.blank-slot--filled {
+  border-bottom-style: solid;
+  background: rgba(108, 92, 231, 0.15);
+  font-weight: 600;
+}
+
+.blank-slot--correct {
+  border-color: var(--cup-color-success);
+  color: var(--cup-color-success);
+  background: rgba(0, 206, 100, 0.1);
+}
+
+.blank-slot--wrong {
+  border-color: var(--cup-color-error);
+  color: var(--cup-color-error);
+  background: rgba(255, 71, 87, 0.1);
+  animation: shake 0.3s ease;
+}
+
+.drill-fill-blank__bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-sm);
+  padding: var(--cup-space-md);
+  background: var(--cup-color-bg);
+  border-radius: var(--cup-radius-md);
+  border: 1px solid var(--cup-color-border);
+  margin-bottom: var(--cup-space-md);
+}
+
+.word-option {
+  display: inline-block;
+  padding: var(--cup-space-xs) var(--cup-space-md);
+  background: var(--cup-color-surface);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-full);
+  cursor: pointer;
+  font-size: var(--cup-font-size-base);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.word-option:hover {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+}
+
+.word-option--used {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* First-letter tap (word bank) */
+.drill-fl-tap {
+  padding: var(--cup-space-md);
+}
+
+.drill-fl-tap__hint {
+  font-family: var(--cup-font-mono, monospace);
+  font-size: var(--cup-font-size-xl);
+  letter-spacing: 2px;
+  color: var(--cup-color-text-muted);
+  margin-bottom: var(--cup-space-md);
+  line-height: 1.8;
+}
+
+.drill-fl-tap__progress {
+  font-size: var(--cup-font-size-lg);
+  line-height: 2;
+  margin-bottom: var(--cup-space-lg);
+  color: var(--cup-color-text);
+  min-height: 60px;
+}
+
+.drill-fl-tap__progress .word-correct {
+  color: var(--cup-color-success);
+}
+
+.drill-fl-tap__progress .word-current {
+  color: var(--cup-color-primary);
+  font-weight: 700;
+  border-bottom: 2px solid var(--cup-color-primary);
+}
+
+.drill-fl-tap__bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-sm);
+  padding: var(--cup-space-md);
+  background: var(--cup-color-bg);
+  border-radius: var(--cup-radius-md);
+  border: 1px solid var(--cup-color-border);
+}
+
+/* Drill progress bar */
+.drill-progress {
+  margin-bottom: var(--cup-space-md);
+}
+
+.drill-progress__bar {
+  height: 6px;
+  background: var(--cup-color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.drill-progress__fill {
+  height: 100%;
+  background: var(--cup-color-primary);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.drill-progress__label {
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+  margin-top: var(--cup-space-xs);
+  text-align: right;
+}
+
+/* Drill result banner */
+.drill-result {
+  text-align: center;
+  padding: var(--cup-space-lg);
+  border-radius: var(--cup-radius-md);
+  margin-top: var(--cup-space-md);
+}
+
+.drill-result--perfect {
+  background: rgba(0, 206, 100, 0.15);
+  border: 1px solid var(--cup-color-success);
+  color: var(--cup-color-success);
+}
+
+.drill-result--good {
+  background: rgba(108, 92, 231, 0.15);
+  border: 1px solid var(--cup-color-primary);
+  color: var(--cup-color-primary);
+}
+
+.drill-result--retry {
+  background: rgba(255, 71, 87, 0.15);
+  border: 1px solid var(--cup-color-error);
+  color: var(--cup-color-error);
+}
+
+/* Drill mode button wrapping for mobile */
+.drill-mode-btns {
+  flex-wrap: wrap;
+}

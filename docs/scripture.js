@@ -419,7 +419,7 @@ function getDueVerses(lib, now) {
 var scriptureLib = loadVerseLibrary();
 var currentReviewQueue = [];
 var currentReviewIdx = 0;
-var scriptureDrillMode = 'first-letter';
+var scriptureDrillMode = 'self-check';
 
 function renderVerseList() {
   var container = $('#scripture-list');
@@ -593,30 +593,115 @@ function rateReview(quality) {
 }
 
 // -- Drill System --
+
+// Inline drill-modes utilities
+function drillSeededRandom(seed) {
+  var s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0x100000000;
+  };
+}
+
+function drillShuffle(arr, rng) {
+  var rand = rng || Math.random;
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rand() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function scrambleChunks(chunks) {
+  if (chunks.length <= 1) return chunks.slice();
+  var scrambled = drillShuffle(chunks);
+  var same = scrambled.every(function(c, i) { return c === chunks[i]; });
+  if (same) { var tmp = scrambled[0]; scrambled[0] = scrambled[1]; scrambled[1] = tmp; }
+  return scrambled;
+}
+
+function generateBlanks(words, ratio, seed) {
+  if (ratio <= 0) return words.map(function(w, i) { return { word: w, blanked: false, index: i }; });
+  if (ratio >= 1) return words.map(function(w, i) { return { word: w, blanked: true, index: i }; });
+  var count = Math.round(words.length * ratio);
+  var indices = words.map(function(_, i) { return i; });
+  var rng = seed !== undefined ? drillSeededRandom(seed) : undefined;
+  var shuffled = drillShuffle(indices, rng);
+  var blankedSet = {};
+  for (var k = 0; k < count; k++) blankedSet[shuffled[k]] = true;
+  return words.map(function(w, i) { return { word: w, blanked: !!blankedSet[i], index: i }; });
+}
+
+function generateWordBank(blanks, distractors) {
+  var correct = blanks.filter(function(b) { return b.blanked; }).map(function(b) { return b.word; });
+  if (correct.length === 0) return [];
+  var bank = correct.slice();
+  if (distractors && distractors.length > 0) distractors.forEach(function(d) { bank.push(d); });
+  return drillShuffle(bank);
+}
+
+// Drill state
+var drillCurrentVerse = null;
+var chunkOrderCorrect = [];
+var chunkOrderSelected = [];
+var fillBlankItems = [];
+var fillBlankBankWords = [];
+var fillBlankCurrentIdx = 0;
+var flTapWords = [];
+var flTapCurrentIdx = 0;
+
+function hideAllDrillSubs() {
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area'];
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function drillUpdateSR(ref, quality) {
+  var v = scriptureLib.verses.find(function(x) { return x.reference === ref; });
+  if (v) { v.card = srReview(v.card, quality); saveVerseLibrary(scriptureLib); }
+}
+
 function startScriptureDrill(ref) {
   var verse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
   if (!verse) { $('#scripture-drill-area').style.display = 'none'; return; }
+  drillCurrentVerse = verse;
   $('#scripture-drill-area').style.display = '';
   $('#sdrill-ref').textContent = verse.reference;
-  $('#sdrill-input').value = '';
-  $('#sdrill-diff').style.display = 'none';
   $('#btn-sdrill-next').style.display = 'none';
+  hideAllDrillSubs();
 
-  var hintEl = $('#sdrill-hint');
-  if (scriptureDrillMode === 'first-letter') {
-    hintEl.textContent = fromFirstLetters(verse.text);
-    hintEl.style.display = '';
-  } else if (scriptureDrillMode === 'chunk-recall') {
-    var drillChunks = verse.customChunks || verse.chunks;
-    hintEl.innerHTML = drillChunks.map(function(ch, i) {
-      return i === 0 ? '<strong>' + ch + '</strong>' : '<span style="opacity:0.3">[chunk ' + (i+1) + ']</span>';
-    }).join(' ');
-    hintEl.style.display = '';
+  if (scriptureDrillMode === 'self-check') {
+    startSelfCheck(verse);
+  } else if (scriptureDrillMode === 'chunk-order') {
+    startChunkOrder(verse);
+  } else if (scriptureDrillMode === 'fill-blank') {
+    startFillBlank(verse);
+  } else if (scriptureDrillMode === 'fl-tap') {
+    startFlTap(verse);
   } else {
-    hintEl.textContent = '';
-    hintEl.style.display = 'none';
+    // Legacy typing modes
+    document.getElementById('drill-typing-area').style.display = '';
+    var hintEl = $('#sdrill-hint');
+    $('#sdrill-input').value = '';
+    $('#sdrill-diff').style.display = 'none';
+    if (scriptureDrillMode === 'first-letter') {
+      hintEl.textContent = fromFirstLetters(verse.text);
+      hintEl.style.display = '';
+    } else if (scriptureDrillMode === 'chunk-recall') {
+      var drillChunks = verse.customChunks || verse.chunks;
+      hintEl.innerHTML = drillChunks.map(function(ch, i) {
+        return i === 0 ? '<strong>' + ch + '</strong>' : '<span style="opacity:0.3">[chunk ' + (i+1) + ']</span>';
+      }).join(' ');
+      hintEl.style.display = '';
+    } else {
+      hintEl.textContent = '';
+      hintEl.style.display = 'none';
+    }
+    $('#sdrill-input').focus();
   }
-  $('#sdrill-input').focus();
 }
 
 function checkScriptureDrill() {
@@ -631,10 +716,280 @@ function checkScriptureDrill() {
   $('#btn-sdrill-next').style.display = '';
   var score = scoreDiff(diff);
   var quality = score >= 1.0 ? 5 : score >= 0.8 ? 4 : score >= 0.5 ? 3 : 2;
-  var libVerse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
-  if (libVerse) {
-    libVerse.card = srReview(libVerse.card, quality);
-    saveVerseLibrary(scriptureLib);
+  drillUpdateSR(ref, quality);
+}
+
+// == Mode 1: Self-Check (flashcard) ==
+function startSelfCheck(verse) {
+  var el = document.getElementById('drill-self-check');
+  el.style.display = '';
+  document.getElementById('flashcard-reveal').style.display = 'none';
+  document.getElementById('flashcard-rating').style.display = 'none';
+  document.getElementById('btn-flashcard-reveal').style.display = '';
+  document.getElementById('flashcard-text').textContent = verse.text;
+}
+
+function revealFlashcard() {
+  document.getElementById('flashcard-reveal').style.display = '';
+  document.getElementById('flashcard-rating').style.display = '';
+  document.getElementById('btn-flashcard-reveal').style.display = 'none';
+}
+
+function rateFlashcard(quality) {
+  var ref = drillCurrentVerse ? drillCurrentVerse.reference : '';
+  drillUpdateSR(ref, quality);
+  $('#btn-sdrill-next').style.display = '';
+}
+
+// == Mode 2: Chunk Ordering ==
+function startChunkOrder(verse) {
+  var el = document.getElementById('drill-chunk-order');
+  el.style.display = '';
+  chunkOrderCorrect = verse.customChunks || verse.chunks;
+  chunkOrderSelected = [];
+  var scrambled = scrambleChunks(chunkOrderCorrect);
+
+  var bankEl = document.getElementById('chunk-order-bank');
+  var selectedEl = document.getElementById('chunk-order-selected');
+  var resultEl = document.getElementById('chunk-order-result');
+  document.getElementById('btn-chunk-order-reset').style.display = 'none';
+  resultEl.innerHTML = '';
+  selectedEl.innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
+
+  bankEl.innerHTML = scrambled.map(function(ch, i) {
+    return '<button class="chunk-pill" data-chunk-idx="' + i + '" data-chunk-text="' + escapeHtml(ch) + '">' + escapeHtml(ch) + '</button>';
+  }).join('');
+
+  bankEl.querySelectorAll('.chunk-pill').forEach(function(pill) {
+    pill.addEventListener('click', function() { tapChunkPill(pill); });
+  });
+}
+
+function escapeHtml(s) {
+  var div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function tapChunkPill(pill) {
+  if (pill.classList.contains('chunk-pill--used')) return;
+  var text = pill.dataset.chunkText;
+  chunkOrderSelected.push(text);
+  pill.classList.add('chunk-pill--used');
+
+  var selectedEl = document.getElementById('chunk-order-selected');
+  if (chunkOrderSelected.length === 1) selectedEl.innerHTML = '';
+
+  var idx = chunkOrderSelected.length - 1;
+  var isCorrect = chunkOrderCorrect[idx] === text;
+  var selPill = document.createElement('span');
+  selPill.className = 'chunk-pill ' + (isCorrect ? 'chunk-pill--correct' : 'chunk-pill--wrong');
+  selPill.textContent = text;
+  selectedEl.appendChild(selPill);
+
+  if (!isCorrect) {
+    var resultEl = document.getElementById('chunk-order-result');
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong order! The next chunk was: <strong>' + escapeHtml(chunkOrderCorrect[idx]) + '</strong></div>';
+    document.getElementById('btn-chunk-order-reset').style.display = '';
+    drillUpdateSR(drillCurrentVerse.reference, 2);
+    return;
+  }
+
+  if (chunkOrderSelected.length === chunkOrderCorrect.length) {
+    var resultEl = document.getElementById('chunk-order-result');
+    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! All chunks in order.</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 5);
+    $('#btn-sdrill-next').style.display = '';
+  }
+}
+
+function resetChunkOrder() {
+  if (drillCurrentVerse) startChunkOrder(drillCurrentVerse);
+}
+
+// == Mode 3: Fill-in-the-Blank ==
+function startFillBlank(verse) {
+  var el = document.getElementById('drill-fill-blank');
+  el.style.display = '';
+  var words = verse.text.split(/\s+/);
+  var ratio = 0.4;
+  fillBlankItems = generateBlanks(words, ratio);
+  fillBlankCurrentIdx = 0;
+
+  while (fillBlankCurrentIdx < fillBlankItems.length && !fillBlankItems[fillBlankCurrentIdx].blanked) {
+    fillBlankCurrentIdx++;
+  }
+
+  var distractors = getDistractorWords(verse, 4);
+  fillBlankBankWords = generateWordBank(fillBlankItems, distractors);
+
+  renderFillBlank();
+}
+
+function getDistractorWords(excludeVerse, count) {
+  var allWords = [];
+  scriptureLib.verses.forEach(function(v) {
+    if (v.reference !== excludeVerse.reference) {
+      var w = v.text.split(/\s+/);
+      for (var i = 0; i < w.length; i++) allWords.push(w[i]);
+    }
+  });
+  if (allWords.length === 0) return [];
+  var shuffled = drillShuffle(allWords);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function renderFillBlank() {
+  var verseEl = document.getElementById('fill-blank-verse');
+  var bankEl = document.getElementById('fill-blank-bank');
+  var resultEl = document.getElementById('fill-blank-result');
+  resultEl.innerHTML = '';
+
+  var totalBlanks = fillBlankItems.filter(function(it) { return it.blanked; }).length;
+  var filledBlanks = fillBlankItems.filter(function(it) { return it.blanked && it.filled; }).length;
+  var pct = totalBlanks > 0 ? Math.round((filledBlanks / totalBlanks) * 100) : 0;
+  document.getElementById('fill-blank-fill').style.width = pct + '%';
+  document.getElementById('fill-blank-label').textContent = filledBlanks + '/' + totalBlanks + ' filled';
+
+  var html = '';
+  for (var i = 0; i < fillBlankItems.length; i++) {
+    var it = fillBlankItems[i];
+    if (!it.blanked) {
+      html += escapeHtml(it.word) + ' ';
+    } else if (it.filled) {
+      var cls = it.correct ? 'blank-slot blank-slot--filled blank-slot--correct' : 'blank-slot blank-slot--filled blank-slot--wrong';
+      html += '<span class="' + cls + '">' + escapeHtml(it.filledWord || '') + '</span> ';
+    } else if (i === fillBlankCurrentIdx) {
+      html += '<span class="blank-slot" id="current-blank">___</span> ';
+    } else {
+      html += '<span class="blank-slot">___</span> ';
+    }
+  }
+  verseEl.innerHTML = html;
+
+  var usedWords = {};
+  fillBlankItems.forEach(function(it) { if (it.filled && it.bankUsed !== undefined) usedWords[it.bankUsed] = true; });
+  bankEl.innerHTML = fillBlankBankWords.map(function(w, idx) {
+    var usedClass = usedWords[idx] ? ' word-option--used' : '';
+    return '<button class="word-option' + usedClass + '" data-bank-idx="' + idx + '">' + escapeHtml(w) + '</button>';
+  }).join('');
+
+  bankEl.querySelectorAll('.word-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapFillBlankWord(btn); });
+  });
+}
+
+function tapFillBlankWord(btn) {
+  if (btn.classList.contains('word-option--used')) return;
+  var word = btn.textContent;
+  var bankIdx = parseInt(btn.dataset.bankIdx);
+  var it = fillBlankItems[fillBlankCurrentIdx];
+  if (!it || !it.blanked) return;
+
+  it.filled = true;
+  it.filledWord = word;
+  it.correct = word === it.word;
+  it.bankUsed = bankIdx;
+
+  fillBlankCurrentIdx++;
+  while (fillBlankCurrentIdx < fillBlankItems.length && !fillBlankItems[fillBlankCurrentIdx].blanked) {
+    fillBlankCurrentIdx++;
+  }
+
+  renderFillBlank();
+
+  var totalBlanks = fillBlankItems.filter(function(it) { return it.blanked; }).length;
+  var filledBlanks = fillBlankItems.filter(function(it) { return it.blanked && it.filled; }).length;
+  if (filledBlanks === totalBlanks) {
+    var correctCount = fillBlankItems.filter(function(it) { return it.blanked && it.correct; }).length;
+    var resultEl = document.getElementById('fill-blank-result');
+    var scorePct = Math.round((correctCount / totalBlanks) * 100);
+    if (scorePct === 100) {
+      resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! ' + correctCount + '/' + totalBlanks + ' correct.</div>';
+      drillUpdateSR(drillCurrentVerse.reference, 5);
+    } else if (scorePct >= 70) {
+      resultEl.innerHTML = '<div class="drill-result drill-result--good">Good! ' + correctCount + '/' + totalBlanks + ' correct (' + scorePct + '%)</div>';
+      drillUpdateSR(drillCurrentVerse.reference, 4);
+    } else {
+      resultEl.innerHTML = '<div class="drill-result drill-result--retry">' + correctCount + '/' + totalBlanks + ' correct (' + scorePct + '%). Keep practicing!</div>';
+      drillUpdateSR(drillCurrentVerse.reference, 2);
+    }
+    $('#btn-sdrill-next').style.display = '';
+  }
+}
+
+// == Mode 4: First-Letter Tap ==
+function startFlTap(verse) {
+  var el = document.getElementById('drill-fl-tap');
+  el.style.display = '';
+  flTapWords = verse.text.split(/\s+/);
+  flTapCurrentIdx = 0;
+
+  document.getElementById('fl-tap-hint').textContent = fromFirstLetters(verse.text);
+
+  renderFlTap();
+}
+
+function renderFlTap() {
+  var progressEl = document.getElementById('fl-tap-progress');
+  var bankEl = document.getElementById('fl-tap-bank');
+  var resultEl = document.getElementById('fl-tap-result');
+  resultEl.innerHTML = '';
+
+  var html = '';
+  for (var i = 0; i < flTapWords.length; i++) {
+    if (i < flTapCurrentIdx) {
+      html += '<span class="word-correct">' + escapeHtml(flTapWords[i]) + '</span> ';
+    } else if (i === flTapCurrentIdx) {
+      html += '<span class="word-current">?</span> ';
+    } else {
+      html += '<span style="color:var(--cup-color-text-muted)">_</span> ';
+    }
+  }
+  progressEl.innerHTML = html;
+
+  if (flTapCurrentIdx >= flTapWords.length) {
+    bankEl.innerHTML = '';
+    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! Every word recalled.</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 5);
+    $('#btn-sdrill-next').style.display = '';
+    return;
+  }
+
+  var correctWord = flTapWords[flTapCurrentIdx];
+  var options = [correctWord];
+  var nearby = [];
+  for (var j = 0; j < flTapWords.length; j++) {
+    if (j !== flTapCurrentIdx && options.indexOf(flTapWords[j]) < 0 && nearby.indexOf(flTapWords[j]) < 0) {
+      nearby.push(flTapWords[j]);
+    }
+  }
+  var distractors = drillShuffle(nearby).slice(0, 3);
+  options = options.concat(distractors);
+  options = drillShuffle(options);
+
+  bankEl.innerHTML = options.map(function(w) {
+    return '<button class="word-option" data-fl-word="' + escapeHtml(w) + '">' + escapeHtml(w) + '</button>';
+  }).join('');
+
+  bankEl.querySelectorAll('.word-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapFlWord(btn); });
+  });
+}
+
+function tapFlWord(btn) {
+  var word = btn.dataset.flWord;
+  var correct = flTapWords[flTapCurrentIdx];
+
+  if (word === correct) {
+    flTapCurrentIdx++;
+    renderFlTap();
+  } else {
+    btn.classList.add('chunk-pill--wrong');
+    setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
+    var resultEl = document.getElementById('fl-tap-result');
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 2);
   }
 }
 
@@ -863,6 +1218,9 @@ function handleBulkPaste() {
       $$('.scripture-mode').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       scriptureDrillMode = btn.dataset.mode;
+      // Auto-restart drill if verse already selected
+      var p = $('#drill-verse-picker');
+      if (p && p.value) startScriptureDrill(p.value);
     });
   });
 
@@ -874,6 +1232,20 @@ function handleBulkPaste() {
 
   var drillCheckBtn = $('#btn-sdrill-check');
   if (drillCheckBtn) drillCheckBtn.addEventListener('click', checkScriptureDrill);
+
+  // Self-Check (flashcard) listeners
+  var revealBtn = document.getElementById('btn-flashcard-reveal');
+  if (revealBtn) revealBtn.addEventListener('click', revealFlashcard);
+  var ratingDiv = document.getElementById('flashcard-rating');
+  if (ratingDiv) {
+    ratingDiv.querySelectorAll('.btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { rateFlashcard(parseInt(btn.dataset.q)); });
+    });
+  }
+
+  // Chunk-order reset listener
+  var chunkResetBtn = document.getElementById('btn-chunk-order-reset');
+  if (chunkResetBtn) chunkResetBtn.addEventListener('click', resetChunkOrder);
 
   var nextBtn = $('#btn-sdrill-next');
   if (nextBtn) nextBtn.addEventListener('click', function() {
