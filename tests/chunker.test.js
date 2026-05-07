@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chunkVerse, chunkPassage } from '../src/chunker.js';
+import { chunkVerse, chunkPassage, getWords, splitAtPositions } from '../src/chunker.js';
 
 describe('chunker', () => {
   describe('chunkVerse', () => {
@@ -86,6 +86,88 @@ describe('chunker', () => {
       ];
       const result = chunkPassage(verses);
       expect(result[0].chunks.join(' ')).toBe(verses[0].text);
+    });
+  });
+
+  describe('getWords', () => {
+    it('splits text into individual word tokens', () => {
+      const words = getWords('For God so loved the world');
+      expect(words).toEqual(['For', 'God', 'so', 'loved', 'the', 'world']);
+    });
+
+    it('returns empty array for empty input', () => {
+      expect(getWords('')).toEqual([]);
+      expect(getWords(null)).toEqual([]);
+      expect(getWords(undefined)).toEqual([]);
+    });
+
+    it('handles punctuation attached to words', () => {
+      const words = getWords('this letter is from Paul,');
+      expect(words).toEqual(['this', 'letter', 'is', 'from', 'Paul,']);
+    });
+
+    it('collapses extra whitespace', () => {
+      const words = getWords('  God   so   loved  ');
+      expect(words).toEqual(['God', 'so', 'loved']);
+    });
+  });
+
+  describe('splitAtPositions', () => {
+    it('splits text at given word indices', () => {
+      const text = 'this letter is from Paul a servant of Christ Jesus Chosen by God';
+      // positions = indices where NEW chunks start
+      const chunks = splitAtPositions(text, [5, 10, 12]);
+      expect(chunks).toEqual([
+        'this letter is from Paul',
+        'a servant of Christ Jesus',
+        'Chosen by',
+        'God',
+      ]);
+    });
+
+    it('returns full text as single chunk when no positions given', () => {
+      const text = 'For God so loved the world';
+      expect(splitAtPositions(text, [])).toEqual(['For God so loved the world']);
+    });
+
+    it('handles position at word 0 (no leading empty chunk)', () => {
+      const text = 'Hello world of grace';
+      const chunks = splitAtPositions(text, [0, 2]);
+      expect(chunks).toEqual(['Hello world', 'of grace']);
+    });
+
+    it('handles single word chunks', () => {
+      const text = 'Alpha Bravo Charlie Delta';
+      const chunks = splitAtPositions(text, [1, 2, 3]);
+      expect(chunks).toEqual(['Alpha', 'Bravo', 'Charlie', 'Delta']);
+    });
+
+    it('preserves punctuation on words', () => {
+      const text = 'For God so loved the world, that he gave';
+      const chunks = splitAtPositions(text, [6]);
+      expect(chunks).toEqual(['For God so loved the world,', 'that he gave']);
+    });
+
+    it('returns full text when positions is undefined', () => {
+      const text = 'Be still and know';
+      expect(splitAtPositions(text, undefined)).toEqual(['Be still and know']);
+    });
+
+    it('ignores positions beyond word count', () => {
+      const text = 'short text';
+      expect(splitAtPositions(text, [5, 10])).toEqual(['short text']);
+    });
+
+    it('sorts positions and deduplicates', () => {
+      const text = 'Alpha Bravo Charlie Delta Echo';
+      const chunks = splitAtPositions(text, [3, 1, 3, 1]);
+      expect(chunks).toEqual(['Alpha', 'Bravo Charlie', 'Delta Echo']);
+    });
+
+    it('joins back to original text', () => {
+      const text = 'this letter is from Paul a servant of Christ Jesus';
+      const chunks = splitAtPositions(text, [5]);
+      expect(chunks.join(' ')).toBe(text);
     });
   });
 });

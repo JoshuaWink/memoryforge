@@ -53,6 +53,48 @@ export function chunkPassage(verses) {
   }));
 }
 
+
+/**
+ * Get individual words from text (for the chunk editor UI).
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function getWords(text) {
+  if (!text) return [];
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+/**
+ * Split text into chunks at specified word positions.
+ * Positions are word indices where a new chunk begins.
+ * @param {string} text - Full verse text
+ * @param {number[]} positions - Word indices starting new chunks (0-based)
+ * @returns {string[]}
+ */
+export function splitAtPositions(text, positions) {
+  if (!text || !text.trim()) return [''];
+  const words = getWords(text);
+  if (!positions || positions.length === 0) return [words.join(' ')];
+
+  // Deduplicate, sort, filter valid, remove 0 (first chunk always starts at 0)
+  const cuts = [...new Set(positions)]
+    .map(Number)
+    .filter(p => p > 0 && p < words.length)
+    .sort((a, b) => a - b);
+
+  if (cuts.length === 0) return [words.join(' ')];
+
+  const chunks = [];
+  let start = 0;
+  for (const cut of cuts) {
+    chunks.push(words.slice(start, cut).join(' '));
+    start = cut;
+  }
+  chunks.push(words.slice(start).join(' '));
+
+  return chunks.filter(Boolean);
+}
+
 function splitOnPunctuation(text) {
   // Split keeping the punctuation attached to the preceding chunk
   const parts = [];

@@ -2,7 +2,7 @@
  * VerseLibrary — persistent verse collection with chunking, SR cards, and passages.
  */
 
-import { chunkVerse } from './chunker.js';
+import { chunkVerse, splitAtPositions } from './chunker.js';
 import { createCard } from './spaced-repetition.js';
 
 /**
@@ -132,6 +132,53 @@ export class VerseLibrary {
   }
 
   /**
+   * Set custom chunk boundaries for a verse (overrides auto-chunking).
+   * @param {string} reference
+   * @param {string[]} chunks
+   */
+  setCustomChunks(reference, chunks) {
+    const ref = normalizeRef(reference);
+    const verse = this._verses.get(ref);
+    if (!verse) throw new Error('Verse not found: ' + ref);
+    verse.customChunks = chunks;
+  }
+
+  /**
+   * Get effective chunks for a verse (custom if set, else auto).
+   * @param {string} reference
+   * @returns {string[]}
+   */
+  getChunks(reference) {
+    const ref = normalizeRef(reference);
+    const verse = this._verses.get(ref);
+    if (!verse) throw new Error('Verse not found: ' + ref);
+    return verse.customChunks || verse.chunks;
+  }
+
+  /**
+   * Remove custom chunk override, reverting to auto-chunking.
+   * @param {string} reference
+   */
+  clearCustomChunks(reference) {
+    const ref = normalizeRef(reference);
+    const verse = this._verses.get(ref);
+    if (!verse) throw new Error('Verse not found: ' + ref);
+    delete verse.customChunks;
+  }
+
+  /**
+   * Set custom chunks using word-index split positions.
+   * @param {string} reference
+   * @param {number[]} positions - Word indices where new chunks begin
+   */
+  setSplitPositions(reference, positions) {
+    const ref = normalizeRef(reference);
+    const verse = this._verses.get(ref);
+    if (!verse) throw new Error('Verse not found: ' + ref);
+    verse.customChunks = splitAtPositions(verse.text, positions);
+  }
+
+    /**
    * Export library to JSON string.
    * @returns {string}
    */

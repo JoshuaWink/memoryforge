@@ -63,6 +63,132 @@ function mergeTinyChunks(chunks) {
   return result;
 }
 
+
+// -- Chunk Editor: manual split-point placement --
+function getWordsFromText(text) {
+  if (!text) return [];
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function splitTextAtPositions(text, positions) {
+  var words = getWordsFromText(text);
+  if (!positions || positions.length === 0) return [words.join(' ')];
+  var cuts = positions.slice().filter(function(p) { return p > 0 && p < words.length; });
+  // deduplicate and sort
+  cuts = cuts.filter(function(v, i, a) { return a.indexOf(v) === i; }).sort(function(a, b) { return a - b; });
+  if (cuts.length === 0) return [words.join(' ')];
+  var chunks = [];
+  var start = 0;
+  for (var i = 0; i < cuts.length; i++) {
+    chunks.push(words.slice(start, cuts[i]).join(' '));
+    start = cuts[i];
+  }
+  chunks.push(words.slice(start).join(' '));
+  return chunks.filter(Boolean);
+}
+
+var chunkEditorSplits = []; // current split positions (word indices)
+var chunkEditorText = '';   // current text being edited
+
+function showChunkEditor(text) {
+  chunkEditorText = (text || '').trim();
+  var editor = document.getElementById('chunk-editor');
+  if (!chunkEditorText) { editor.style.display = 'none'; return; }
+  editor.style.display = '';
+  // Default splits from auto-chunker
+  chunkEditorSplits = getAutoSplitPositions(chunkEditorText);
+  renderChunkEditor();
+}
+
+function hideChunkEditor() {
+  document.getElementById('chunk-editor').style.display = 'none';
+  chunkEditorSplits = [];
+  chunkEditorText = '';
+}
+
+function getAutoSplitPositions(text) {
+  var autoChunks = chunkVerse(text);
+  if (autoChunks.length <= 1) return [];
+  // Convert chunks back to word-index positions
+  var positions = [];
+  var wordIdx = 0;
+  for (var i = 0; i < autoChunks.length; i++) {
+    if (i > 0) positions.push(wordIdx);
+    var chunkWords = autoChunks[i].trim().split(/\s+/).filter(Boolean);
+    wordIdx += chunkWords.length;
+  }
+  return positions;
+}
+
+function renderChunkEditor() {
+  var words = getWordsFromText(chunkEditorText);
+  var container = document.getElementById('chunk-editor-words');
+  container.innerHTML = '';
+
+  // Compute which chunk index each word belongs to
+  var chunkMap = [];
+  var chunkIdx = 0;
+  for (var i = 0; i < words.length; i++) {
+    if (chunkEditorSplits.indexOf(i) >= 0 && i > 0) chunkIdx++;
+    chunkMap.push(chunkIdx);
+  }
+
+  for (var w = 0; w < words.length; w++) {
+    // Splitter BEFORE each word (except the first)
+    if (w > 0) {
+      var splitter = document.createElement('span');
+      splitter.className = 'chunk-splitter';
+      if (chunkEditorSplits.indexOf(w) >= 0) splitter.classList.add('active');
+      splitter.dataset.idx = w;
+      splitter.setAttribute('role', 'button');
+      splitter.setAttribute('tabindex', '0');
+      splitter.setAttribute('aria-label', 'Split before word ' + (w + 1));
+      splitter.addEventListener('click', toggleSplit);
+      splitter.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSplit.call(this); }
+      });
+      container.appendChild(splitter);
+    }
+
+    var wordEl = document.createElement('span');
+    wordEl.className = 'chunk-word';
+    wordEl.textContent = words[w];
+    wordEl.dataset.chunkIdx = chunkMap[w];
+    wordEl.dataset.chunkEven = (chunkMap[w] % 2 === 0) ? 'true' : 'false';
+    container.appendChild(wordEl);
+  }
+
+  renderChunkPreview();
+}
+
+function toggleSplit() {
+  var idx = parseInt(this.dataset.idx);
+  var pos = chunkEditorSplits.indexOf(idx);
+  if (pos >= 0) {
+    chunkEditorSplits.splice(pos, 1);
+  } else {
+    chunkEditorSplits.push(idx);
+    chunkEditorSplits.sort(function(a, b) { return a - b; });
+  }
+  renderChunkEditor();
+}
+
+function renderChunkPreview() {
+  var preview = document.getElementById('chunk-editor-preview');
+  var chunks = splitTextAtPositions(chunkEditorText, chunkEditorSplits);
+  preview.innerHTML = chunks.map(function(ch) {
+    return '<span class="chunk-preview-pill">' + ch + '</span>';
+  }).join('');
+}
+
+function getChunkEditorResult() {
+  if (!chunkEditorText) return null;
+  return {
+    splits: chunkEditorSplits.slice(),
+    chunks: splitTextAtPositions(chunkEditorText, chunkEditorSplits)
+  };
+}
+
 // -- First Letter --
 function toFirstLetters(text) {
   if (!text) return '';
@@ -245,13 +371,20 @@ function renderVerseList() {
     return '<div class="verse-card" data-ref="' + v.reference + '">' +
       '<p class="verse-card__ref">' + v.reference + ' <small>(' + v.translation + ')</small></p>' +
       '<p class="verse-card__text">' + v.text + '</p>' +
-      '<div class="verse-card__meta"><span>Layer: ' + layerName + '</span><span>' + dueText + '</span><span>Streak: ' + v.card.streak + '</span></div>' +
+      '<div class="verse-card__chunks">' + (v.customChunks || v.chunks).map(function(ch) { return '<span class="chunk-preview-pill">' + ch + '</span>'; }).join('') + '</div>' +
+      '<div class="verse-card__meta"><span>Layer: ' + layerName + '</span><span>' + dueText + '</span><span>Streak: ' + v.card.streak + '</span>' + (v.customChunks ? '<span class="custom-tag">Custom</span>' : '') + '</div>' +
       '<div class="verse-card__actions">' +
+      '<button class="btn btn-sm btn-secondary" data-action="edit-chunks" data-ref="' + v.reference + '">Edit Chunks</button>' +
       '<button class="btn btn-sm btn-secondary" data-action="drill-verse" data-ref="' + v.reference + '">Drill</button>' +
       '<button class="btn btn-sm btn-danger" data-action="remove-verse" data-ref="' + v.reference + '">Remove</button>' +
       '</div></div>';
   }).join('');
 
+  container.querySelectorAll('[data-action="edit-chunks"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      openChunkEditorForVerse(btn.dataset.ref);
+    });
+  });
   container.querySelectorAll('[data-action="remove-verse"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       if (confirm('Remove ' + btn.dataset.ref + '?')) {
@@ -300,10 +433,16 @@ function handleAddVerse() {
   if (!ref.trim() || !text.trim()) { alert('Reference and text are required.'); return; }
   var result = addVerse(scriptureLib, ref, text, translation, notes);
   if (!result) { alert('Verse already exists or invalid input.'); return; }
+  // Apply custom chunks from the chunk editor if any
+  var editorResult = getChunkEditorResult();
+  if (editorResult && editorResult.chunks.length > 0) {
+    result.customChunks = editorResult.chunks;
+  }
   saveVerseLibrary(scriptureLib);
   $('#verse-ref').value = '';
   $('#verse-text').value = '';
   $('#verse-notes').value = '';
+  hideChunkEditor();
   renderVerseList();
 }
 
@@ -379,7 +518,8 @@ function startScriptureDrill(ref) {
     hintEl.textContent = fromFirstLetters(verse.text);
     hintEl.style.display = '';
   } else if (currentDrillMode === 'chunk-recall') {
-    hintEl.innerHTML = verse.chunks.map(function(ch, i) {
+    var drillChunks = verse.customChunks || verse.chunks;
+    hintEl.innerHTML = drillChunks.map(function(ch, i) {
       return i === 0 ? '<strong>' + ch + '</strong>' : '<span style="opacity:0.3">[chunk ' + (i+1) + ']</span>';
     }).join(' ');
     hintEl.style.display = '';
@@ -409,10 +549,120 @@ function checkScriptureDrill() {
   }
 }
 
+// -- Chunk Editor: open for existing verse --
+var chunkEditingRef = null; // reference of verse being chunk-edited
+
+function openChunkEditorForVerse(ref) {
+  var verse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  if (!verse) return;
+  chunkEditingRef = ref;
+
+  // Scroll to top of library and show the editor below the add form
+  var editor = document.getElementById('chunk-editor');
+  chunkEditorText = verse.text;
+  editor.style.display = '';
+
+  // If verse has custom chunks, reconstruct the split positions
+  if (verse.customChunks) {
+    chunkEditorSplits = chunksToSplitPositions(verse.text, verse.customChunks);
+  } else {
+    chunkEditorSplits = getAutoSplitPositions(verse.text);
+  }
+  renderChunkEditor();
+
+  // Show save/cancel buttons for edit mode
+  var header = editor.querySelector('.chunk-editor__header');
+  // Remove any existing save/cancel buttons
+  var oldSave = document.getElementById('btn-chunk-save');
+  var oldCancel = document.getElementById('btn-chunk-cancel');
+  if (oldSave) oldSave.remove();
+  if (oldCancel) oldCancel.remove();
+
+  var saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.id = 'btn-chunk-save';
+  saveBtn.className = 'btn btn-xs btn-primary';
+  saveBtn.textContent = 'Save Chunks';
+  saveBtn.addEventListener('click', saveChunkEditorForVerse);
+  header.appendChild(saveBtn);
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.id = 'btn-chunk-cancel';
+  cancelBtn.className = 'btn btn-xs btn-secondary';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() {
+    chunkEditingRef = null;
+    hideChunkEditor();
+  });
+  header.appendChild(cancelBtn);
+
+  // Update label
+  editor.querySelector('.chunk-editor__label').textContent = 'Editing chunks for ' + ref;
+  editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function chunksToSplitPositions(text, chunks) {
+  var positions = [];
+  var wordIdx = 0;
+  for (var i = 0; i < chunks.length; i++) {
+    if (i > 0) positions.push(wordIdx);
+    var chunkWords = chunks[i].trim().split(/\s+/).filter(Boolean);
+    wordIdx += chunkWords.length;
+  }
+  return positions;
+}
+
+function saveChunkEditorForVerse() {
+  if (!chunkEditingRef) return;
+  var verse = scriptureLib.verses.find(function(v) { return v.reference === chunkEditingRef; });
+  if (!verse) return;
+  var result = getChunkEditorResult();
+  if (result && result.chunks.length > 0) {
+    verse.customChunks = result.chunks;
+  } else {
+    delete verse.customChunks;
+  }
+  saveVerseLibrary(scriptureLib);
+  chunkEditingRef = null;
+  hideChunkEditor();
+  renderVerseList();
+}
+
 // -- Wire up Scripture events --
 (function initScripture() {
   $$('.scripture-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchScriptureTab(tab.dataset.stab); });
+  });
+
+  // Show chunk editor when user types verse text
+  var verseTextArea = $('#verse-text');
+  if (verseTextArea) {
+    var debounceTimer = null;
+    verseTextArea.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        var text = verseTextArea.value.trim();
+        if (text.length > 5) {
+          chunkEditingRef = null; // new verse mode
+          showChunkEditor(text);
+        } else {
+          hideChunkEditor();
+        }
+      }, 400);
+    });
+  }
+
+  // Auto/Clear buttons for chunk editor
+  var autoBtn = $('#btn-chunk-auto');
+  if (autoBtn) autoBtn.addEventListener('click', function() {
+    chunkEditorSplits = getAutoSplitPositions(chunkEditorText);
+    renderChunkEditor();
+  });
+  var clearBtn = $('#btn-chunk-clear');
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    chunkEditorSplits = [];
+    renderChunkEditor();
   });
 
   var addBtn = $('#btn-add-verse');

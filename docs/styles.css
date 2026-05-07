@@ -1699,3 +1699,126 @@ body {
   padding: var(--cup-space-xl);
   font-style: italic;
 }
+
+
+/* ── Chunk Editor ── */
+.chunk-editor {
+  margin-top: var(--cup-space-sm);
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  background: var(--cup-color-surface-alt);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md, 6px);
+}
+.chunk-editor__header {
+  display: flex;
+  align-items: center;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-sm);
+}
+.chunk-editor__label {
+  font-size: 0.8rem;
+  color: var(--cup-color-secondary);
+  flex: 1;
+}
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+.chunk-editor__words {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  line-height: 2.2;
+}
+.chunk-word {
+  padding: 2px 1px;
+  cursor: default;
+  color: var(--cup-color-on-surface);
+  font-size: 1rem;
+  white-space: nowrap;
+}
+.chunk-splitter {
+  width: 18px;
+  height: 1.8em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  position: relative;
+  margin: 0 1px;
+}
+.chunk-splitter:hover {
+  background: rgba(79, 195, 247, 0.15);
+}
+.chunk-splitter::after {
+  content: '';
+  width: 2px;
+  height: 60%;
+  background: transparent;
+  border-radius: 1px;
+  transition: background 0.15s;
+}
+.chunk-splitter:hover::after {
+  background: var(--cup-color-primary);
+  opacity: 0.5;
+}
+.chunk-splitter.active {
+  background: rgba(79, 195, 247, 0.1);
+}
+.chunk-splitter.active::after {
+  background: var(--cup-color-primary);
+  opacity: 1;
+  width: 3px;
+  height: 80%;
+}
+/* Alternating chunk backgrounds for visual grouping */
+.chunk-word[data-chunk-idx] {
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.chunk-word[data-chunk-even="true"] {
+  background: rgba(79, 195, 247, 0.08);
+}
+.chunk-word[data-chunk-even="false"] {
+  background: rgba(176, 190, 197, 0.08);
+}
+.chunk-editor__preview {
+  margin-top: var(--cup-space-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-xs);
+}
+.chunk-preview-pill {
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  border-radius: 12px;
+  border: 1px solid var(--cup-color-border);
+  color: var(--cup-color-on-surface);
+  background: var(--cup-color-surface);
+}
+.chunk-preview-pill:nth-child(even) {
+  border-color: var(--cup-color-primary);
+  color: var(--cup-color-primary);
+}
+
+/* ── Verse card chunk display ── */
+.verse-card__chunks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-xs);
+  margin-top: var(--cup-space-xs);
+  margin-bottom: var(--cup-space-xs);
+}
+.custom-tag {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}

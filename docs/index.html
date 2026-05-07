@@ -410,6 +410,16 @@
           <div class="field-group">
             <label class="field-label" for="verse-text">Text</label>
             <textarea id="verse-text" class="field-input scripture-textarea" rows="3" placeholder="Type or paste the verse text..."></textarea>
+            <!-- Chunk Editor: tap between words to set split points -->
+            <div id="chunk-editor" class="chunk-editor" style="display:none;">
+              <div class="chunk-editor__header">
+                <span class="chunk-editor__label">Tap between words to set chunk boundaries</span>
+                <button type="button" id="btn-chunk-auto" class="btn btn-xs btn-secondary">Auto</button>
+                <button type="button" id="btn-chunk-clear" class="btn btn-xs btn-secondary">Clear All</button>
+              </div>
+              <div id="chunk-editor-words" class="chunk-editor__words" role="group" aria-label="Chunk boundary editor"></div>
+              <div id="chunk-editor-preview" class="chunk-editor__preview"></div>
+            </div>
           </div>
           <div class="field-group">
             <label class="field-label" for="verse-notes">Story Notes (optional)</label>

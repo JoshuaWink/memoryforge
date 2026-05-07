@@ -143,4 +143,65 @@ describe('verse-library', () => {
       expect(() => lib.createPassage('test', ['John 3:16', 'NoExist 1:1'])).toThrow();
     });
   });
+
+  describe('custom chunks', () => {
+    it('auto-chunks on add by default', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      const v = lib.get('Rom 1:1');
+      expect(v.chunks.length).toBeGreaterThanOrEqual(1);
+      expect(v.customChunks).toBeUndefined();
+    });
+
+    it('setCustomChunks overrides auto chunks', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      lib.setCustomChunks('Rom 1:1', ['this letter is from Paul', 'a servant of Christ Jesus']);
+      const v = lib.get('Rom 1:1');
+      expect(v.customChunks).toEqual(['this letter is from Paul', 'a servant of Christ Jesus']);
+    });
+
+    it('getChunks returns custom chunks when set', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      const custom = ['this letter is from Paul', 'a servant of Christ Jesus'];
+      lib.setCustomChunks('Rom 1:1', custom);
+      expect(lib.getChunks('Rom 1:1')).toEqual(custom);
+    });
+
+    it('getChunks returns auto chunks when no custom set', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'For God so loved the world, that he gave his only Son' });
+      const chunks = lib.getChunks('Rom 1:1');
+      expect(chunks.length).toBeGreaterThanOrEqual(2);
+      expect(chunks.join(' ')).toBe('For God so loved the world, that he gave his only Son');
+    });
+
+    it('clearCustomChunks removes override', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      lib.setCustomChunks('Rom 1:1', ['custom1', 'custom2']);
+      lib.clearCustomChunks('Rom 1:1');
+      const v = lib.get('Rom 1:1');
+      expect(v.customChunks).toBeUndefined();
+    });
+
+    it('setSplitPositions creates custom chunks from word indices', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      lib.setSplitPositions('Rom 1:1', [5]);
+      const v = lib.get('Rom 1:1');
+      expect(v.customChunks).toEqual(['this letter is from Paul', 'a servant of Christ Jesus']);
+    });
+
+    it('throws on unknown reference', () => {
+      expect(() => lib.setCustomChunks('NoExist 1:1', ['a'])).toThrow();
+      expect(() => lib.getChunks('NoExist 1:1')).toThrow();
+      expect(() => lib.clearCustomChunks('NoExist 1:1')).toThrow();
+      expect(() => lib.setSplitPositions('NoExist 1:1', [2])).toThrow();
+    });
+
+    it('custom chunks survive export/import', () => {
+      lib.add({ reference: 'Rom 1:1', text: 'this letter is from Paul a servant of Christ Jesus' });
+      lib.setCustomChunks('Rom 1:1', ['this letter is from Paul', 'a servant of Christ Jesus']);
+      const json = lib.export();
+      const lib2 = new VerseLibrary();
+      lib2.import(json);
+      expect(lib2.getChunks('Rom 1:1')).toEqual(['this letter is from Paul', 'a servant of Christ Jesus']);
+    });
+  });
 });
