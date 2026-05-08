@@ -127,8 +127,19 @@ var chunkEditorText = '';   // current text being edited
 function showChunkEditor(text) {
   chunkEditorText = (text || '').trim();
   var editor = document.getElementById('chunk-editor');
-  if (!chunkEditorText) { editor.style.display = 'none'; return; }
+  if (!chunkEditorText) { hideChunkEditor(); return; }
   editor.style.display = '';
+  editor.classList.add('chunk-editor--modal');
+  var backdrop = document.getElementById('chunk-editor-backdrop');
+  if (backdrop) backdrop.classList.add('active');
+  // Update label for add-verse context
+  var label = editor.querySelector('.chunk-editor__label');
+  if (label) label.textContent = 'Tap between words to set chunk boundaries';
+  // Remove any leftover save/cancel buttons from edit mode
+  var oldSave = document.getElementById('btn-chunk-save');
+  var oldCancel = document.getElementById('btn-chunk-cancel');
+  if (oldSave) oldSave.remove();
+  if (oldCancel) oldCancel.remove();
   // Default splits from auto-chunker
   chunkEditorSplits = getAutoSplitPositions(chunkEditorText);
   renderChunkEditor();

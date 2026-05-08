@@ -241,6 +241,10 @@ test.describe('Scripture Drill Modes', () => {
   test.describe('Mode switching', () => {
     test.beforeEach(async ({ page }) => {
       await page.selectOption('#drill-verse-picker', TEST_REF);
+      // startScriptureDrill collapses drill-settings; wait for drill to start then re-open it
+      await page.waitForSelector('#scripture-drill-area', { state: 'visible' });
+      await page.locator('#drill-settings').evaluate(el => el.setAttribute('open', ''));
+      await page.waitForSelector('button.scripture-mode[data-mode="chunk-order"]', { state: 'visible' });
     });
 
     test('switching from self-check to chunk-order', async ({ page }) => {
