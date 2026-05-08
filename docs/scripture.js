@@ -1282,17 +1282,34 @@ function handleImportJSON(e) {
     try {
       var data = JSON.parse(ev.target.result);
       if (data.verses && Array.isArray(data.verses)) {
-        var added = 0;
+        var addedVerses = 0;
         for (var i = 0; i < data.verses.length; i++) {
           var v = data.verses[i];
           if (!scriptureLib.verses.some(function(x) { return x.reference === v.reference; })) {
             scriptureLib.verses.push(v);
-            added++;
+            addedVerses++;
+          }
+        }
+        var addedPassages = 0;
+        if (data.passages && Array.isArray(data.passages)) {
+          if (!scriptureLib.passages) scriptureLib.passages = [];
+          for (var j = 0; j < data.passages.length; j++) {
+            var p = data.passages[j];
+            if (!scriptureLib.passages.some(function(x) { return x.reference === p.reference; })) {
+              scriptureLib.passages.push(p);
+              addedPassages++;
+            }
           }
         }
         saveVerseLibrary(scriptureLib);
         renderVerseList();
-        alert('Imported ' + added + ' new verses (' + (data.verses.length - added) + ' duplicates skipped).');
+        renderPassageList();
+        populatePassagePicker();
+        populatePassageCheckboxes();
+        var msg = 'Imported ' + addedVerses + ' verse(s)';
+        if (data.verses.length - addedVerses > 0) msg += ' (' + (data.verses.length - addedVerses) + ' duplicate verses skipped)';
+        if (addedPassages > 0) msg += ', ' + addedPassages + ' passage(s)';
+        alert(msg + '.');
       } else {
         alert('Invalid file format.');
       }
