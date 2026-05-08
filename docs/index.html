@@ -500,12 +500,30 @@
           </details>
         </div>
 
-        <div class="scripture-list" id="scripture-list">
-          <p class="empty-state">No verses yet. Add your first verse above.</p>
-        </div>
+        <!-- Verses Section: collapsible + searchable -->
+        <details class="library-section" id="library-verses-section" open>
+          <summary class="library-section__header">
+            <span class="library-section__title">Verses <span class="library-section__count" id="verse-count-badge"></span></span>
+            <span class="library-section__arrow">▸</span>
+          </summary>
+          <div class="library-section__body">
+            <div class="library-search-bar">
+              <input type="search" id="verse-search" class="field-input field-input--sm" placeholder="Search verses…" autocomplete="off" autocorrect="off" spellcheck="false">
+            </div>
+            <div class="scripture-list" id="scripture-list"></div>
+          </div>
+        </details>
 
-        <!-- Passage List -->
-        <div class="passage-list" id="passage-list"></div>
+        <!-- Passages Section: collapsible -->
+        <details class="library-section" id="library-passages-section" open>
+          <summary class="library-section__header">
+            <span class="library-section__title">Passages <span class="library-section__count" id="passage-count-badge"></span></span>
+            <span class="library-section__arrow">▸</span>
+          </summary>
+          <div class="library-section__body">
+            <div class="passage-list" id="passage-list"></div>
+          </div>
+        </details>
       </div>
 
       <!-- REVIEW panel (spaced repetition queue) -->

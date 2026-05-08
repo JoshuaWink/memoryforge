@@ -122,6 +122,7 @@ function splitTextAtPositions(text, positions) {
 }
 
 var chunkEditorSplits = []; // current split positions (word indices)
+var verseSearchQuery = '';  // library search filter
 var chunkEditorText = '';   // current text being edited
 
 function showChunkEditor(text) {
@@ -586,12 +587,27 @@ var scriptureDrillMode = 'self-check';
 function renderVerseList() {
   var container = $('#scripture-list');
   if (!container) return;
+  // Update count badge
+  var badge = document.getElementById('verse-count-badge');
+  if (badge) badge.textContent = scriptureLib.verses.length ? '(' + scriptureLib.verses.length + ')' : '';
   if (scriptureLib.verses.length === 0) {
     container.innerHTML = '<p class="empty-state">No verses yet. Add your first verse above.</p>';
     return;
   }
+  var q = verseSearchQuery.toLowerCase().trim();
+  var filtered = q
+    ? scriptureLib.verses.filter(function(v) {
+        return v.reference.toLowerCase().indexOf(q) >= 0 ||
+               v.text.toLowerCase().indexOf(q) >= 0 ||
+               (v.translation || '').toLowerCase().indexOf(q) >= 0;
+      })
+    : scriptureLib.verses;
+  if (filtered.length === 0) {
+    container.innerHTML = '<p class="empty-state">No verses match "' + q + '".</p>';
+    return;
+  }
   var layerNames = ['New', 'Learning', 'Familiar', 'Confident', 'Mastered', 'Deep'];
-  container.innerHTML = scriptureLib.verses.map(function(v) {
+  container.innerHTML = filtered.map(function(v) {
     var layerName = layerNames[v.card.layer] || 'New';
     var dueText = v.card.nextReview <= Date.now() ? 'Due now' : 'Next: ' + new Date(v.card.nextReview).toLocaleDateString();
     return '<div class="verse-card" data-ref="' + v.reference + '">' +
@@ -1457,9 +1473,14 @@ function renderPassageList() {
   var container = document.getElementById('passage-list');
   if (!container) return;
   var passages = scriptureLib.passages || [];
+  // Update count badge
+  var pbadge = document.getElementById('passage-count-badge');
+  if (pbadge) pbadge.textContent = passages.length ? '(' + passages.length + ')' : '';
+  // Hide section if empty
+  var psec = document.getElementById('library-passages-section');
+  if (psec) psec.style.display = passages.length ? '' : 'none';
   if (passages.length === 0) { container.innerHTML = ''; return; }
-  container.innerHTML = '<h3 style="color:var(--cup-color-warning);margin-bottom:var(--cup-space-sm)">Passages</h3>' +
-    passages.map(function(p) {
+  container.innerHTML = passages.map(function(p) {
       var seamKeys = Object.keys(p.seams);
       var seamBars = seamKeys.map(function(k) {
         var s = p.seams[k].strength;
@@ -1761,6 +1782,14 @@ function startPassageFlTap(passage, verses) {
   // Chunk-order reset listener
   var chunkResetBtn = document.getElementById('btn-chunk-order-reset');
   if (chunkResetBtn) chunkResetBtn.addEventListener('click', resetChunkOrder);
+
+  var verseSearchInput = document.getElementById('verse-search');
+  if (verseSearchInput) {
+    verseSearchInput.addEventListener('input', function() {
+      verseSearchQuery = verseSearchInput.value;
+      renderVerseList();
+    });
+  }
 
   var drillEditChunksBtn = document.getElementById('btn-drill-edit-chunks');
   if (drillEditChunksBtn) drillEditChunksBtn.addEventListener('click', function() {

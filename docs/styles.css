@@ -2432,3 +2432,60 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+
+/* ── Library: collapsible sections + search ────────────────── */
+.library-section {
+  margin-top: var(--cup-space-md);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md);
+  background: var(--cup-color-surface);
+  overflow: hidden;
+}
+
+.library-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-weight: 600;
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+}
+.library-section__header::-webkit-details-marker { display: none; }
+
+.library-section__count {
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+.library-section__arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 11px;
+}
+.library-section[open] > .library-section__header .library-section__arrow {
+  transform: rotate(90deg);
+}
+
+.library-section__body {
+  padding: 0 var(--cup-space-md) var(--cup-space-md);
+}
+
+.library-search-bar {
+  margin-bottom: var(--cup-space-sm);
+  padding-top: var(--cup-space-xs);
+}
+.field-input--sm {
+  padding: 6px 10px;
+  font-size: var(--cup-font-size-sm);
+}
+
+/* Remove the old margin-top on passage-list since it's now inside a section */
+#library-passages-section .passage-list {
+  margin-top: 0;
+}
