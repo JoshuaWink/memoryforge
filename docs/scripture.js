@@ -837,6 +837,8 @@ function startScriptureDrill(ref) {
   if (!verse) { $('#scripture-drill-area').style.display = 'none'; return; }
   drillCurrentVerse = verse;
   $('#scripture-drill-area').style.display = '';
+  var ds = document.getElementById('drill-settings');
+  if (ds) ds.removeAttribute('open');
   $('#sdrill-ref').textContent = verse.reference;
   $('#btn-sdrill-next').style.display = 'none';
   hideAllDrillSubs();
@@ -1462,6 +1464,8 @@ function startPassageDrill(ref) {
   var verses = getPassageVerses(passage);
   if (verses.length === 0) return;
   document.getElementById('scripture-drill-area').style.display = '';
+  var ds = document.getElementById('drill-settings');
+  if (ds) ds.removeAttribute('open');
   document.getElementById('sdrill-ref').textContent = passage.reference + ' (' + verses.length + ' verses)';
   document.getElementById('btn-sdrill-next').style.display = 'none';
   hideAllDrillSubs();
@@ -1864,7 +1868,7 @@ function startPassageFlTap(passage, verses) {
     }
   });
 
-  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'http://129.213.102.42:8787';
+  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'https://algorithms-bingo-homeland-assignment.trycloudflare.com';
 
   var chImportBtn = document.getElementById('btn-ch-import');
   if (chImportBtn) chImportBtn.addEventListener('click', function() {

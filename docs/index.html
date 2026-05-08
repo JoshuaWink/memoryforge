@@ -543,42 +543,47 @@
 
       <!-- DRILL panel -->
       <div class="scripture-panel" id="sp-drill" style="display:none;">
-        <!-- Scale Selector -->
-        <div class="drill-scale-select">
-          <label class="field-label">Scale</label>
-          <div class="drill-scale-btns">
-            <button class="btn btn-sm drill-scale active" data-scale="verse">Verse</button>
-            <button class="btn btn-sm drill-scale" data-scale="section">Section</button>
-            <button class="btn btn-sm drill-scale" data-scale="chapter">Chapter</button>
-          </div>
-        </div>
+        <details class="drill-settings" id="drill-settings" open>
+          <summary class="drill-settings__toggle">Drill Settings</summary>
+          <div class="drill-settings__body">
+            <!-- Scale Selector -->
+            <div class="drill-scale-select">
+              <label class="field-label">Scale</label>
+              <div class="drill-scale-btns">
+                <button class="btn btn-sm drill-scale active" data-scale="verse">Verse</button>
+                <button class="btn btn-sm drill-scale" data-scale="section">Section</button>
+                <button class="btn btn-sm drill-scale" data-scale="chapter">Chapter</button>
+              </div>
+            </div>
 
-        <!-- Passage Picker (for section/chapter scale) -->
-        <div class="drill-passage-select" id="drill-passage-select" style="display:none;">
-          <label class="field-label" for="drill-passage-picker">Passage</label>
-          <select id="drill-passage-picker" class="field-input">
-            <option value="">Select a passage...</option>
-          </select>
-        </div>
+            <!-- Passage Picker (for section/chapter scale) -->
+            <div class="drill-passage-select" id="drill-passage-select" style="display:none;">
+              <label class="field-label" for="drill-passage-picker">Passage</label>
+              <select id="drill-passage-picker" class="field-input">
+                <option value="">Select a passage...</option>
+              </select>
+            </div>
 
-        <div class="drill-mode-select">
-          <label class="field-label">Drill Mode</label>
-          <div class="drill-mode-btns">
-            <button class="btn btn-sm scripture-mode active" data-mode="self-check">Self-Check</button>
-            <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
-            <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
-            <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
-            <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
-            <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
-            <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
+            <div class="drill-mode-select">
+              <label class="field-label">Drill Mode</label>
+              <div class="drill-mode-btns">
+                <button class="btn btn-sm scripture-mode active" data-mode="self-check">Self-Check</button>
+                <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
+                <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
+                <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
+                <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
+                <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
+                <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
+              </div>
+            </div>
+            <div class="drill-verse-select">
+              <label class="field-label" for="drill-verse-picker">Verse</label>
+              <select id="drill-verse-picker" class="field-input">
+                <option value="">Select a verse...</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <div class="drill-verse-select">
-          <label class="field-label" for="drill-verse-picker">Verse</label>
-          <select id="drill-verse-picker" class="field-input">
-            <option value="">Select a verse...</option>
-          </select>
-        </div>
+        </details>
         <div class="scripture-drill-area" id="scripture-drill-area" style="display:none;">
           <p class="drill-reference" id="sdrill-ref"></p>
 

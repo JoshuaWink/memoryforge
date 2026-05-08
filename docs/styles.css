@@ -2204,6 +2204,54 @@ body {
   border-color: var(--cup-color-warning);
 }
 
+/* Collapsible drill settings */
+.drill-settings {
+  margin-bottom: var(--cup-space-md);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-md);
+  background: var(--cup-color-surface);
+}
+
+.drill-settings__toggle {
+  cursor: pointer;
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  font-weight: 600;
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--cup-space-xs);
+}
+
+.drill-settings__toggle::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.drill-settings[open] > .drill-settings__toggle::before {
+  transform: rotate(90deg);
+}
+
+.drill-settings__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.drill-settings__body {
+  padding: 0 var(--cup-space-md) var(--cup-space-md);
+}
+
+/* Sticky Next button */
+#btn-sdrill-next {
+  position: sticky;
+  bottom: var(--cup-space-md);
+  z-index: 10;
+  width: 100%;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
+}
+
 /* Passage picker */
 .drill-passage-select {
   margin-bottom: var(--cup-space-md);
