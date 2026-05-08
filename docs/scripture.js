@@ -1898,7 +1898,8 @@ function startPassageFlTap(passage, verses) {
         renderVerseList();
         renderPassageList();
         populatePassageCheckboxes();
-        bookInput.value = '';
+        // Keep book name — advance chapter for rapid multi-chapter workflow
+        if (chapterInput) chapterInput.value = chapter + 1;
         var msg = added + '/' + data.verses.length + ' verses imported for ' + humanBook + ' ' + chapter + ' ' + translation;
         if (data.verses.length - added > 0) msg += ' (' + (data.verses.length - added) + ' duplicates skipped)';
         if (addedRefs.length >= 2) msg += '. Passage created!';
@@ -1909,6 +1910,97 @@ function startPassageFlTap(passage, verses) {
         if (statusEl) statusEl.textContent = 'Import failed: ' + err.message + '. Is the proxy running?';
         chImportBtn.disabled = false;
       });
+  });
+
+  // -- Book Import (all chapters) --
+  var BOOK_CHAPTER_COUNTS = {
+    'GEN':50,'EXO':40,'LEV':27,'NUM':36,'DEU':34,'JOS':24,'JDG':21,'RUT':4,
+    '1SA':31,'2SA':24,'1KI':22,'2KI':25,'1CH':29,'2CH':36,'EZR':10,'NEH':13,'EST':10,
+    'JOB':42,'PSA':150,'PRO':31,'ECC':12,'SNG':8,
+    'ISA':66,'JER':52,'LAM':5,'EZK':48,'DAN':12,'HOS':14,'JOL':3,'AMO':9,
+    'OBA':1,'JON':4,'MIC':7,'NAM':3,'HAB':3,'ZEP':3,'HAG':2,'ZEC':14,'MAL':4,
+    'MAT':28,'MRK':16,'LUK':24,'JHN':21,'ACT':28,'ROM':16,
+    '1CO':16,'2CO':13,'GAL':6,'EPH':6,'PHP':4,'COL':4,
+    '1TH':5,'2TH':3,'1TI':6,'2TI':4,'TIT':3,'PHM':1,
+    'HEB':13,'JAS':5,'1PE':5,'2PE':3,'1JN':5,'2JN':1,'3JN':1,'JUD':1,'REV':22
+  };
+
+  var bookImportBtn = document.getElementById('btn-book-import');
+  if (bookImportBtn) bookImportBtn.addEventListener('click', function() {
+    var bookInput = document.getElementById('ch-import-book');
+    var translationSelect = document.getElementById('ch-import-translation');
+    var statusEl = document.getElementById('ch-import-status');
+    var chImportBtnEl = document.getElementById('btn-ch-import');
+
+    var bookName = (bookInput ? bookInput.value.trim() : '');
+    var selOpt = translationSelect ? translationSelect.options[translationSelect.selectedIndex] : null;
+    var translation = selOpt ? selOpt.value.toUpperCase() : 'NLT';
+    var versionId = selOpt ? selOpt.getAttribute('data-vid') : '116';
+
+    if (!bookName) { if (statusEl) statusEl.textContent = 'Enter a book name'; return; }
+    var bookCode = CHAPTER_BOOK_CODES[bookName.toLowerCase()];
+    if (!bookCode) { if (statusEl) statusEl.textContent = 'Unknown book: ' + bookName; return; }
+
+    var totalChapters = BOOK_CHAPTER_COUNTS[bookCode];
+    if (!totalChapters) { if (statusEl) statusEl.textContent = 'Chapter count unknown for ' + bookName; return; }
+
+    var humanBook = CHAPTER_CODE_TO_NAME[bookCode] || bookName;
+    bookImportBtn.disabled = true;
+    if (chImportBtnEl) chImportBtnEl.disabled = true;
+    if (statusEl) statusEl.textContent = 'Importing ' + humanBook + ' (' + totalChapters + ' chapters)...';
+
+    var chapterNum = 1;
+    var totalAdded = 0;
+
+    function importNextChapter() {
+      if (chapterNum > totalChapters) {
+        if (statusEl) statusEl.textContent = 'Imported ' + totalAdded + ' verses across ' + totalChapters + ' chapters of ' + humanBook + ' ' + translation + '.';
+        bookImportBtn.disabled = false;
+        if (chImportBtnEl) chImportBtnEl.disabled = false;
+        renderVerseList();
+        renderPassageList();
+        populatePassageCheckboxes();
+        return;
+      }
+      var ch = chapterNum;
+      if (statusEl) statusEl.textContent = 'Importing ' + humanBook + ' ' + ch + '/' + totalChapters + '...';
+      var url = PROXY_BASE + '/api/bible/' + versionId + '/' + bookCode + '.' + ch;
+      fetch(url)
+        .then(function(resp) {
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          return resp.json();
+        })
+        .then(function(data) {
+          if (data.verses && data.verses.length > 0) {
+            var addedRefs = [];
+            for (var i = 0; i < data.verses.length; i++) {
+              var v = data.verses[i];
+              var ref = humanBook + ' ' + ch + ':' + v.verse;
+              var r = addVerse(scriptureLib, ref, v.text, translation, '');
+              if (r) { totalAdded++; addedRefs.push(r.reference); }
+            }
+            if (addedRefs.length >= 2) {
+              var passageName = humanBook + ' ' + ch;
+              var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
+              if (!existing) {
+                var passage = createPassageFromVerses(passageName, addedRefs);
+                if (passage) savePassage(passage);
+              }
+            }
+            saveVerseLibrary(scriptureLib);
+          }
+          chapterNum++;
+          // Small delay to avoid hammering the proxy
+          setTimeout(importNextChapter, 150);
+        })
+        .catch(function(err) {
+          if (statusEl) statusEl.textContent = 'Failed at chapter ' + ch + ': ' + err.message;
+          bookImportBtn.disabled = false;
+          if (chImportBtnEl) chImportBtnEl.disabled = false;
+        });
+    }
+
+    importNextChapter();
   });
 
   // -- Scale selector --
