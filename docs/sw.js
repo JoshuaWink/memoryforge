@@ -1,4 +1,4 @@
-const CACHE_NAME = 'memoryforge-v18';
+const CACHE_NAME = 'memoryforge-v19';
 const ASSETS = [
   './',
   './index.html',

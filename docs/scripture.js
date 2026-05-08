@@ -1602,39 +1602,58 @@ function startChapterChunkOrder(passage, verses) {
 function renderChapterChunks(scrambled) {
   var bank = document.getElementById('chapter-chunks-bank');
   bank.innerHTML = scrambled.map(function(ch, i) {
-    return '<button class="chunk-pill" data-idx="' + i + '">' + escapeHtmlScripture(ch) + '</button>';
+    return '<button class="chunk-pill" data-chunk-text="' + escapeHtmlScripture(ch) + '" data-idx="' + i + '">' + escapeHtmlScripture(ch) + '</button>';
   }).join('');
-  document.getElementById('chapter-chunks-selected').innerHTML = '';
+  document.getElementById('chapter-chunks-selected').innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
 
   bank.querySelectorAll('.chunk-pill').forEach(function(pill) {
-    pill.addEventListener('click', function() {
-      if (pill.classList.contains('chunk-pill--used')) return;
-      var text = pill.textContent;
-      chapterChunksSelected.push(text);
-      pill.classList.add('chunk-pill--used');
-      var sel = document.getElementById('chapter-chunks-selected');
-      var sp = document.createElement('span');
-      sp.className = 'chunk-pill chunk-pill--selected';
-      sp.textContent = text;
-      sel.appendChild(sp);
-      updateChapterChunksProgress();
-
-      if (chapterChunksSelected.length === chapterChunksCorrect.length) {
-        var allRight = chapterChunksSelected.every(function(c, ci) { return c === chapterChunksCorrect[ci]; });
-        if (allRight) {
-          document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>Perfect! Every chunk in order.</p></div>';
-          document.getElementById('btn-sdrill-next').style.display = '';
-        } else {
-          var firstWrong = -1;
-          for (var w = 0; w < chapterChunksCorrect.length; w++) {
-            if (chapterChunksSelected[w] !== chapterChunksCorrect[w]) { firstWrong = w; break; }
-          }
-          document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--retry"><p>Wrong order at chunk ' + (firstWrong + 1) + '. Try again!</p></div>';
-          document.getElementById('btn-chapter-chunks-reset').style.display = '';
-        }
-      }
-    });
+    pill.addEventListener('click', function() { tapChapterChunkPill(pill); });
   });
+}
+
+function tapChapterChunkPill(pill) {
+  if (pill.classList.contains('chunk-pill--used')) return;
+  var text = pill.dataset.chunkText;
+  chapterChunksSelected.push(text);
+  pill.classList.add('chunk-pill--used');
+
+  var selectedEl = document.getElementById('chapter-chunks-selected');
+  if (chapterChunksSelected.length === 1) selectedEl.innerHTML = '';
+
+  var idx = chapterChunksSelected.length - 1;
+  var isCorrect = chapterChunksCorrect[idx] === text;
+  var selPill = document.createElement('span');
+  selPill.className = 'chunk-pill ' + (isCorrect ? 'chunk-pill--correct' : 'chunk-pill--wrong');
+  selPill.textContent = text;
+  selectedEl.appendChild(selPill);
+  updateChapterChunksProgress();
+
+  if (!isCorrect) {
+    var resultEl = document.getElementById('chapter-chunks-result');
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong \u2014 expected: <strong>' + escapeHtmlScripture(chapterChunksCorrect[idx]) + '</strong>. Tap the red chip to undo, or reset.</div>';
+    document.getElementById('btn-chapter-chunks-reset').style.display = '';
+    selPill.style.cursor = 'pointer';
+    selPill.addEventListener('click', function undoWrong() {
+      selPill.removeEventListener('click', undoWrong);
+      chapterChunksSelected.pop();
+      selPill.remove();
+      pill.classList.remove('chunk-pill--used');
+      resultEl.innerHTML = '';
+      updateChapterChunksProgress();
+      if (chapterChunksSelected.length === 0) {
+        selectedEl.innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
+      }
+      document.getElementById('btn-chapter-chunks-reset').style.display = 'none';
+    });
+    return;
+  }
+
+  pill.remove();
+
+  if (chapterChunksSelected.length === chapterChunksCorrect.length) {
+    document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>Perfect! Every chunk in order.</p></div>';
+    document.getElementById('btn-sdrill-next').style.display = '';
+  }
 }
 
 function updateChapterChunksProgress() {
