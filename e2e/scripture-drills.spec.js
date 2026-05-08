@@ -203,25 +203,33 @@ test.describe('Scripture Drill Modes', () => {
       }
     });
 
-    test('shows first-letter hint and word options', async ({ page }) => {
+    test('shows verse display with first-letter hints and word options', async ({ page }) => {
       await expect(page.locator('#drill-fl-tap')).toBeVisible();
-      const hint = page.locator('#fl-tap-hint');
-      await expect(hint).toBeVisible();
-      const hintText = await hint.textContent();
-      expect(hintText.length).toBeGreaterThan(0);
+      const verse = page.locator('#fl-tap-verse');
+      await expect(verse).toBeVisible();
+      // Should show first-letter hints for pending words
+      const pending = page.locator('.flt-word--pending');
+      const pendingCount = await pending.count();
+      expect(pendingCount).toBeGreaterThan(0);
       const options = page.locator('#fl-tap-bank .word-option');
       await expect(options).toHaveCount(4);
     });
 
-    test('shows progress with ? for current word', async ({ page }) => {
-      const progress = page.locator('#fl-tap-progress');
-      await expect(progress).toContainText('?');
+    test('shows current word as first-letter blank', async ({ page }) => {
+      const current = page.locator('.flt-word--current');
+      await expect(current).toBeVisible();
+      const text = await current.textContent();
+      // Should show first letter + underscores (e.g. "T___")
+      expect(text).toMatch(/^[A-Z]___$/);
     });
 
-    test('tapping correct word advances progress', async ({ page }) => {
+    test('tapping correct word fills in verse text', async ({ page }) => {
       const wordBtn = page.locator('#fl-tap-bank .word-option', { hasText: 'This' });
       await wordBtn.click();
-      await expect(page.locator('#fl-tap-progress .word-correct')).toHaveCount(1);
+      // First word should now show as filled
+      const filled = page.locator('.flt-word--filled');
+      await expect(filled).toHaveCount(1);
+      await expect(filled.first()).toContainText('This');
     });
 
     test('tapping wrong word shows error', async ({ page }) => {

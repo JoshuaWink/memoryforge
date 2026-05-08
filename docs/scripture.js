@@ -1141,28 +1141,36 @@ function startFlTap(verse) {
   flTapWords = verse.text.split(/\s+/);
   flTapCurrentIdx = 0;
 
-  document.getElementById('fl-tap-hint').textContent = fromFirstLetters(verse.text);
-
   renderFlTap();
 }
 
+function getFirstLetter(word) {
+  // Return first letter (uppercase) — skip leading punctuation
+  var clean = word.replace(/^[^a-zA-Z0-9]*/, '');
+  return clean.length > 0 ? clean[0].toUpperCase() : word[0];
+}
+
 function renderFlTap() {
-  var progressEl = document.getElementById('fl-tap-progress');
+  var verseEl = document.getElementById('fl-tap-verse');
   var bankEl = document.getElementById('fl-tap-bank');
   var resultEl = document.getElementById('fl-tap-result');
   resultEl.innerHTML = '';
 
+  // Build flowing verse text — filled words + current blank + future first-letter hints
   var html = '';
   for (var i = 0; i < flTapWords.length; i++) {
     if (i < flTapCurrentIdx) {
-      html += '<span class="word-correct">' + escapeHtmlScripture(flTapWords[i]) + '</span> ';
+      // Already tapped — show full word
+      html += '<span class="flt-word flt-word--filled">' + escapeHtmlScripture(flTapWords[i]) + '</span> ';
     } else if (i === flTapCurrentIdx) {
-      html += '<span class="word-current">?</span> ';
+      // Current — show as active blank with first-letter hint
+      html += '<span class="flt-word flt-word--current">' + getFirstLetter(flTapWords[i]) + '___</span> ';
     } else {
-      html += '<span style="color:var(--cup-color-text-muted)">_</span> ';
+      // Future — show first letter only (dimmed)
+      html += '<span class="flt-word flt-word--pending">' + getFirstLetter(flTapWords[i]) + '</span> ';
     }
   }
-  progressEl.innerHTML = html;
+  verseEl.innerHTML = html;
 
   if (flTapCurrentIdx >= flTapWords.length) {
     bankEl.innerHTML = '';

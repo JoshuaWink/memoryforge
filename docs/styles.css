@@ -2099,22 +2099,31 @@ body {
   line-height: 1.8;
 }
 
-.drill-fl-tap__progress {
+.drill-fl-tap__verse {
   font-size: var(--cup-font-size-lg);
-  line-height: 2;
+  line-height: 2.2;
   margin-bottom: var(--cup-space-lg);
   color: var(--cup-color-text);
   min-height: 60px;
 }
 
-.drill-fl-tap__progress .word-correct {
+.flt-word {
+  display: inline;
+}
+.flt-word--filled {
   color: var(--cup-color-success);
 }
-
-.drill-fl-tap__progress .word-current {
+.flt-word--current {
+  display: inline-block;
   color: var(--cup-color-primary);
   font-weight: 700;
   border-bottom: 2px solid var(--cup-color-primary);
+  padding: 0 2px;
+  min-width: 40px;
+}
+.flt-word--pending {
+  color: var(--cup-color-text-muted);
+  opacity: 0.5;
 }
 
 .drill-fl-tap__bank {
