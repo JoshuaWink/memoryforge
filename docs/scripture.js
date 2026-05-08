@@ -843,6 +843,8 @@ function startScriptureDrill(ref) {
   if (ds) ds.removeAttribute('open');
   $('#sdrill-ref').textContent = verse.reference;
   $('#btn-sdrill-next').style.display = 'none';
+  var drillEditBtn = document.getElementById('btn-drill-edit-chunks');
+  if (drillEditBtn) drillEditBtn.style.display = '';
   hideAllDrillSubs();
 
   if (scriptureDrillMode === 'self-check') {
@@ -1249,7 +1251,8 @@ function chunksToSplitPositions(text, chunks) {
 
 function saveChunkEditorForVerse() {
   if (!chunkEditingRef) return;
-  var verse = scriptureLib.verses.find(function(v) { return v.reference === chunkEditingRef; });
+  var savedRef = chunkEditingRef;
+  var verse = scriptureLib.verses.find(function(v) { return v.reference === savedRef; });
   if (!verse) return;
   var result = getChunkEditorResult();
   if (result && result.chunks.length > 0) {
@@ -1261,6 +1264,12 @@ function saveChunkEditorForVerse() {
   chunkEditingRef = null;
   hideChunkEditor();
   renderVerseList();
+  // Restart the active drill so new chunks take effect immediately
+  if (drillCurrentVerse && drillCurrentVerse.reference === savedRef) {
+    startScriptureDrill(savedRef);
+  } else if (drillCurrentPassage && scriptureDrillScale !== 'verse') {
+    startPassageDrill(drillCurrentPassage.reference);
+  }
 }
 
 // -- Import/Export --
@@ -1502,6 +1511,8 @@ function startPassageDrill(ref) {
   if (ds) ds.removeAttribute('open');
   document.getElementById('sdrill-ref').textContent = passage.reference + ' (' + verses.length + ' verses)';
   document.getElementById('btn-sdrill-next').style.display = 'none';
+  var drillEditBtnP = document.getElementById('btn-drill-edit-chunks');
+  if (drillEditBtnP) drillEditBtnP.style.display = 'none';
   hideAllDrillSubs();
 
   if (scriptureDrillMode === 'self-check') {
@@ -1739,6 +1750,13 @@ function startPassageFlTap(passage, verses) {
   // Chunk-order reset listener
   var chunkResetBtn = document.getElementById('btn-chunk-order-reset');
   if (chunkResetBtn) chunkResetBtn.addEventListener('click', resetChunkOrder);
+
+  var drillEditChunksBtn = document.getElementById('btn-drill-edit-chunks');
+  if (drillEditChunksBtn) drillEditChunksBtn.addEventListener('click', function() {
+    if (drillCurrentVerse && scriptureDrillScale === 'verse') {
+      openChunkEditorForVerse(drillCurrentVerse.reference);
+    }
+  });
 
   var nextBtn = $('#btn-sdrill-next');
   if (nextBtn) nextBtn.addEventListener('click', function() {
