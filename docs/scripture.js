@@ -959,9 +959,22 @@ function tapChunkPill(pill) {
 
   if (!isCorrect) {
     var resultEl = document.getElementById('chunk-order-result');
-    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong order! The next chunk was: <strong>' + escapeHtmlScripture(chunkOrderCorrect[idx]) + '</strong></div>';
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong — expected: <strong>' + escapeHtmlScripture(chunkOrderCorrect[idx]) + '</strong>. Tap the red chip to undo, or reset.</div>';
     document.getElementById('btn-chunk-order-reset').style.display = '';
     drillUpdateSR(drillCurrentVerse.reference, 2);
+    // Let user tap the wrong chip in selected area to undo it
+    selPill.style.cursor = 'pointer';
+    selPill.addEventListener('click', function undoWrong() {
+      selPill.removeEventListener('click', undoWrong);
+      chunkOrderSelected.pop();
+      selPill.remove();
+      pill.classList.remove('chunk-pill--used');
+      resultEl.innerHTML = '';
+      if (chunkOrderSelected.length === 0) {
+        selectedEl.innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order…</span>';
+      }
+      document.getElementById('btn-chunk-order-reset').style.display = 'none';
+    });
     return;
   }
 

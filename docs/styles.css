@@ -1985,6 +1985,11 @@ body {
   color: #fff;
   border-color: var(--cup-color-error);
   animation: shake 0.3s ease;
+  cursor: pointer;
+}
+
+.chunk-pill--wrong:hover {
+  opacity: 0.7;
 }
 
 @keyframes shake {
