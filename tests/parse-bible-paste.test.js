@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBiblePaste } from '../src/parse-bible-paste.js';
+import { parseBiblePaste, parseBibleUrl } from '../src/parse-bible-paste.js';
 
 describe('parseBiblePaste', () => {
   describe('Bible app single verse format', () => {
@@ -151,4 +151,102 @@ https://bible.com/bible/116/rom.1.1.NLT`;
       expect(result[0].translation).toBe('');
     });
   });
+
+  describe('mobile Bible app format (text first, reference last)', () => {
+    it('parses text-first single verse paste', () => {
+      const paste = `This letter is from Paul, a slave of Christ Jesus.
+Romans 1:1 NLT
+https://bible.com/bible/116/rom.1.1.NLT`;
+      const result = parseBiblePaste(paste);
+      expect(result).toHaveLength(1);
+      expect(result[0].reference).toBe('Romans 1:1');
+      expect(result[0].text).toBe('This letter is from Paul, a slave of Christ Jesus.');
+      expect(result[0].translation).toBe('NLT');
+    });
+
+    it('parses text-first with verse brackets', () => {
+      const paste = `[1] First verse. [2] Second verse.
+Romans 1:1-2 NLT
+https://bible.com/bible/116/rom.1.1-2.NLT`;
+      const result = parseBiblePaste(paste);
+      expect(result).toHaveLength(2);
+      expect(result[0].reference).toBe('Romans 1:1');
+      expect(result[1].reference).toBe('Romans 1:2');
+    });
+
+    it('parses text-first without URL', () => {
+      const paste = `The LORD is my shepherd; I shall not want.
+Psalm 23:1 KJV`;
+      const result = parseBiblePaste(paste);
+      expect(result).toHaveLength(1);
+      expect(result[0].reference).toBe('Psalm 23:1');
+      expect(result[0].text).toBe('The LORD is my shepherd; I shall not want.');
+    });
+
+    it('handles unicode dashes in range references', () => {
+      const paste = `[1] First verse. [2] Second verse.
+Romans 1:1\u20132 NLT
+https://bible.com/bible/116/rom.1.1-2.NLT`;
+      const result = parseBiblePaste(paste);
+      expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('parseBibleUrl', () => {
+    it('parses standard Bible.com verse URL', () => {
+      const result = parseBibleUrl('https://bible.com/bible/116/rom.1.1.NLT');
+      expect(result).toEqual({
+        book: 'rom',
+        chapter: 1,
+        startVerse: 1,
+        endVerse: 1,
+        translation: 'NLT',
+        versionId: '116',
+        url: 'https://bible.com/bible/116/rom.1.1.NLT',
+      });
+    });
+
+    it('parses verse range URL', () => {
+      const result = parseBibleUrl('https://bible.com/bible/116/rom.1.1-5.NLT');
+      expect(result.startVerse).toBe(1);
+      expect(result.endVerse).toBe(5);
+      expect(result.chapter).toBe(1);
+      expect(result.book).toBe('rom');
+    });
+
+    it('parses full chapter URL (no verse)', () => {
+      const result = parseBibleUrl('https://bible.com/bible/116/rom.8.NLT');
+      expect(result.book).toBe('rom');
+      expect(result.chapter).toBe(8);
+      expect(result.startVerse).toBe(null);
+      expect(result.endVerse).toBe(null);
+    });
+
+    it('handles www prefix', () => {
+      const result = parseBibleUrl('https://www.bible.com/bible/116/rom.1.1.NLT');
+      expect(result.book).toBe('rom');
+      expect(result.versionId).toBe('116');
+    });
+
+    it('returns null for non-Bible.com URLs', () => {
+      expect(parseBibleUrl('https://google.com')).toBeNull();
+      expect(parseBibleUrl('not a url')).toBeNull();
+      expect(parseBibleUrl('')).toBeNull();
+    });
+
+    it('parses different translations', () => {
+      const kjv = parseBibleUrl('https://bible.com/bible/1/gen.1.1.KJV');
+      expect(kjv.versionId).toBe('1');
+      expect(kjv.translation).toBe('KJV');
+      expect(kjv.book).toBe('gen');
+    });
+
+    it('handles numbered book codes', () => {
+      const result = parseBibleUrl('https://bible.com/bible/111/1co.13.4.NIV');
+      expect(result.book).toBe('1co');
+      expect(result.chapter).toBe(13);
+      expect(result.startVerse).toBe(4);
+    });
+  });
+
 });

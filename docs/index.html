@@ -439,6 +439,14 @@
                 <textarea id="bulk-paste-area" class="field-input scripture-textarea" rows="4" placeholder="Paste from Bible app — e.g. Romans 1:1 NLT&#10;[1] This letter is from Paul...&#10;&#10;https://bible.com/..."></textarea>
                 <button id="btn-bulk-import" class="btn btn-sm btn-primary">Import Pasted Verses</button>
               </div>
+              <div class="field-group" style="margin-top:var(--cup-space-sm)">
+                <label class="field-label" for="bible-url-input">Bible.com URL</label>
+                <div style="display:flex;gap:var(--cup-space-xs)">
+                  <input type="url" id="bible-url-input" class="field-input" placeholder="https://bible.com/bible/116/rom.1.1-5.NLT" style="flex:1">
+                  <button id="btn-fetch-bible-url" class="btn btn-sm btn-primary">Fetch</button>
+                </div>
+                <p id="bible-url-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
+              </div>
               <div class="import-export-row">
                 <button id="btn-export-json" class="btn btn-sm btn-secondary">Export JSON</button>
                 <label class="btn btn-sm btn-secondary import-file-label">

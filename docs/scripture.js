@@ -348,6 +348,8 @@ function parseBiblePaste(input) {
   if (!input) return [];
   var result = tryBibleAppFormat(input);
   if (result.length > 0) return result;
+  result = tryRefLastFormat(input);
+  if (result.length > 0) return result;
   result = tryPlainFormat(input);
   return result;
 }
@@ -399,6 +401,117 @@ function tryPlainFormat(input) {
     }
   }
   return results;
+}
+
+
+function tryRefLastFormat(input) {
+  var lines = input.split('\n');
+  var cleanLines = [];
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim();
+    if (l) cleanLines.push(l);
+  }
+  if (cleanLines.length < 2) return [];
+
+  var refLineIdx = -1;
+  var refMatch = null;
+  for (var i = cleanLines.length - 1; i >= 1; i--) {
+    if (BIBLE_URL_RE.test(cleanLines[i])) continue;
+    var normalized = cleanLines[i].replace(/[\u2013\u2014\u2012]/g, '-');
+    var m = normalized.match(BIBLE_REF_LINE_RE);
+    if (m) { refLineIdx = i; refMatch = m; break; }
+  }
+  if (!refMatch || refLineIdx < 1) return [];
+
+  var book = refMatch[1].trim();
+  var chapterVerse = refMatch[2];
+  var translation = refMatch[3] || '';
+
+  var bodyLines = [];
+  for (var j = 0; j < refLineIdx; j++) {
+    if (!BIBLE_URL_RE.test(cleanLines[j])) bodyLines.push(cleanLines[j]);
+  }
+  var body = bodyLines.join(' ').replace(/\s{2,}/g, ' ').trim();
+  if (!body) return [];
+
+  if (/\[\d+\]/.test(body)) {
+    return parseMultiVersePaste(book, chapterVerse, translation, body);
+  }
+
+  var text = body.replace(/^\[\d+\]\s*/, '').trim();
+  var cv = chapterVerse.indexOf('-') >= 0 ? chapterVerse.split('-')[0] : chapterVerse;
+  return [{ reference: book + ' ' + cv, text: text, translation: translation }];
+}
+
+function extractVersesFromHtml(html, urlInfo) {
+  // Bible.com pages embed verse content. Try to find it.
+  // The page has verse text in data attributes or in the page body.
+  // Strategy: find text between content markers, split by verse numbers.
+  var results = [];
+
+  // Try to extract from page content - look for verse text patterns
+  // Bible.com uses spans with class containing "verse" or data-usfm
+  // Fallback: extract raw text content between known markers
+
+  // Method 1: Look for ChapterContent or verse spans
+  var versePattern = /data-usfm="[^"]*\.(\d+)"[^>]*>([^<]+)/gi;
+  var m;
+  while ((m = versePattern.exec(html)) !== null) {
+    var vnum = parseInt(m[1], 10);
+    var text = m[2].trim();
+    if (text && (!urlInfo.startVerse || (vnum >= urlInfo.startVerse && vnum <= (urlInfo.endVerse || vnum)))) {
+      // Accumulate text for same verse number
+      var existingIdx = results.findIndex(function(r) { return r.verseNum === vnum; });
+      if (existingIdx >= 0) {
+        results[existingIdx].text += ' ' + text;
+      } else {
+        results.push({ verseNum: vnum, text: text });
+      }
+    }
+  }
+
+  // Method 2: Try plain text extraction if method 1 found nothing
+  if (results.length === 0) {
+    // Look for verse content in class="content" or similar
+    var contentMatch = html.match(/<div[^>]*class="[^"]*ChapterContent[^"]*"[^>]*>(.*?)<\/div>/si);
+    if (contentMatch) {
+      var inner = contentMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (inner && urlInfo.startVerse) {
+        // Single verse or range without markers - treat as one block per verse
+        if (!urlInfo.endVerse || urlInfo.endVerse === urlInfo.startVerse) {
+          results.push({ verseNum: urlInfo.startVerse, text: inner });
+        }
+      }
+    }
+  }
+
+  // Build book name from URL info (approximate)
+  var bookMap = {gen:'Genesis',exo:'Exodus',lev:'Leviticus',num:'Numbers',deu:'Deuteronomy',jos:'Joshua',jdg:'Judges',rut:'Ruth','1sa':'1 Samuel','2sa':'2 Samuel','1ki':'1 Kings','2ki':'2 Kings','1ch':'1 Chronicles','2ch':'2 Chronicles',ezr:'Ezra',neh:'Nehemiah',est:'Esther',job:'Job',psa:'Psalms',pro:'Proverbs',ecc:'Ecclesiastes',sng:'Song of Solomon',isa:'Isaiah',jer:'Jeremiah',lam:'Lamentations',ezk:'Ezekiel',dan:'Daniel',hos:'Hosea',jol:'Joel',amo:'Amos',oba:'Obadiah',jon:'Jonah',mic:'Micah',nam:'Nahum',hab:'Habakkuk',zep:'Zephaniah',hag:'Haggai',zec:'Zechariah',mal:'Malachi',mat:'Matthew',mrk:'Mark',luk:'Luke',jhn:'John',act:'Acts',rom:'Romans','1co':'1 Corinthians','2co':'2 Corinthians',gal:'Galatians',eph:'Ephesians',php:'Philippians',col:'Colossians','1th':'1 Thessalonians','2th':'2 Thessalonians','1ti':'1 Timothy','2ti':'2 Timothy',tit:'Titus',phm:'Philemon',heb:'Hebrews',jas:'James','1pe':'1 Peter','2pe':'2 Peter','1jn':'1 John','2jn':'2 John','3jn':'3 John',jud:'Jude',rev:'Revelation'};
+  var bookName = bookMap[urlInfo.book] || urlInfo.book;
+
+  return results.map(function(r) {
+    return {
+      reference: bookName + ' ' + urlInfo.chapter + ':' + r.verseNum,
+      text: r.text.replace(/\s+/g, ' ').trim(),
+      translation: urlInfo.translation
+    };
+  });
+}
+
+function parseBibleUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  url = url.trim();
+  var m = url.match(/^https?:\/\/(?:www\.)?bible\.com\/bible\/(\d+)\/([\w]+)\.(\d+)(?:\.(\d+)(?:-(\d+))?)?\.([A-Z]+)$/i);
+  if (!m) return null;
+  return {
+    book: m[2].toLowerCase(),
+    chapter: parseInt(m[3], 10),
+    startVerse: m[4] ? parseInt(m[4], 10) : null,
+    endVerse: m[5] ? parseInt(m[5], 10) : (m[4] ? parseInt(m[4], 10) : null),
+    translation: m[6].toUpperCase(),
+    versionId: m[1],
+    url: url
+  };
 }
 
 // -- Verse Library (localStorage) --
@@ -535,17 +648,29 @@ function handleAddVerse() {
     if (parsed.length > 0) {
       // Bulk-add all parsed verses
       var added = 0;
+      var addedRefs = [];
       for (var p = 0; p < parsed.length; p++) {
         var r = addVerse(scriptureLib, parsed[p].reference, parsed[p].text, parsed[p].translation || translation, notes);
-        if (r) added++;
+        if (r) { added++; addedRefs.push(r.reference); }
       }
       if (added > 0) {
+        // Auto-create passage if 2+ consecutive verses
+        if (addedRefs.length >= 2) {
+          var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
+          var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
+          if (!existing) {
+            var passage = createPassageFromVerses(passageName, addedRefs);
+            if (passage) savePassage(passage);
+          }
+        }
         saveVerseLibrary(scriptureLib);
         $('#verse-ref').value = '';
         $('#verse-text').value = '';
         $('#verse-notes').value = '';
         hideChunkEditor();
         renderVerseList();
+        renderPassageList();
+        populatePassageCheckboxes();
         return;
       }
       alert('Verses already exist or could not be parsed.');
@@ -1163,14 +1288,29 @@ function handleBulkPaste() {
   var parsed = parseBiblePaste(text);
   if (parsed.length === 0) { alert('Could not parse any verses from the pasted text.'); return; }
   var added = 0;
+  var addedRefs = [];
   for (var i = 0; i < parsed.length; i++) {
     var r = addVerse(scriptureLib, parsed[i].reference, parsed[i].text, parsed[i].translation || 'KJV', '');
-    if (r) added++;
+    if (r) { added++; addedRefs.push(r.reference); }
+  }
+  // Auto-create passage if 2+ consecutive verses imported
+  if (addedRefs.length >= 2) {
+    var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
+    var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
+    if (!existing) {
+      var passage = createPassageFromVerses(passageName, addedRefs);
+      if (passage) savePassage(passage);
+    }
   }
   saveVerseLibrary(scriptureLib);
   renderVerseList();
+  renderPassageList();
+  populatePassageCheckboxes();
   textarea.value = '';
-  alert('Added ' + added + ' verse(s)' + (parsed.length - added > 0 ? ' (' + (parsed.length - added) + ' duplicates skipped)' : '') + '.');
+  var msg = 'Added ' + added + ' verse(s)';
+  if (parsed.length - added > 0) msg += ' (' + (parsed.length - added) + ' duplicates skipped)';
+  if (addedRefs.length >= 2) msg += '. Passage created automatically!';
+  alert(msg);
 }
 
 // -- Wire up Scripture events --
@@ -1622,6 +1762,59 @@ function startPassageFlTap(passage, verses) {
   if (importFile) importFile.addEventListener('change', handleImportJSON);
   var bulkBtn = $('#btn-bulk-import');
   if (bulkBtn) bulkBtn.addEventListener('click', handleBulkPaste);
+
+  // -- Bible.com URL fetch --
+  var fetchUrlBtn = document.getElementById('btn-fetch-bible-url');
+  if (fetchUrlBtn) fetchUrlBtn.addEventListener('click', function() {
+    var urlInput = document.getElementById('bible-url-input');
+    var statusEl = document.getElementById('bible-url-status');
+    if (!urlInput || !urlInput.value.trim()) { if (statusEl) statusEl.textContent = 'Enter a Bible.com URL'; return; }
+    var parsed = parseBibleUrl(urlInput.value.trim());
+    if (!parsed) { if (statusEl) statusEl.textContent = 'Invalid Bible.com URL. Use format: bible.com/bible/116/rom.1.1-5.NLT'; return; }
+    if (statusEl) statusEl.textContent = 'Fetching ' + parsed.translation + ' ' + parsed.book + ' ' + parsed.chapter + ':' + (parsed.startVerse || 1) + (parsed.endVerse && parsed.endVerse !== parsed.startVerse ? '-' + parsed.endVerse : '') + '...';
+    fetchUrlBtn.disabled = true;
+    fetch(parsed.url)
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.text();
+      })
+      .then(function(html) {
+        var verseData = extractVersesFromHtml(html, parsed);
+        if (verseData.length === 0) {
+          if (statusEl) statusEl.textContent = 'Could not extract verses from page. Try pasting text instead.';
+          fetchUrlBtn.disabled = false;
+          return;
+        }
+        var added = 0;
+        var addedRefs = [];
+        for (var i = 0; i < verseData.length; i++) {
+          var r = addVerse(scriptureLib, verseData[i].reference, verseData[i].text, verseData[i].translation || parsed.translation, '');
+          if (r) { added++; addedRefs.push(r.reference); }
+        }
+        if (addedRefs.length >= 2) {
+          var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
+          var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
+          if (!existing) {
+            var passage = createPassageFromVerses(passageName, addedRefs);
+            if (passage) savePassage(passage);
+          }
+        }
+        saveVerseLibrary(scriptureLib);
+        renderVerseList();
+        renderPassageList();
+        populatePassageCheckboxes();
+        urlInput.value = '';
+        var msg = added + ' verse(s) added';
+        if (verseData.length - added > 0) msg += ' (' + (verseData.length - added) + ' duplicates skipped)';
+        if (addedRefs.length >= 2) msg += '. Passage created!';
+        if (statusEl) statusEl.textContent = msg;
+        fetchUrlBtn.disabled = false;
+      })
+      .catch(function(err) {
+        if (statusEl) statusEl.textContent = 'Fetch failed: ' + err.message + '. CORS may block this \u2014 try pasting text instead.';
+        fetchUrlBtn.disabled = false;
+      });
+  });
 
   // -- Scale selector --
   $$('.drill-scale').forEach(function(btn) {

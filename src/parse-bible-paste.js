@@ -35,6 +35,10 @@ export function parseBiblePaste(input) {
   const bibleAppResult = tryBibleAppFormat(input);
   if (bibleAppResult.length > 0) return bibleAppResult;
 
+  // Try mobile Bible app format (text first, reference last)
+  const refLastResult = tryRefLastFormat(input);
+  if (refLastResult.length > 0) return refLastResult;
+
   // Try plain "Ref - text" format (one per line)
   const plainResult = tryPlainFormat(input);
   if (plainResult.length > 0) return plainResult;
@@ -121,4 +125,75 @@ function tryPlainFormat(input) {
   }
 
   return results;
+}
+
+
+function tryRefLastFormat(input) {
+  const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  // Find the reference line (could be last or second-to-last before URL)
+  let refLineIdx = -1;
+  let refMatch = null;
+  for (let i = lines.length - 1; i >= 1; i--) {
+    if (URL_RE.test(lines[i])) continue;
+    // Try matching as a reference line (with unicode dashes too)
+    const normalized = lines[i].replace(/[\u2013\u2014\u2012]/g, '-');
+    const m = normalized.match(REF_LINE_RE);
+    if (m) {
+      refLineIdx = i;
+      refMatch = m;
+      break;
+    }
+  }
+
+  if (!refMatch || refLineIdx < 1) return [];
+
+  const book = refMatch[1].trim();
+  const chapterVerse = refMatch[2];
+  const translation = refMatch[3] || '';
+
+  // Body is everything before the reference line (and excluding URL lines)
+  const bodyLines = [];
+  for (let i = 0; i < refLineIdx; i++) {
+    if (!URL_RE.test(lines[i])) bodyLines.push(lines[i]);
+  }
+  const body = bodyLines.join(' ').replace(/\s{2,}/g, ' ').trim();
+  if (!body) return [];
+
+  // Check for verse brackets
+  if (/\[\d+\]/.test(body)) {
+    return parseMultiVerse(book, chapterVerse, translation, body);
+  }
+
+  // Single verse
+  const text = body.replace(/^\[\d+\]\s*/, '').trim();
+  const ref = buildReference(book, chapterVerse);
+  return [{ reference: ref, text, translation }];
+}
+
+/**
+ * Parse a Bible.com URL into structured reference data.
+ * URL format: https://bible.com/bible/{versionId}/{book}.{chapter}.{verse(-end)}.{translation}
+ * @param {string} url
+ * @returns {{ book: string, chapter: number, startVerse: number|null, endVerse: number|null, translation: string, versionId: string, url: string }|null}
+ */
+export function parseBibleUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  url = url.trim();
+
+  // Match: https://(www.)bible.com/bible/{versionId}/{book}.{chapter}(.{verse(-end)}).{translation}
+  const m = url.match(
+    /^https?:\/\/(?:www\.)?bible\.com\/bible\/(\d+)\/([\w]+)\.(\d+)(?:\.(\d+)(?:-(\d+))?)?\.([A-Z]+)$/i
+  );
+  if (!m) return null;
+
+  const versionId = m[1];
+  const book = m[2].toLowerCase();
+  const chapter = parseInt(m[3], 10);
+  const startVerse = m[4] ? parseInt(m[4], 10) : null;
+  const endVerse = m[5] ? parseInt(m[5], 10) : (m[4] ? parseInt(m[4], 10) : null);
+  const translation = m[6].toUpperCase();
+
+  return { book, chapter, startVerse, endVerse, translation, versionId, url };
 }
