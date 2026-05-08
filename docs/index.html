@@ -456,6 +456,38 @@
               </div>
             </div>
           </details>
+
+          <details class="import-section" style="margin-top:var(--cup-space-sm)">
+            <summary class="btn btn-sm btn-secondary">Import Chapter</summary>
+            <div class="import-section__body">
+              <div class="field-group">
+                <label class="field-label" for="ch-import-book">Book</label>
+                <input type="text" id="ch-import-book" class="field-input" placeholder="e.g. Romans, Genesis, Psalm" autocomplete="off">
+              </div>
+              <div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-xs)">
+                <div class="field-group" style="flex:1">
+                  <label class="field-label" for="ch-import-chapter">Chapter</label>
+                  <input type="number" id="ch-import-chapter" class="field-input" min="1" value="1">
+                </div>
+                <div class="field-group" style="flex:1">
+                  <label class="field-label" for="ch-import-translation">Translation</label>
+                  <select id="ch-import-translation" class="field-input">
+                    <option value="nlt" data-vid="116">NLT</option>
+                    <option value="kjv" data-vid="1">KJV</option>
+                    <option value="esv" data-vid="59">ESV</option>
+                    <option value="niv" data-vid="111">NIV</option>
+                    <option value="nkjv" data-vid="114">NKJV</option>
+                    <option value="nasb" data-vid="100">NASB</option>
+                    <option value="web" data-vid="206">WEB</option>
+                    <option value="amp" data-vid="8">AMP</option>
+                    <option value="msg" data-vid="97">MSG</option>
+                  </select>
+                </div>
+              </div>
+              <button id="btn-ch-import" class="btn btn-sm btn-primary" style="margin-top:var(--cup-space-sm);width:100%">Import Chapter</button>
+              <p id="ch-import-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
+            </div>
+          </details>
         </div>
 
         <!-- Passage Creation -->

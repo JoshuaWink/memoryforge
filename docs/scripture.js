@@ -1832,6 +1832,108 @@ function startPassageFlTap(passage, verses) {
       });
   });
 
+  // -- Chapter Import (proxy-based) --
+  var CHAPTER_BOOK_CODES = {
+    'genesis':'GEN','exodus':'EXO','leviticus':'LEV','numbers':'NUM','deuteronomy':'DEU',
+    'joshua':'JOS','judges':'JDG','ruth':'RUT',
+    '1 samuel':'1SA','2 samuel':'2SA','1 kings':'1KI','2 kings':'2KI',
+    '1 chronicles':'1CH','2 chronicles':'2CH',
+    'ezra':'EZR','nehemiah':'NEH','esther':'EST',
+    'job':'JOB','psalms':'PSA','psalm':'PSA','proverbs':'PRO','ecclesiastes':'ECC',
+    'song of solomon':'SNG','song of songs':'SNG',
+    'isaiah':'ISA','jeremiah':'JER','lamentations':'LAM',
+    'ezekiel':'EZK','daniel':'DAN','hosea':'HOS','joel':'JOL','amos':'AMO',
+    'obadiah':'OBA','jonah':'JON','micah':'MIC','nahum':'NAM','habakkuk':'HAB',
+    'zephaniah':'ZEP','haggai':'HAG','zechariah':'ZEC','malachi':'MAL',
+    'matthew':'MAT','mark':'MRK','luke':'LUK','john':'JHN',
+    'acts':'ACT','romans':'ROM',
+    '1 corinthians':'1CO','2 corinthians':'2CO',
+    'galatians':'GAL','ephesians':'EPH','philippians':'PHP','colossians':'COL',
+    '1 thessalonians':'1TH','2 thessalonians':'2TH',
+    '1 timothy':'1TI','2 timothy':'2TI','titus':'TIT','philemon':'PHM',
+    'hebrews':'HEB','james':'JAS',
+    '1 peter':'1PE','2 peter':'2PE',
+    '1 john':'1JN','2 john':'2JN','3 john':'3JN',
+    'jude':'JUD','revelation':'REV'
+  };
+  var CHAPTER_CODE_TO_NAME = {};
+  Object.keys(CHAPTER_BOOK_CODES).forEach(function(name) {
+    var code = CHAPTER_BOOK_CODES[name];
+    if (!CHAPTER_CODE_TO_NAME[code]) {
+      CHAPTER_CODE_TO_NAME[code] = name.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+  });
+
+  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'http://localhost:8787';
+
+  var chImportBtn = document.getElementById('btn-ch-import');
+  if (chImportBtn) chImportBtn.addEventListener('click', function() {
+    var bookInput = document.getElementById('ch-import-book');
+    var chapterInput = document.getElementById('ch-import-chapter');
+    var translationSelect = document.getElementById('ch-import-translation');
+    var statusEl = document.getElementById('ch-import-status');
+
+    var bookName = (bookInput ? bookInput.value.trim() : '');
+    var chapter = parseInt(chapterInput ? chapterInput.value : '1', 10);
+    var selOpt = translationSelect ? translationSelect.options[translationSelect.selectedIndex] : null;
+    var translation = selOpt ? selOpt.value.toUpperCase() : 'NLT';
+    var versionId = selOpt ? selOpt.getAttribute('data-vid') : '116';
+
+    if (!bookName) { if (statusEl) statusEl.textContent = 'Enter a book name'; return; }
+    var bookCode = CHAPTER_BOOK_CODES[bookName.toLowerCase()];
+    if (!bookCode) { if (statusEl) statusEl.textContent = 'Unknown book: ' + bookName + '. Try full name (e.g. "Romans")'; return; }
+    if (!chapter || chapter < 1) { if (statusEl) statusEl.textContent = 'Enter a valid chapter number'; return; }
+
+    var humanBook = CHAPTER_CODE_TO_NAME[bookCode] || bookName;
+    if (statusEl) statusEl.textContent = 'Fetching ' + humanBook + ' ' + chapter + ' ' + translation + '...';
+    chImportBtn.disabled = true;
+
+    var url = PROXY_BASE + '/api/bible/' + versionId + '/' + bookCode + '.' + chapter;
+    fetch(url)
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+      })
+      .then(function(data) {
+        if (!data.verses || data.verses.length === 0) {
+          if (statusEl) statusEl.textContent = 'No verses found. Check book/chapter or proxy server.';
+          chImportBtn.disabled = false;
+          return;
+        }
+        var added = 0;
+        var addedRefs = [];
+        for (var i = 0; i < data.verses.length; i++) {
+          var v = data.verses[i];
+          var ref = humanBook + ' ' + chapter + ':' + v.verse;
+          var r = addVerse(scriptureLib, ref, v.text, translation, '');
+          if (r) { added++; addedRefs.push(r.reference); }
+        }
+        // Auto-create passage for the chapter
+        if (addedRefs.length >= 2) {
+          var passageName = humanBook + ' ' + chapter;
+          var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
+          if (!existing) {
+            var passage = createPassageFromVerses(passageName, addedRefs);
+            if (passage) savePassage(passage);
+          }
+        }
+        saveVerseLibrary(scriptureLib);
+        renderVerseList();
+        renderPassageList();
+        populatePassageCheckboxes();
+        bookInput.value = '';
+        var msg = added + '/' + data.verses.length + ' verses imported for ' + humanBook + ' ' + chapter + ' ' + translation;
+        if (data.verses.length - added > 0) msg += ' (' + (data.verses.length - added) + ' duplicates skipped)';
+        if (addedRefs.length >= 2) msg += '. Passage created!';
+        if (statusEl) statusEl.textContent = msg;
+        chImportBtn.disabled = false;
+      })
+      .catch(function(err) {
+        if (statusEl) statusEl.textContent = 'Import failed: ' + err.message + '. Is the proxy running?';
+        chImportBtn.disabled = false;
+      });
+  });
+
   // -- Scale selector --
   $$('.drill-scale').forEach(function(btn) {
     btn.addEventListener('click', function() {
