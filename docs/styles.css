@@ -2348,3 +2348,34 @@ body {
 .drill-chapter-chunks {
   padding: var(--cup-space-md);
 }
+
+
+/* ── Chunk Editor Modal Overlay ── */
+.chunk-editor-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 999;
+  animation: fade-in 0.15s ease;
+}
+.chunk-editor-backdrop.active {
+  display: block;
+}
+.chunk-editor--modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: min(92vw, 600px);
+  max-height: 80vh;
+  overflow-y: auto;
+  margin: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: fade-in 0.15s ease;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -135,7 +135,11 @@ function showChunkEditor(text) {
 }
 
 function hideChunkEditor() {
-  document.getElementById('chunk-editor').style.display = 'none';
+  var editor = document.getElementById('chunk-editor');
+  editor.style.display = 'none';
+  editor.classList.remove('chunk-editor--modal');
+  var backdrop = document.getElementById('chunk-editor-backdrop');
+  if (backdrop) backdrop.classList.remove('active');
   chunkEditorSplits = [];
   chunkEditorText = '';
 }
@@ -1165,10 +1169,13 @@ function openChunkEditorForVerse(ref) {
   if (!verse) return;
   chunkEditingRef = ref;
 
-  // Scroll to top of library and show the editor below the add form
+  // Show editor as modal overlay so user keeps their scroll position
   var editor = document.getElementById('chunk-editor');
   chunkEditorText = verse.text;
   editor.style.display = '';
+  editor.classList.add('chunk-editor--modal');
+  var backdrop = document.getElementById('chunk-editor-backdrop');
+  if (backdrop) backdrop.classList.add('active');
 
   // If verse has custom chunks, reconstruct the split positions
   if (verse.customChunks) {
@@ -1207,7 +1214,7 @@ function openChunkEditorForVerse(ref) {
 
   // Update label
   editor.querySelector('.chunk-editor__label').textContent = 'Editing chunks for ' + ref;
-  editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
 }
 
 function chunksToSplitPositions(text, chunks) {
@@ -1699,6 +1706,15 @@ function startPassageFlTap(passage, verses) {
   if (clearBtn) clearBtn.addEventListener('click', function() {
     chunkEditorSplits = [];
     renderChunkEditor();
+  });
+
+  // Backdrop click cancels chunk editing
+  var chunkBackdrop = $('#chunk-editor-backdrop');
+  if (chunkBackdrop) chunkBackdrop.addEventListener('click', function() {
+    if (chunkEditingRef) {
+      chunkEditingRef = null;
+      hideChunkEditor();
+    }
   });
 
   var addBtn = $('#btn-add-verse');
