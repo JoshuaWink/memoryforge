@@ -1868,7 +1868,7 @@ function startPassageFlTap(passage, verses) {
     }
   });
 
-  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'https://algorithms-bingo-homeland-assignment.trycloudflare.com';
+  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'https://bible.orchestrate.solutions';
 
   var chImportBtn = document.getElementById('btn-ch-import');
   if (chImportBtn) chImportBtn.addEventListener('click', function() {
