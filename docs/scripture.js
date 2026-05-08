@@ -965,6 +965,8 @@ function tapChunkPill(pill) {
     return;
   }
 
+  pill.remove();
+
   if (chunkOrderSelected.length === chunkOrderCorrect.length) {
     var resultEl = document.getElementById('chunk-order-result');
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! All chunks in order.</div>';
