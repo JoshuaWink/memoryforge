@@ -17,6 +17,18 @@ function chunkVerse(text) {
       result.push(parts[i].trim());
     }
   }
+  // Third pass: split still-long chunks at phrase boundaries
+  var refined = [];
+  for (var r = 0; r < result.length; r++) {
+    var rw = result[r].trim().split(/\s+/);
+    if (rw.length > 8) {
+      var sub2 = splitOnPhraseBoundary(result[r].trim());
+      refined = refined.concat(sub2);
+    } else {
+      refined.push(result[r].trim());
+    }
+  }
+  result = refined;
   result = mergeTinyChunks(result);
   result = result.map(function(ch) { return ch.replace(/\s{2,}/g, ' ').trim(); }).filter(Boolean);
   return result.length === 0 ? [text] : result;
@@ -45,6 +57,28 @@ function splitOnConjunction(text) {
     }
   }
   return [text];
+}
+
+var PHRASE_BOUNDARY_WORDS = ['in', 'of', 'to', 'from', 'with', 'by', 'through', 'upon', 'into', 'unto', 'before', 'after', 'against', 'among', 'between', 'within', 'without', 'above', 'below', 'over', 'under', 'around', 'beyond', 'the', 'a', 'an', 'who', 'whom', 'whose', 'which', 'where', 'when'];
+
+function splitOnPhraseBoundary(text) {
+  var words = text.split(/\s+/);
+  if (words.length <= 8) return [text];
+  var mid = words.length / 2;
+  var bestIdx = -1;
+  var bestScore = Infinity;
+  for (var i = 3; i < words.length - 2; i++) {
+    var w = words[i].toLowerCase().replace(/[^a-z]/g, '');
+    if (PHRASE_BOUNDARY_WORDS.indexOf(w) >= 0) {
+      var dist = Math.abs(i - mid);
+      if (dist < bestScore) {
+        bestScore = dist;
+        bestIdx = i;
+      }
+    }
+  }
+  if (bestIdx < 0) bestIdx = Math.round(mid);
+  return [words.slice(0, bestIdx).join(' '), words.slice(bestIdx).join(' ')];
 }
 
 function mergeTinyChunks(chunks) {

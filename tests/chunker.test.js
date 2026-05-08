@@ -65,6 +65,43 @@ describe('chunker', () => {
         expect(c).not.toMatch(/\s{2,}/);
       });
     });
+
+    it('splits long text with no punctuation at phrase boundaries', () => {
+      const text = 'For God sent not his Son into the world to condemn the world';
+      const chunks = chunkVerse(text);
+      expect(chunks.length).toBeGreaterThanOrEqual(2);
+      expect(chunks.join(' ')).toBe(text);
+    });
+
+    it('splits at prepositions as phrase boundaries', () => {
+      const text = 'He has delivered us from the domain of darkness';
+      const chunks = chunkVerse(text);
+      expect(chunks.length).toBeGreaterThanOrEqual(2);
+      expect(chunks.some(c => /^from /i.test(c))).toBe(true);
+    });
+
+    it('does not over-split short text without punctuation', () => {
+      const text = 'In the beginning was the Word';
+      const chunks = chunkVerse(text);
+      expect(chunks).toHaveLength(1);
+    });
+
+    it('splits 12 plus word text into at least 2 chunks', () => {
+      const text = 'the heavens declare the glory of God the skies proclaim the work of his hands';
+      const chunks = chunkVerse(text);
+      expect(chunks.length).toBeGreaterThanOrEqual(2);
+      expect(chunks.join(' ')).toBe(text);
+    });
+
+    it('produces balanced chunks when splitting long text', () => {
+      const text = 'Grace and peace to you from God our Father through the Lord Jesus Christ';
+      const chunks = chunkVerse(text);
+      expect(chunks.length).toBeGreaterThanOrEqual(2);
+      chunks.forEach(c => {
+        expect(c.split(/\s+/).length).toBeGreaterThanOrEqual(3);
+      });
+      expect(chunks.join(' ')).toBe(text);
+    });
   });
 
   describe('chunkPassage', () => {

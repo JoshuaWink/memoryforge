@@ -32,6 +32,19 @@ export function chunkVerse(text) {
     }
   }
 
+  // Third pass: split any still-long chunks at phrase boundaries
+  let refined = [];
+  for (const chunk of result) {
+    const words = chunk.trim().split(/\s+/);
+    if (words.length > 8) {
+      const subParts = splitOnPhraseBoundary(chunk.trim());
+      refined.push(...subParts);
+    } else {
+      refined.push(chunk.trim());
+    }
+  }
+  result = refined;
+
   // Merge tiny chunks back into their neighbor
   result = mergeTiny(result);
 
@@ -132,6 +145,43 @@ function splitOnConjunction(text) {
   }
 
   return [text];
+}
+
+const PHRASE_BOUNDARY_WORDS = [
+  'in', 'of', 'to', 'from', 'with', 'by', 'through', 'upon', 'into',
+  'unto', 'before', 'after', 'against', 'among', 'between', 'within',
+  'without', 'above', 'below', 'over', 'under', 'around', 'beyond',
+  'the', 'a', 'an', 'who', 'whom', 'whose', 'which', 'where', 'when',
+];
+
+function splitOnPhraseBoundary(text) {
+  const words = text.split(/\s+/);
+  if (words.length <= 8) return [text];
+
+  // Score each valid split position - prefer closest to midpoint
+  const mid = words.length / 2;
+  let bestIdx = -1;
+  let bestScore = Infinity;
+
+  for (let i = MIN_CHUNK_WORDS; i < words.length - MIN_CHUNK_WORDS + 1; i++) {
+    const w = words[i].toLowerCase().replace(/[^a-z]/g, '');
+    if (PHRASE_BOUNDARY_WORDS.includes(w)) {
+      const dist = Math.abs(i - mid);
+      if (dist < bestScore) {
+        bestScore = dist;
+        bestIdx = i;
+      }
+    }
+  }
+
+  // Fallback: split at midpoint if no boundary word found
+  if (bestIdx < 0) {
+    bestIdx = Math.round(mid);
+  }
+
+  const left = words.slice(0, bestIdx).join(' ');
+  const right = words.slice(bestIdx).join(' ');
+  return [left, right];
 }
 
 function mergeTiny(chunks) {
