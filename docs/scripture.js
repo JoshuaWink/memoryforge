@@ -816,11 +816,10 @@ var flTapCurrentIdx = 0;
 var scriptureDrillScale = 'verse';
 var drillCurrentPassage = null;
 var bridgeCurrentIdx = 0;
-var chapterChunksCorrect = [];
-var chapterChunksSelected = [];
+
 
 function hideAllDrillSubs() {
-  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area', 'drill-bridge', 'drill-chapter-chunks'];
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area', 'drill-bridge'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -1488,7 +1487,12 @@ function startPassageDrill(ref) {
   if (scriptureDrillMode === 'self-check') {
     startPassageSelfCheck(passage, verses);
   } else if (scriptureDrillMode === 'chunk-order') {
-    startChapterChunkOrder(passage, verses);
+    var allChunks = [];
+    verses.forEach(function(v) {
+      (v.chunks || [v.text]).forEach(function(ch) { allChunks.push(ch); });
+    });
+    drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
+    startChunkOrder(drillCurrentVerse);
   } else if (scriptureDrillMode === 'fill-blank') {
     startBridgeDrill(passage, verses);
   } else if (scriptureDrillMode === 'fl-tap') {
@@ -1579,97 +1583,7 @@ function showBridgeQuestion(passage, verses, idx) {
   });
 }
 
-function startChapterChunkOrder(passage, verses) {
-  document.getElementById('drill-chapter-chunks').style.display = '';
-  chapterChunksCorrect = [];
-  verses.forEach(function(v) {
-    (v.chunks || [v.text]).forEach(function(ch) { chapterChunksCorrect.push(ch); });
-  });
-  chapterChunksSelected = [];
-  var scrambled = chapterChunksCorrect.slice();
-  for (var i = scrambled.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = scrambled[i]; scrambled[i] = scrambled[j]; scrambled[j] = tmp;
-  }
-  var same = scrambled.every(function(c, idx) { return c === chapterChunksCorrect[idx]; });
-  if (same && scrambled.length > 1) { var t2 = scrambled[0]; scrambled[0] = scrambled[1]; scrambled[1] = t2; }
-  renderChapterChunks(scrambled);
-  updateChapterChunksProgress();
-  document.getElementById('chapter-chunks-result').innerHTML = '';
-  document.getElementById('btn-chapter-chunks-reset').style.display = 'none';
-}
 
-function renderChapterChunks(scrambled) {
-  var bank = document.getElementById('chapter-chunks-bank');
-  bank.innerHTML = scrambled.map(function(ch, i) {
-    return '<button class="chunk-pill" data-chunk-text="' + escapeHtmlScripture(ch) + '" data-idx="' + i + '">' + escapeHtmlScripture(ch) + '</button>';
-  }).join('');
-  document.getElementById('chapter-chunks-selected').innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
-
-  bank.querySelectorAll('.chunk-pill').forEach(function(pill) {
-    pill.addEventListener('click', function() { tapChapterChunkPill(pill); });
-  });
-}
-
-function tapChapterChunkPill(pill) {
-  if (pill.classList.contains('chunk-pill--used')) return;
-  var text = pill.dataset.chunkText;
-  chapterChunksSelected.push(text);
-  pill.classList.add('chunk-pill--used');
-
-  var selectedEl = document.getElementById('chapter-chunks-selected');
-  if (chapterChunksSelected.length === 1) selectedEl.innerHTML = '';
-
-  var idx = chapterChunksSelected.length - 1;
-  var isCorrect = chapterChunksCorrect[idx] === text;
-  var selPill = document.createElement('span');
-  selPill.className = 'chunk-pill ' + (isCorrect ? 'chunk-pill--correct' : 'chunk-pill--wrong');
-  selPill.textContent = text;
-  selectedEl.appendChild(selPill);
-  updateChapterChunksProgress();
-
-  if (!isCorrect) {
-    var resultEl = document.getElementById('chapter-chunks-result');
-    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong \u2014 expected: <strong>' + escapeHtmlScripture(chapterChunksCorrect[idx]) + '</strong>. Tap the red chip to undo, or reset.</div>';
-    document.getElementById('btn-chapter-chunks-reset').style.display = '';
-    selPill.style.cursor = 'pointer';
-    selPill.addEventListener('click', function undoWrong() {
-      selPill.removeEventListener('click', undoWrong);
-      chapterChunksSelected.pop();
-      selPill.remove();
-      pill.classList.remove('chunk-pill--used');
-      resultEl.innerHTML = '';
-      updateChapterChunksProgress();
-      if (chapterChunksSelected.length === 0) {
-        selectedEl.innerHTML = '<span style="color:var(--cup-color-text-muted);font-style:italic">Tap chunks in order\u2026</span>';
-      }
-      document.getElementById('btn-chapter-chunks-reset').style.display = 'none';
-    });
-    return;
-  }
-
-  pill.remove();
-
-  if (chapterChunksSelected.length === chapterChunksCorrect.length) {
-    document.getElementById('chapter-chunks-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>Perfect! Every chunk in order.</p></div>';
-    document.getElementById('btn-sdrill-next').style.display = '';
-  }
-}
-
-function updateChapterChunksProgress() {
-  var pct = chapterChunksCorrect.length > 0 ? Math.round((chapterChunksSelected.length / chapterChunksCorrect.length) * 100) : 0;
-  var fill = document.getElementById('chapter-chunks-fill');
-  var label = document.getElementById('chapter-chunks-label');
-  if (fill) fill.style.width = pct + '%';
-  if (label) label.textContent = chapterChunksSelected.length + ' / ' + chapterChunksCorrect.length;
-}
-
-function resetChapterChunks() {
-  if (drillCurrentPassage) {
-    var verses = getPassageVerses(drillCurrentPassage);
-    startChapterChunkOrder(drillCurrentPassage, verses);
-  }
-}
 
 function startPassageFlTap(passage, verses) {
   var allText = verses.map(function(v) { return v.text; }).join(' ');
@@ -2005,8 +1919,7 @@ function startPassageFlTap(passage, verses) {
   });
 
   // -- Chapter chunks reset --
-  var ccResetBtn = document.getElementById('btn-chapter-chunks-reset');
-  if (ccResetBtn) ccResetBtn.addEventListener('click', resetChapterChunks);
+
 
   renderVerseList();
   renderPassageList();
