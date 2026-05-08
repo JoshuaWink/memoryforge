@@ -1864,7 +1864,7 @@ function startPassageFlTap(passage, verses) {
     }
   });
 
-  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'http://localhost:8787';
+  var PROXY_BASE = localStorage.getItem('mf_proxy_url') || 'http://129.213.102.42:8787';
 
   var chImportBtn = document.getElementById('btn-ch-import');
   if (chImportBtn) chImportBtn.addEventListener('click', function() {
