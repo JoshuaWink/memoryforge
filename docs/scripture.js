@@ -1489,7 +1489,7 @@ function startPassageDrill(ref) {
   } else if (scriptureDrillMode === 'chunk-order') {
     var allChunks = [];
     verses.forEach(function(v) {
-      (v.chunks || [v.text]).forEach(function(ch) { allChunks.push(ch); });
+      (v.customChunks || v.chunks || [v.text]).forEach(function(ch) { allChunks.push(ch); });
     });
     drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
     startChunkOrder(drillCurrentVerse);
@@ -1686,9 +1686,14 @@ function startPassageFlTap(passage, verses) {
       $$('.scripture-mode').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       scriptureDrillMode = btn.dataset.mode;
-      // Auto-restart drill if verse already selected
-      var p = $('#drill-verse-picker');
-      if (p && p.value) startScriptureDrill(p.value);
+      // Auto-restart drill for current scale
+      if (scriptureDrillScale === 'verse') {
+        var p = $('#drill-verse-picker');
+        if (p && p.value) startScriptureDrill(p.value);
+      } else {
+        var pp = document.getElementById('drill-passage-picker');
+        if (pp && pp.value) startPassageDrill(pp.value);
+      }
     });
   });
 
