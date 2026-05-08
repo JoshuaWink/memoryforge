@@ -828,7 +828,10 @@ function hideAllDrillSubs() {
 
 function drillUpdateSR(ref, quality) {
   var v = scriptureLib.verses.find(function(x) { return x.reference === ref; });
-  if (v) { v.card = srReview(v.card, quality); saveVerseLibrary(scriptureLib); }
+  if (v) { v.card = srReview(v.card, quality); saveVerseLibrary(scriptureLib); return; }
+  // Passage-level SR: ref might be a passage reference
+  var p = (scriptureLib.passages || []).find(function(x) { return x.reference === ref; });
+  if (p) { p.card = srReview(p.card, quality); savePassage(p); }
 }
 
 function startScriptureDrill(ref) {
