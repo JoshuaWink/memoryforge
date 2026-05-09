@@ -841,44 +841,222 @@ var fillBlankCurrentIdx = 0;
 var flTapWords = [];
 var flTapCurrentIdx = 0;
 
-// Intelligent word pools for FL-tap distractors — thematically grouped by biblical concepts
-// Each pool contains semantically similar words that could be confused in scripture context
+// Static biblical vocabulary — fallback pool for FL-tap distractors (Tier 2)
+// Organized by first letter, sourced from common scripture words across translations
 var flTapWordPools = {
-  // Faith & Worship
-  'F': ['faith', 'fear', 'flesh', 'flock', 'fruit', 'favor'],
-  'P': ['pray', 'praise', 'peace', 'power', 'pure', 'proud'],
-  'W': ['worship', 'word', 'world', 'wise', 'walk', 'work'],
-  
-  // Sin & Redemption  
-  'S': ['sin', 'save', 'soul', 'saint', 'serve', 'share'],
-  'R': ['repent', 'redeem', 'right', 'rise', 'rule', 'rest'],
-  'B': ['blood', 'bless', 'born', 'bond', 'break', 'bind'],
-  
-  // Life & Death
-  'L': ['life', 'live', 'love', 'lord', 'last', 'lose'],
-  'D': ['die', 'dead', 'day', 'dark', 'deep', 'doom'],
-  'E': ['eternal', 'end', 'earth', 'evil', 'enter', 'exit'],
-  
-  // Action & Service
-  'G': ['give', 'go', 'good', 'grace', 'grow', 'guard'],
-  'H': ['help', 'hear', 'hold', 'holy', 'hope', 'humble'],
-  'C': ['come', 'call', 'care', 'clean', 'cross', 'cure'],
-  
-  // Knowledge & Truth
-  'K': ['know', 'keep', 'kind', 'king', 'kill', 'kiss'],
-  'T': ['truth', 'teach', 'tell', 'thank', 'think', 'turn'],
-  'U': ['understand', 'uphold', 'unite', 'urge', 'use'],
-  
-  // People & Relationships
-  'M': ['man', 'mother', 'make', 'meet', 'mend', 'mind'],
-  'O': ['other', 'one', 'old', 'open', 'own', 'obey'],
-  'N': ['name', 'near', 'need', 'new', 'next', 'none'],
-  
-  // Nature & Creation
-  'A': ['all', 'above', 'after', 'air', 'angel', 'animal'],
-  'I': ['in', 'is', 'it', 'into', 'image', 'inner'],
-  'Y': ['you', 'your', 'yes', 'year', 'yoke', 'yield']
+  'A': ['a','am','an','as','at','add','age','ago','aid','all','also','amen','amid',
+    'able','abide','about','above','abuse','after','again','agree','ahead','alien',
+    'alive','alone','along','altar','among','angel','anger','apart','arise','armor',
+    'asked','atone','avail','avoid','awake','aware','appointed','assembly','anointed','according'],
+  'B': ['be','by','bad','ban','bid','bow','but','bear','been','bind','blot','body',
+    'bold','bond','bone','book','bore','born','both','burn','bury',
+    'began','being','below','bless','blind','blood','boast','bread','break','bride',
+    'bring','broad','broke','build','built','burnt','baptize','bearing','because',
+    'becomes','before','begins','behalf','beheld','behold','believe','belongs','besides','between','blessed','brought'],
+  'C': ['can','cry','cut','call','calm','came','camp','care','cast','city','clad',
+    'clan','clay','come','cord','corn','cost','crop','cure','curse',
+    'carry','cause','cease','chief','child','chose','claim','clean','clear','cling',
+    'close','cloth','cloud','count','court','cover','craft','cross','crown','crush',
+    'called','charge','chosen','church','coming','commit','covenant','command','condemn','confess','created'],
+  'D': ['do','day','did','die','dry','due','dark','dawn','dead','deaf','deal','dear',
+    'deed','deep','deny','done','door','down','draw','dust','dwell',
+    'daily','death','decry','delay','depart','depth','devote','doing','doubt','drink','drive','drunk',
+    'danger','daughter','deliver','delight','desire','devour','disciple','distant','divide','divine','dominion'],
+  'E': ['ear','eat','end','era','eve','eye','each','ease','east','edge','else','envy',
+    'even','ever','evil','exalt',
+    'early','earth','elder','elect','empty','enemy','enjoy','enter','equal','error',
+    'every','exact','exile','exist',
+    'endure','entire','escape','estate','eternal','evening','exalted','examine','example','except'],
+  'F': ['far','fed','few','fig','fit','fly','foe','for','face','fade','fail','fair',
+    'fall','fame','fast','fate','fear','feed','feel','feet','fell','felt','fill',
+    'find','fine','fire','firm','fish','five','flee','flow','fold','food','fool',
+    'form','fort','foul','four','free','from','full','fury',
+    'faith','false','fault','favor','feast','field','fight','final','first','flame',
+    'flesh','flock','flood','floor','force','forgave','forgive','former','forsake','forth',
+    'found','fruit','fully','future','follow','forever','foreign','fountain','freedom','fulfill'],
+  'G': ['go','gap','get','gift','give','glad','glow','goat','goes','gold','gone',
+    'good','grab','grew','grim','grip','grow','gate',
+    'gains','gather','gentle','given','gives','glory','going','grace','grain','grant',
+    'grass','grave','great','greed','green','groan','group','grown','guard','guide','guilt',
+    'garden','garment','generation','gentile','genuine','glorify','granted','greater','greatly'],
+  'H': ['he','ha','had','has','her','hid','him','his','how','half','hall','hand',
+    'hang','hard','harm','hate','have','head','heal','heap','hear','heat','heed',
+    'held','help','here','hero','hide','high','hill','hold','hole','holy','home',
+    'hope','host','hour','huge','hurt',
+    'hands','happy','heart','heavy','hence','honor','horse','house','human','humble',
+    'harden','healed','heaven','helped','hidden','higher','hollow','hunger','husband',
+    'harvest','healing','heavens','heavenly'],
+  'I': ['I','if','in','is','it','ill','ink','inn','idle','idol',
+    'image','infer','inner','issue','ivory',
+    'idols','impure','indeed','inherit','iniquity','instruct','instead','invoke'],
+  'J': ['jar','jaw','joy','jot','just','join','judge',
+    'jewel','joined','journey','joyful',
+    'judged','judges','justice','justify','judgment','justified'],
+  'K': ['key','kin','keen','keep','kept','kid','kill','kind','king','kiss','knee','knew','knit','knot','know',
+    'keeps','kings','kneel','knife','knock','known',
+    'kindle','kindred','kingdom','kinsman','knowing','knowledge'],
+  'L': ['law','lay','led','let','lie','lip','lot','low','lack','laid','lake','lamb',
+    'lame','lamp','land','last','late','lead','left','lend','less','lest','life',
+    'lift','like','line','lion','list','live','long','look','lord','lose','loss',
+    'lost','loud','love',
+    'labor','large','later','learn','least','leave','light','limit','linen','lives',
+    'living','longer','looked','loving','lowly',
+    'lawful','leader','leaves','length','lepers','letter','lifted','listen','little'],
+  'M': ['me','my','mad','man','map','may','met','mid','mix','mob','made','make',
+    'male','mark','mate','meal','mean','meet','melt','mend','mere','mild','milk',
+    'mind','mine','more','most','move','much','must',
+    'maker','march','meant','mercy','midst','might','mourn','mouth','moved',
+    'manner','master','matter','meekly','member','memory','mighty','minister','miracle','morning','mother','murder','myself'],
+  'N': ['no','nap','net','new','nil','nod','nor','not','now','nut','name','near',
+    'neck','need','next','nine','none','noon','note','null',
+    'named','noble','north','noted','night',
+    'narrow','nation','nature','needed','nephew','number','neither','nothing','noticed'],
+  'O': ['o','of','oh','on','or','oak','oar','odd','off','oil','old','one','opt',
+    'ore','our','out','owe','own','obey','once','only','onto','open','ours','over',
+    'offer','often','olive','order','other','ought','outer','owner',
+    'obtain','offend','oppose','oracle','ordain','origin','orphan','outcast','overcome','overflow'],
+  'P': ['pay','pit','put','pain','pair','pale','palm','part','pass','past','path',
+    'plan','play','plea','plot','ploy','plow','plus','pond','poor','pour','prey','pull','pure',
+    'peace','place','plain','plant','plead','point','pound','power','pray',
+    'pride','price','proof','proud',
+    'pardon','people','perish','permit','person','pierce','pillar','plague','pledge','plunge',
+    'poison','ponder','potter','praise','prayer','preach','prince','prison','profit','promise',
+    'proper','prophet','prosper','protect','provide','punish','pursue','purpose'],
+  'Q': ['quick','quiet','quite','quake','quarrel','quench'],
+  'R': ['ran','raw','red','rid','rod','rot','row','rub','run','rage','rain','rank',
+    'rare','read','real','reap','reed','rest','rich','ride','ring','ripe','rise',
+    'road','robe','rock','role','roof','room','root','rope','ruin','rule',
+    'raise','reach','realm','rebel','reign','renew','reply','right','river','royal',
+    'ransom','rather','reason','rebuke','recall','reckon','redeem','refuge','refuse','reject',
+    'remain','remind','remove','repay','repent','report','resist','restore','return','reveal',
+    'revere','reward','riches','ruling','runner','righteous','remnant','reproach','resurrection'],
+  'S': ['so','say','sat','saw','sea','see','set','sin','sir','sit','six','sky',
+    'son','sow','sad','safe','said','sake','sale','salt','same','sand','sang',
+    'save','seal','seed','seek','seem','seen','self','send','sent','shed',
+    'ship','show','shut','sick','side','sift','sign','sing','site','size','skin',
+    'slew','slow','soar','soil','sold','sole','some','song','soon','sort',
+    'soul','sour','span','spit','spot','star','stay','step','stir','stop','such',
+    'sure','sway','swim',
+    'saint','savor','scorn','sense','serve','seven','shame','shape','share','sharp',
+    'sheep','shift','shine','short','shout','sight','since','slave','sleep','small',
+    'smite','smoke','snare','solid','sound','south','space','spare','speak','speed',
+    'spend','spill','spoil','spoke','staff','stand','start','stead','steal','stern',
+    'still','stone','stood','store','storm','story','stray','strip','study','stump',
+    'swear','sweet','swept','swift','sword',
+    'sacred','safety','saying','search','season','second','secret','secure','seeing',
+    'shield','silver','simple','sinful','sinner','sister','sorrow','sought','source',
+    'speech','spirit','spoken','spread','spring','steady','stolen','stored','stream',
+    'street','strength','strong','struck','submit','sudden','suffer','supply','surely',
+    'savior','scatter','servant','service','shelter','silence','slander','soldier',
+    'solemn','sparrow','station','strange','stumble','subject','support','supreme','surpass'],
+  'T': ['to','the','ten','tie','tip','too','top','try','two','take','tale','talk',
+    'tall','tame','task','tear','tell','tend','tent','term','test','text','than',
+    'that','them','then','they','thin','this','thou','thus','tide','till','time',
+    'tire','toil','told','toll','tomb','tone','took','torn','town','trap','tree',
+    'trim','trip','true','tune','turn','twin','type',
+    'table','taken','taste','teach','teeth','tempt','thank','their','there','these',
+    'thief','thing','think','third','those','three','threw','throw','today','token',
+    'touch','tower','trace','track','trade','train','trait','tread','treat','trial',
+    'tribe','tried','truly','trust','truth','twice',
+    'temple','tender','terror','tested','thanks','thirst','thorn','throne','thrown',
+    'tongue','toward','travel','treaty','tremor','tribes','trophy','trouble','truest',
+    'twelve','tyrant','teacher','thought','through','thunder','torment',
+    'treason','triumph','trustee'],
+  'U': ['up','us','use','ugly','unit','unto','upon','urge','used',
+    'under','unfit','union','unite','unity','until','upper','upset','utter',
+    'unable','unclean','undone','unfair','unholy','unjust','unlike','unrest','unseen',
+    'unwrap','uphold','upkeep','upright','upward','useful','utmost','understand'],
+  'V': ['van','vat','veil','very','vest','view','vine','void','vote','vow',
+    'valid','valor','value','vapor','verse','vigor','visit','vital','voice','venom',
+    'valley','vanish','vanity','vessel','victim','virgin','virtue','vision','vengeance'],
+  'W': ['we','war','was','way','wet','who','why','win','wit','woe','won',
+    'wage','wait','wake','walk','wall','want','ward','warm','warn','wash','wave',
+    'weak','wear','weed','week','weep','well','went','were','west','what','when',
+    'whom','wide','wife','wild','will','wind','wine','wing','wipe','wise','wish',
+    'with','woke','wolf','wood','word','wore','work','worm','worn','wove','wrap',
+    'water','watch','weary','wheat','wheel','where','which','while','white','whole',
+    'whose','widen','widow','wield','woman','women','world','worry','worse','worst',
+    'worth','would','wound','wrath','write','wrong','wrote',
+    'waited','walked','wander','wanted','warned','washed','wasted','wealth','weapon',
+    'wicked','wilderness','willing','wisdom','within','without','witness','wonder','worker','worthy','worship'],
+  'Y': ['yam','yap','yea','yes','yet','yew','year','yell','yoke','yore','your',
+    'yearn','yield','young','yours','youth'],
+  'Z': ['zap','zeal','zero','zone','zealot','zealous']
 };
+
+// Three-tier distractor selection for FL-tap
+// Tier 1: Words from user's own scripture library (hardest — real words they've studied)
+// Tier 2: Static biblical vocabulary pool (broad coverage fallback)
+// Tier 3: Other words from the current verse (last resort)
+function getFlTapDistractors(correctWord, verseWords, currentIdx) {
+  var firstLetter = getFirstLetter(correctWord).toUpperCase();
+  var targetLen = correctWord.replace(/[^a-zA-Z]/g, '').length;
+  var correctLower = correctWord.toLowerCase().replace(/[^a-zA-Z]/g, '');
+  var candidates = [];
+  var seen = {};
+  seen[correctLower] = true;
+
+  function addCandidate(word, tier) {
+    var clean = word.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    if (!clean || seen[clean]) return;
+    if (getFirstLetter(word).toUpperCase() !== firstLetter) return;
+    if (Math.abs(clean.length - targetLen) > 2) return;
+    seen[clean] = true;
+    candidates.push({ word: word, tier: tier, lenDiff: Math.abs(clean.length - targetLen) });
+  }
+
+  // Tier 1: Words from user's own scripture library
+  if (typeof scriptureLib !== 'undefined' && scriptureLib.verses) {
+    var libWords = {};
+    for (var v = 0; v < scriptureLib.verses.length; v++) {
+      var vText = scriptureLib.verses[v].text || '';
+      var vWords = vText.split(/\s+/);
+      for (var w = 0; w < vWords.length; w++) {
+        var lw = vWords[w].replace(/[^a-zA-Z]/g, '').toLowerCase();
+        if (lw && !libWords[lw]) libWords[lw] = vWords[w];
+      }
+    }
+    if (scriptureLib.passages) {
+      for (var p = 0; p < scriptureLib.passages.length; p++) {
+        var pText = scriptureLib.passages[p].text || '';
+        var pWords = pText.split(/\s+/);
+        for (var pw = 0; pw < pWords.length; pw++) {
+          var plw = pWords[pw].replace(/[^a-zA-Z]/g, '').toLowerCase();
+          if (plw && !libWords[plw]) libWords[plw] = pWords[pw];
+        }
+      }
+    }
+    var libKeys = Object.keys(libWords);
+    for (var lk = 0; lk < libKeys.length; lk++) {
+      addCandidate(libWords[libKeys[lk]], 1);
+    }
+  }
+
+  // Tier 2: Static biblical word pool
+  var pool = flTapWordPools[firstLetter] || [];
+  for (var pi = 0; pi < pool.length; pi++) {
+    addCandidate(pool[pi], 2);
+  }
+
+  // Tier 3: Other words from this verse
+  for (var vi = 0; vi < verseWords.length; vi++) {
+    if (vi === currentIdx) continue;
+    addCandidate(verseWords[vi], 3);
+  }
+
+  // Sort: prefer tier 1, then closest length match, then tier 2/3
+  candidates.sort(function(a, b) {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    return a.lenDiff - b.lenDiff;
+  });
+
+  var result = [];
+  for (var ri = 0; ri < candidates.length && result.length < 3; ri++) {
+    result.push(candidates[ri].word);
+  }
+  return result;
+}
+
 var scriptureDrillScale = 'verse';
 var drillCurrentPassage = null;
 var bridgeCurrentIdx = 0;
@@ -1244,28 +1422,9 @@ function renderFlTap() {
 
   var correctWord = flTapWords[flTapCurrentIdx];
   var options = [correctWord];
-  
-  // Get distractors from word pool with same starting letter
-  var firstLetter = getFirstLetter(correctWord).toUpperCase();
-  var pool = flTapWordPools[firstLetter] || [];
-  
-  // Filter out the correct word if it's in the pool
-  var targetLength = correctWord.length;
-  pool = pool.filter(function(w) { 
-    return w !== correctWord.toLowerCase() && 
-           Math.abs(w.length - targetLength) <= 2; // Length similarity
-  });
-  
-  // If pool is too small, add from other thematic pools (same first letter)
-  if (pool.length < 3) {
-    // Add some length-flexible options from the same letter pool
-    var extendedPool = flTapWordPools[firstLetter] || [];
-    extendedPool = extendedPool.filter(function(w) { return w !== correctWord.toLowerCase(); });
-    pool = pool.concat(drillShuffle(extendedPool).slice(0, 3 - pool.length));
-  }
-  
-  // Shuffle and take up to 3 distractors
-  var distractors = drillShuffle(pool).slice(0, 3);
+
+  // Three-tier distractor selection: library words > static pool > verse words
+  var distractors = getFlTapDistractors(correctWord, flTapWords, flTapCurrentIdx);
   options = options.concat(distractors);
   options = drillShuffle(options);
 
