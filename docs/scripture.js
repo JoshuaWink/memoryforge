@@ -988,6 +988,37 @@ var flTapWordPools = {
 // Tier 1: Words from user's own scripture library (hardest — real words they've studied)
 // Tier 2: Static biblical vocabulary pool (broad coverage fallback)
 // Tier 3: Other words from the current verse (last resort)
+// Match a distractor word's casing and punctuation to the correct word's form
+// e.g. correctWord="Then," + distractor="therefore" => "Therefore,"
+function matchWordForm(distractor, correctWord) {
+  // Extract leading/trailing punctuation from correctWord
+  var leadPunc = correctWord.match(/^[^a-zA-Z]*/)[0];
+  var trailPunc = correctWord.match(/[^a-zA-Z]*$/)[0];
+  
+  // Strip punctuation from distractor to get clean word
+  var clean = distractor.replace(/^[^a-zA-Z]*/, '').replace(/[^a-zA-Z]*$/, '');
+  if (!clean) return distractor;
+  
+  // Match capitalization pattern of correctWord's letters
+  var correctLetters = correctWord.replace(/[^a-zA-Z]/g, '');
+  var result = '';
+  for (var i = 0; i < clean.length; i++) {
+    if (i < correctLetters.length) {
+      // Mirror the case of the corresponding letter in correctWord
+      if (correctLetters[i] === correctLetters[i].toUpperCase()) {
+        result += clean[i].toUpperCase();
+      } else {
+        result += clean[i].toLowerCase();
+      }
+    } else {
+      // Beyond correctWord's length — use lowercase
+      result += clean[i].toLowerCase();
+    }
+  }
+  
+  return leadPunc + result + trailPunc;
+}
+
 function getFlTapDistractors(correctWord, verseWords, currentIdx) {
   var firstLetter = getFirstLetter(correctWord).toUpperCase();
   var targetLen = correctWord.replace(/[^a-zA-Z]/g, '').length;
@@ -1052,7 +1083,7 @@ function getFlTapDistractors(correctWord, verseWords, currentIdx) {
 
   var result = [];
   for (var ri = 0; ri < candidates.length && result.length < 3; ri++) {
-    result.push(candidates[ri].word);
+    result.push(matchWordForm(candidates[ri].word, correctWord));
   }
   return result;
 }
