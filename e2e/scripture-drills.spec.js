@@ -283,4 +283,87 @@ test.describe('Scripture Drill Modes', () => {
       await expect(page.locator('#sdrill-hint')).toBeVisible();
     });
   });
+
+  test.describe('Chunk by Chunk mode', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.click('button.scripture-mode[data-mode="chunk-by-chunk"]');
+      const drillArea = page.locator('#scripture-drill-area');
+      if (!await drillArea.isVisible()) {
+        await page.selectOption('#drill-verse-picker', TEST_REF);
+      }
+    });
+
+    test('shows drill container with central chunk and pool', async ({ page }) => {
+      await expect(page.locator('#drill-cbc')).toBeVisible();
+      await expect(page.locator('#cbc-display .cbc-slot--center')).toBeVisible();
+      const options = page.locator('#cbc-bank .cbc-option');
+      const count = await options.count();
+      expect(count).toBeGreaterThan(0);
+    });
+
+    test('first chunk asks what comes after', async ({ page }) => {
+      await expect(page.locator('#cbc-prompt')).toHaveText('What comes after this chunk?');
+      // First chunk should NOT have a before slot
+      await expect(page.locator('#cbc-display .cbc-slot--center')).toBeVisible();
+    });
+
+    test('tapping correct after-chunk advances to next chunk', async ({ page }) => {
+      // The first chunk is "This letter is from Paul,"
+      // The second chunk (correct after) is "a slave of Christ Jesus,"
+      const correctAfter = 'a slave of Christ Jesus,';
+      const btn = page.locator('#cbc-bank .cbc-option', { hasText: correctAfter });
+      if (await btn.count() > 0) {
+        await btn.click();
+        // Should advance — now asking "What comes before?" for chunk index 1
+        await expect(page.locator('#cbc-prompt')).toHaveText('What comes before this chunk?');
+      }
+    });
+
+    test('tapping wrong option shows retry message', async ({ page }) => {
+      // First chunk asks "after" — tap something that isn't the correct next chunk
+      const options = page.locator('#cbc-bank .cbc-option');
+      const count = await options.count();
+      // Find a wrong option (not the second chunk)
+      const correctAfter = 'a slave of Christ Jesus,';
+      for (let i = 0; i < count; i++) {
+        const text = await options.nth(i).textContent();
+        if (text.trim() !== correctAfter) {
+          await options.nth(i).click();
+          await expect(page.locator('#cbc-result')).toContainText('Not quite');
+          break;
+        }
+      }
+    });
+
+    test('completing all chunks shows success and drill nav', async ({ page }) => {
+      // Walk through all chunks by tapping correct answers
+      // Chunks: 0="This letter is from Paul," 1="a slave of Christ Jesus,"
+      //         2="chosen by God to be an apostle" 3="and sent out to preach his Good News."
+      const chunks = [
+        'This letter is from Paul,',
+        'a slave of Christ Jesus,',
+        'chosen by God to be an apostle',
+        'and sent out to preach his Good News.'
+      ];
+
+      for (let c = 0; c < chunks.length; c++) {
+        const hasBefore = c > 0;
+        const hasAfter = c < chunks.length - 1;
+
+        if (hasBefore) {
+          // Pick the before chunk
+          const beforeBtn = page.locator('#cbc-bank .cbc-option', { hasText: chunks[c - 1] });
+          if (await beforeBtn.count() > 0) await beforeBtn.click();
+        }
+        if (hasAfter) {
+          // Pick the after chunk
+          const afterBtn = page.locator('#cbc-bank .cbc-option', { hasText: chunks[c + 1] });
+          if (await afterBtn.count() > 0) await afterBtn.click();
+        }
+      }
+
+      await expect(page.locator('#cbc-result')).toContainText('All chunks connected');
+      await expect(page.locator('#drill-nav')).toBeVisible();
+    });
+  });
 });

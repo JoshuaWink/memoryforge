@@ -2522,3 +2522,54 @@ body {
   flex: 1;
   max-width: 10rem;
 }
+
+/* Chunk by Chunk drill */
+.drill-cbc__display {
+  margin: var(--cup-space-md) 0;
+}
+.cbc-flow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--cup-space-xs);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.cbc-slot {
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  border-radius: var(--cup-radius-sm);
+  font-size: var(--cup-font-size-sm);
+  line-height: 1.4;
+  text-align: center;
+  max-width: 14rem;
+}
+.cbc-slot--center {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+  font-weight: 600;
+}
+.cbc-slot--empty {
+  border: 2px dashed var(--cup-color-border);
+  color: var(--cup-color-text-muted);
+  min-width: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--cup-font-size-lg);
+}
+.cbc-slot--filled {
+  background: var(--cup-color-success);
+  color: #fff;
+}
+.cbc-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--cup-color-text-muted);
+  font-size: var(--cup-font-size-lg);
+}
+.drill-cbc__bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cup-space-xs);
+  justify-content: center;
+  margin-top: var(--cup-space-sm);
+}

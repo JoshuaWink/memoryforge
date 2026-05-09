@@ -583,6 +583,7 @@
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
                 <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
                 <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
+                <button class="btn btn-sm scripture-mode" data-mode="chunk-by-chunk">Chunk by Chunk</button>
                 <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
                 <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
@@ -645,6 +646,14 @@
             <p class="field-label">Tap the next word:</p>
             <div class="drill-fl-tap__bank" id="fl-tap-bank"></div>
             <div id="fl-tap-result"></div>
+          </div>
+
+          <!-- Chunk by Chunk -->
+          <div class="drill-cbc" id="drill-cbc" style="display:none;">
+            <div class="drill-cbc__display" id="cbc-display"></div>
+            <p class="field-label" id="cbc-prompt"></p>
+            <div class="drill-cbc__bank" id="cbc-bank"></div>
+            <div id="cbc-result"></div>
           </div>
 
           <!-- Bridge Drill (passage scale) -->

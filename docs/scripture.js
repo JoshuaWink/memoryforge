@@ -1094,7 +1094,7 @@ var bridgeCurrentIdx = 0;
 
 
 function hideAllDrillSubs() {
-  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-typing-area', 'drill-bridge'];
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -1130,6 +1130,8 @@ function startScriptureDrill(ref) {
     startFillBlank(verse);
   } else if (scriptureDrillMode === 'fl-tap') {
     startFlTap(verse);
+  } else if (scriptureDrillMode === 'chunk-by-chunk') {
+    startChunkByChunk(verse);
   } else {
     // Legacy typing modes
     document.getElementById('drill-typing-area').style.display = '';
@@ -1835,6 +1837,8 @@ function startPassageDrill(ref) {
     startBridgeDrill(passage, verses);
   } else if (scriptureDrillMode === 'fl-tap') {
     startPassageFlTap(passage, verses);
+  } else if (scriptureDrillMode === 'chunk-by-chunk') {
+    startPassageChunkByChunk(passage, verses);
   } else {
     startBridgeDrill(passage, verses);
   }
@@ -1922,6 +1926,150 @@ function showBridgeQuestion(passage, verses, idx) {
 }
 
 
+
+// == Mode: Chunk by Chunk ==
+var cbcChunks = [];
+var cbcCurrentIdx = 0;
+var cbcPhase = 'before'; // 'before' | 'after'
+
+function startChunkByChunk(verse) {
+  document.getElementById('drill-cbc').style.display = '';
+  var chunks = verse.customChunks || verse.chunks || chunkVerse(verse.text);
+  cbcChunks = chunks;
+  cbcCurrentIdx = 0;
+  cbcPhase = (cbcCurrentIdx === 0) ? 'after' : 'before';
+  renderCbc();
+}
+
+function startPassageChunkByChunk(passage, verses) {
+  document.getElementById('drill-cbc').style.display = '';
+  var allChunks = [];
+  verses.forEach(function(v) {
+    (v.customChunks || v.chunks || chunkVerse(v.text)).forEach(function(ch) { allChunks.push(ch); });
+  });
+  cbcChunks = allChunks;
+  cbcCurrentIdx = 0;
+  cbcPhase = 'after';
+  drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
+  renderCbc();
+}
+
+function getCbcPool(chunks, centerIdx) {
+  var before = [];
+  var after = [];
+  var startB = Math.max(0, centerIdx - 5);
+  for (var i = startB; i < centerIdx; i++) {
+    before.push({ text: chunks[i], idx: i });
+  }
+  var endA = Math.min(chunks.length, centerIdx + 6);
+  for (var j = centerIdx + 1; j < endA; j++) {
+    after.push({ text: chunks[j], idx: j });
+  }
+  return { before: before, after: after };
+}
+
+function renderCbc() {
+  var displayEl = document.getElementById('cbc-display');
+  var promptEl = document.getElementById('cbc-prompt');
+  var bankEl = document.getElementById('cbc-bank');
+  var resultEl = document.getElementById('cbc-result');
+  resultEl.innerHTML = '';
+
+  if (cbcCurrentIdx >= cbcChunks.length) {
+    displayEl.innerHTML = '';
+    bankEl.innerHTML = '';
+    promptEl.textContent = '';
+    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks connected! The flow is yours.</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 5);
+    $('#drill-nav').style.display = '';
+    return;
+  }
+
+  var center = cbcChunks[cbcCurrentIdx];
+  var hasBefore = cbcCurrentIdx > 0;
+  var hasAfter = cbcCurrentIdx < cbcChunks.length - 1;
+
+  var html = '<div class="cbc-flow">';
+  if (hasBefore) {
+    if (cbcPhase === 'before') {
+      html += '<span class="cbc-slot cbc-slot--empty">?</span>';
+    } else {
+      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(cbcChunks[cbcCurrentIdx - 1]) + '</span>';
+    }
+    html += '<span class="cbc-arrow">\u2192</span>';
+  }
+  html += '<span class="cbc-slot cbc-slot--center">' + escapeHtmlScripture(center) + '</span>';
+  if (hasAfter) {
+    html += '<span class="cbc-arrow">\u2192</span>';
+    if (cbcPhase === 'after' || (cbcPhase === 'before' && hasAfter)) {
+      html += '<span class="cbc-slot cbc-slot--empty">?</span>';
+    }
+  }
+  html += '</div>';
+  displayEl.innerHTML = html;
+
+  if (cbcPhase === 'before') {
+    promptEl.textContent = 'What comes before this chunk?';
+  } else {
+    promptEl.textContent = 'What comes after this chunk?';
+  }
+
+  var pool = getCbcPool(cbcChunks, cbcCurrentIdx);
+  var allOptions = pool.before.concat(pool.after);
+  allOptions = drillShuffle(allOptions);
+
+  bankEl.innerHTML = allOptions.map(function(item) {
+    return '<button class="word-option cbc-option" data-cbc-idx="' + item.idx + '">' + escapeHtmlScripture(item.text) + '</button>';
+  }).join('');
+
+  bankEl.querySelectorAll('.cbc-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapCbcOption(btn); });
+  });
+}
+
+function tapCbcOption(btn) {
+  var tappedIdx = parseInt(btn.dataset.cbcIdx);
+  var resultEl = document.getElementById('cbc-result');
+
+  if (cbcPhase === 'before') {
+    var correctBefore = cbcCurrentIdx - 1;
+    if (tappedIdx === correctBefore) {
+      resultEl.innerHTML = '';
+      if (cbcCurrentIdx < cbcChunks.length - 1) {
+        cbcPhase = 'after';
+        renderCbc();
+      } else {
+        cbcCurrentIdx++;
+        renderCbc();
+      }
+    } else {
+      btn.classList.add('chunk-pill--wrong');
+      setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
+      resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
+      drillUpdateSR(drillCurrentVerse.reference, 2);
+    }
+  } else {
+    var correctAfter = cbcCurrentIdx + 1;
+    if (tappedIdx === correctAfter) {
+      resultEl.innerHTML = '';
+      cbcCurrentIdx++;
+      if (cbcCurrentIdx >= cbcChunks.length) {
+        renderCbc();
+      } else if (cbcCurrentIdx > 0) {
+        cbcPhase = 'before';
+        renderCbc();
+      } else {
+        cbcPhase = 'after';
+        renderCbc();
+      }
+    } else {
+      btn.classList.add('chunk-pill--wrong');
+      setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
+      resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
+      drillUpdateSR(drillCurrentVerse.reference, 2);
+    }
+  }
+}
 
 function startPassageFlTap(passage, verses) {
   var allText = verses.map(function(v) { return v.text; }).join(' ');
