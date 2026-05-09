@@ -840,6 +840,35 @@ var fillBlankBankWords = [];
 var fillBlankCurrentIdx = 0;
 var flTapWords = [];
 var flTapCurrentIdx = 0;
+
+// Word pools for FL-tap distractors — grouped by starting letter
+// Words similar in length/sound to common scripture vocabulary
+var flTapWordPools = {
+  'A': ['about', 'above', 'after', 'again', 'alive', 'alone', 'along', 'among', 'apart', 'arise', 'awake', 'aware'],
+  'B': ['being', 'below', 'bless', 'blood', 'bring', 'build', 'blame', 'brave', 'broad', 'burst'],
+  'C': ['child', 'clean', 'close', 'cloud', 'comes', 'could', 'cross', 'crown', 'cruel', 'cured'],
+  'D': ['death', 'deeds', 'depth', 'devil', 'doing', 'doors', 'doubt', 'drawn', 'dream', 'drink'],
+  'E': ['earth', 'early', 'enter', 'equal', 'every', 'exact', 'exist', 'extra'],
+  'F': ['faith', 'false', 'fault', 'favor', 'fight', 'final', 'first', 'flame', 'flesh', 'flood', 'found', 'fruit'],
+  'G': ['given', 'gives', 'glory', 'grace', 'great', 'group', 'guard', 'guide'],
+  'H': ['hands', 'happy', 'heads', 'heard', 'heart', 'heavy', 'helps', 'holds', 'honor', 'house', 'human'],
+  'I': ['image', 'inner', 'issue'],
+  'J': ['judge', 'kings'],
+  'K': ['keeps', 'kills', 'kinds', 'kings', 'knows'],
+  'L': ['lands', 'large', 'lasts', 'leads', 'leave', 'light', 'lives', 'lords', 'loved', 'loves'],
+  'M': ['makes', 'marks', 'means', 'might', 'minds', 'money', 'month', 'moved', 'music'],
+  'N': ['names', 'needs', 'never', 'night', 'noble', 'north'],
+  'O': ['offer', 'often', 'older', 'opens', 'other', 'ought', 'outer'],
+  'P': ['peace', 'place', 'plans', 'power', 'praise', 'prays', 'price', 'pride', 'proof', 'proud'],
+  'Q': ['queen', 'quick'],
+  'R': ['raise', 'reach', 'ready', 'right', 'rises', 'rules', 'ruler'],
+  'S': ['saint', 'saved', 'saves', 'seats', 'seems', 'serve', 'share', 'shows', 'since', 'small', 'songs', 'souls', 'speak', 'spoke', 'stand', 'stars', 'state', 'still', 'stone', 'stood', 'store', 'storm', 'story', 'sword'],
+  'T': ['takes', 'teach', 'tells', 'thank', 'their', 'there', 'these', 'thing', 'think', 'those', 'three', 'throw', 'tells', 'tried', 'truly', 'trust', 'truth'],
+  'U': ['under', 'until', 'upset'],
+  'V': ['value'],
+  'W': ['walks', 'walls', 'wants', 'water', 'weary', 'weeks', 'where', 'which', 'while', 'whole', 'whose', 'woman', 'words', 'works', 'world', 'worse', 'worth', 'would', 'write'],
+  'Y': ['years', 'young']
+};
 var scriptureDrillScale = 'verse';
 var drillCurrentPassage = null;
 var bridgeCurrentIdx = 0;
@@ -1205,13 +1234,16 @@ function renderFlTap() {
 
   var correctWord = flTapWords[flTapCurrentIdx];
   var options = [correctWord];
-  var nearby = [];
-  for (var j = 0; j < flTapWords.length; j++) {
-    if (j !== flTapCurrentIdx && options.indexOf(flTapWords[j]) < 0 && nearby.indexOf(flTapWords[j]) < 0) {
-      nearby.push(flTapWords[j]);
-    }
-  }
-  var distractors = drillShuffle(nearby).slice(0, 3);
+  
+  // Get distractors from word pool with same starting letter
+  var firstLetter = getFirstLetter(correctWord).toUpperCase();
+  var pool = flTapWordPools[firstLetter] || [];
+  
+  // Filter out the correct word if it's in the pool
+  pool = pool.filter(function(w) { return w !== correctWord.toLowerCase(); });
+  
+  // Shuffle and take up to 3 distractors
+  var distractors = drillShuffle(pool).slice(0, 3);
   options = options.concat(distractors);
   options = drillShuffle(options);
 
