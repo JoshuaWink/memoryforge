@@ -2504,12 +2504,19 @@ body {
   margin-top: 0;
 }
 
-/* Drill navigation bar — shown after drill completion */
+/* Drill navigation bar — sticky footer after drill completion */
 .drill-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   gap: var(--cup-space-sm);
   justify-content: center;
-  margin-top: var(--cup-space-md);
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  background: var(--cup-color-surface);
+  border-top: 1px solid var(--cup-color-border);
+  z-index: 100;
 }
 .drill-nav__btn {
   flex: 1;
