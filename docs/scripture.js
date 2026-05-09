@@ -1931,13 +1931,45 @@ function showBridgeQuestion(passage, verses, idx) {
 var cbcChunks = [];
 var cbcCurrentIdx = 0;
 var cbcPhase = 'before'; // 'before' | 'after'
+var cbcRef = '';
+var CBC_PROG_KEY = 'mf_cbc_prog';
+
+function saveCbcState() {
+  try {
+    var all = JSON.parse(localStorage.getItem(CBC_PROG_KEY) || '{}');
+    all[cbcRef] = { idx: cbcCurrentIdx, phase: cbcPhase };
+    localStorage.setItem(CBC_PROG_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+function loadCbcState(ref) {
+  try {
+    var all = JSON.parse(localStorage.getItem(CBC_PROG_KEY) || '{}');
+    return all[ref] || null;
+  } catch (e) { return null; }
+}
+
+function clearCbcState(ref) {
+  try {
+    var all = JSON.parse(localStorage.getItem(CBC_PROG_KEY) || '{}');
+    delete all[ref];
+    localStorage.setItem(CBC_PROG_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
 
 function startChunkByChunk(verse) {
   document.getElementById('drill-cbc').style.display = '';
   var chunks = verse.customChunks || verse.chunks || chunkVerse(verse.text);
   cbcChunks = chunks;
-  cbcCurrentIdx = 0;
-  cbcPhase = (cbcCurrentIdx === 0) ? 'after' : 'before';
+  cbcRef = verse.reference;
+  var saved = loadCbcState(cbcRef);
+  if (saved && saved.idx < chunks.length) {
+    cbcCurrentIdx = saved.idx;
+    cbcPhase = saved.phase;
+  } else {
+    cbcCurrentIdx = 0;
+    cbcPhase = 'after';
+  }
   renderCbc();
 }
 
@@ -1948,9 +1980,16 @@ function startPassageChunkByChunk(passage, verses) {
     (v.customChunks || v.chunks || chunkVerse(v.text)).forEach(function(ch) { allChunks.push(ch); });
   });
   cbcChunks = allChunks;
-  cbcCurrentIdx = 0;
-  cbcPhase = 'after';
+  cbcRef = passage.reference;
   drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
+  var saved = loadCbcState(cbcRef);
+  if (saved && saved.idx < allChunks.length) {
+    cbcCurrentIdx = saved.idx;
+    cbcPhase = saved.phase;
+  } else {
+    cbcCurrentIdx = 0;
+    cbcPhase = 'after';
+  }
   renderCbc();
 }
 
@@ -1975,11 +2014,46 @@ function renderCbc() {
   var resultEl = document.getElementById('cbc-result');
   resultEl.innerHTML = '';
 
+  // Progress counter
+  var progressEl = document.getElementById('cbc-progress');
+  if (progressEl) {
+    progressEl.textContent = cbcCurrentIdx < cbcChunks.length
+      ? 'Chunk ' + (cbcCurrentIdx + 1) + ' of ' + cbcChunks.length
+      : '';
+  }
+
+  // In-drill prev/next chunk navigation
+  var prevChunkBtn = document.getElementById('btn-cbc-prev');
+  var nextChunkBtn = document.getElementById('btn-cbc-next');
+  if (prevChunkBtn) {
+    prevChunkBtn.disabled = cbcCurrentIdx <= 0;
+    prevChunkBtn.onclick = function() {
+      if (cbcCurrentIdx > 0) {
+        cbcCurrentIdx--;
+        cbcPhase = cbcCurrentIdx === 0 ? 'after' : 'before';
+        saveCbcState();
+        renderCbc();
+      }
+    };
+  }
+  if (nextChunkBtn) {
+    nextChunkBtn.disabled = cbcCurrentIdx >= cbcChunks.length - 1;
+    nextChunkBtn.onclick = function() {
+      if (cbcCurrentIdx < cbcChunks.length - 1) {
+        cbcCurrentIdx++;
+        cbcPhase = cbcCurrentIdx < cbcChunks.length - 1 ? 'before' : 'before';
+        saveCbcState();
+        renderCbc();
+      }
+    };
+  }
+
   if (cbcCurrentIdx >= cbcChunks.length) {
     displayEl.innerHTML = '';
     bankEl.innerHTML = '';
     promptEl.textContent = '';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks connected! The flow is yours.</div>';
+    clearCbcState(cbcRef);
     drillUpdateSR(drillCurrentVerse.reference, 5);
     $('#drill-nav').style.display = '';
     return;
@@ -2037,9 +2111,11 @@ function tapCbcOption(btn) {
       resultEl.innerHTML = '';
       if (cbcCurrentIdx < cbcChunks.length - 1) {
         cbcPhase = 'after';
+        saveCbcState();
         renderCbc();
       } else {
         cbcCurrentIdx++;
+        saveCbcState();
         renderCbc();
       }
     } else {
@@ -2054,12 +2130,15 @@ function tapCbcOption(btn) {
       resultEl.innerHTML = '';
       cbcCurrentIdx++;
       if (cbcCurrentIdx >= cbcChunks.length) {
+        saveCbcState();
         renderCbc();
       } else if (cbcCurrentIdx > 0) {
         cbcPhase = 'before';
+        saveCbcState();
         renderCbc();
       } else {
         cbcPhase = 'after';
+        saveCbcState();
         renderCbc();
       }
     } else {

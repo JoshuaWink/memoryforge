@@ -2524,6 +2524,22 @@ body {
 }
 
 /* Chunk by Chunk drill */
+.cbc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--cup-space-sm);
+  gap: var(--cup-space-sm);
+}
+.cbc-progress {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+  white-space: nowrap;
+}
+.cbc-in-nav {
+  display: flex;
+  gap: var(--cup-space-xs);
+}
 .drill-cbc__display {
   margin: var(--cup-space-md) 0;
 }
