@@ -351,18 +351,18 @@ test.describe('Scripture Drill Modes', () => {
         const hasAfter = c < chunks.length - 1;
 
         if (hasBefore) {
-          // Pick the before chunk
           const beforeBtn = page.locator('#cbc-bank .cbc-option', { hasText: chunks[c - 1] });
-          if (await beforeBtn.count() > 0) await beforeBtn.click();
+          await beforeBtn.waitFor({ state: 'visible', timeout: 3000 });
+          await beforeBtn.click();
         }
         if (hasAfter) {
-          // Pick the after chunk
           const afterBtn = page.locator('#cbc-bank .cbc-option', { hasText: chunks[c + 1] });
-          if (await afterBtn.count() > 0) await afterBtn.click();
+          await afterBtn.waitFor({ state: 'visible', timeout: 3000 });
+          await afterBtn.click();
         }
       }
 
-      await expect(page.locator('#cbc-result')).toContainText('All chunks connected');
+      await expect(page.locator('#cbc-result')).toContainText('All chunks connected', { timeout: 5000 });
       await expect(page.locator('#drill-nav')).toBeVisible();
     });
   });
