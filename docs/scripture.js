@@ -2050,20 +2050,96 @@ function cbcPopulateNow(displayEl, bankEl, promptEl) {
   });
 }
 
-function renderCbc(animated) {
-  var displayEl = document.getElementById('cbc-display');
-  var promptEl = document.getElementById('cbc-prompt');
+function cbcWireBank() {
   var bankEl = document.getElementById('cbc-bank');
-  var resultEl = document.getElementById('cbc-result');
-  resultEl.innerHTML = '';
+  bankEl.innerHTML = cbcBuildBank();
+  bankEl.querySelectorAll('.cbc-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapCbcOption(btn); });
+  });
+}
 
-  // Progress counter
+function cbcUpdateProgress() {
   var progressEl = document.getElementById('cbc-progress');
   if (progressEl) {
     progressEl.textContent = cbcCurrentIdx < cbcChunks.length
       ? 'Chunk ' + (cbcCurrentIdx + 1) + ' of ' + cbcChunks.length
       : '';
   }
+}
+
+// Fill the empty "before" slot in place — no slide, just a smooth fill
+function cbcFillBefore() {
+  var displayEl = document.getElementById('cbc-display');
+  var emptySlot = displayEl.querySelector('.cbc-slot--empty');
+  if (emptySlot) {
+    emptySlot.textContent = escapeHtmlScripture(cbcChunks[cbcCurrentIdx - 1]);
+    emptySlot.className = 'cbc-slot cbc-slot--filled';
+  }
+
+  if (cbcCurrentIdx >= cbcChunks.length - 1) {
+    // Last chunk — no after phase, complete
+    cbcCurrentIdx++;
+    saveCbcState();
+    setTimeout(function() { renderCbc(); }, 500);
+  } else {
+    // Switch to after phase
+    cbcPhase = 'after';
+    saveCbcState();
+    document.getElementById('cbc-prompt').textContent = 'What comes after this chunk?';
+    cbcWireBank();
+  }
+}
+
+// Fill the "after" slot, then slide the whole flow left and rebuild at next chunk
+function cbcSlideForward() {
+  var displayEl = document.getElementById('cbc-display');
+  var bankEl = document.getElementById('cbc-bank');
+  var promptEl = document.getElementById('cbc-prompt');
+
+  // 1. Fill the right empty slot with the answer
+  var emptySlots = displayEl.querySelectorAll('.cbc-slot--empty');
+  var rightSlot = emptySlots[emptySlots.length - 1];
+  if (rightSlot) {
+    rightSlot.textContent = escapeHtmlScripture(cbcChunks[cbcCurrentIdx + 1]);
+    rightSlot.className = 'cbc-slot cbc-slot--filled';
+  }
+
+  // 2. Advance state
+  cbcCurrentIdx++;
+  if (cbcCurrentIdx >= cbcChunks.length) {
+    saveCbcState();
+    setTimeout(function() { renderCbc(); }, 500);
+    return;
+  }
+  cbcPhase = cbcCurrentIdx > 0 ? 'before' : 'after';
+  saveCbcState();
+
+  // 3. Brief pause to show all three filled, then slide left
+  setTimeout(function() {
+    var flow = displayEl.querySelector('.cbc-flow');
+    if (flow) flow.classList.add('cbc-slide-left');
+    bankEl.classList.add('cbc-exit');
+    promptEl.style.opacity = '0';
+
+    // 4. After slide completes, rebuild at new position
+    setTimeout(function() {
+      if (flow) flow.classList.remove('cbc-slide-left');
+      bankEl.classList.remove('cbc-exit');
+      promptEl.style.opacity = '';
+      cbcUpdateProgress();
+      cbcPopulateNow(displayEl, bankEl, promptEl);
+    }, 350);
+  }, 300);
+}
+
+function renderCbc(slideDir) {
+  var displayEl = document.getElementById('cbc-display');
+  var promptEl = document.getElementById('cbc-prompt');
+  var bankEl = document.getElementById('cbc-bank');
+  var resultEl = document.getElementById('cbc-result');
+  resultEl.innerHTML = '';
+
+  cbcUpdateProgress();
 
   // In-drill prev/next chunk navigation
   var prevChunkBtn = document.getElementById('btn-cbc-prev');
@@ -2075,7 +2151,7 @@ function renderCbc(animated) {
         cbcCurrentIdx--;
         cbcPhase = cbcCurrentIdx === 0 ? 'after' : 'before';
         saveCbcState();
-        renderCbc(true);
+        renderCbc('right');
       }
     };
   }
@@ -2086,7 +2162,7 @@ function renderCbc(animated) {
         cbcCurrentIdx++;
         cbcPhase = cbcCurrentIdx > 0 ? 'before' : 'after';
         saveCbcState();
-        renderCbc(true);
+        renderCbc('left');
       }
     };
   }
@@ -2102,50 +2178,22 @@ function renderCbc(animated) {
     return;
   }
 
-  if (animated) {
-    // Phase 1: fade out existing content
-    displayEl.classList.add('cbc-exit');
+  if (slideDir) {
+    // Slide existing content out in the given direction
+    var flow = displayEl.querySelector('.cbc-flow');
+    var exitClass = slideDir === 'left' ? 'cbc-slide-left' : 'cbc-slide-right';
+    if (flow) flow.classList.add(exitClass);
     bankEl.classList.add('cbc-exit');
     promptEl.style.opacity = '0';
 
     setTimeout(function() {
-      // Phase 2: swap content while invisible, set enter position
-      cbcPopulateNow(displayEl, bankEl, promptEl);
-      displayEl.classList.remove('cbc-exit');
-      displayEl.classList.add('cbc-enter');
+      if (flow) flow.classList.remove(exitClass);
       bankEl.classList.remove('cbc-exit');
-
-      // Phase 3: trigger reflow then remove enter to slide in
-      void displayEl.offsetWidth;
-      displayEl.classList.remove('cbc-enter');
       promptEl.style.opacity = '';
-    }, 250);
+      cbcPopulateNow(displayEl, bankEl, promptEl);
+    }, 350);
   } else {
     cbcPopulateNow(displayEl, bankEl, promptEl);
-  }
-}
-
-function cbcAdvance() {
-  if (cbcPhase === 'before') {
-    if (cbcCurrentIdx < cbcChunks.length - 1) {
-      cbcPhase = 'after';
-      saveCbcState();
-      renderCbc(true);
-    } else {
-      cbcCurrentIdx++;
-      saveCbcState();
-      renderCbc(true);
-    }
-  } else {
-    cbcCurrentIdx++;
-    if (cbcCurrentIdx >= cbcChunks.length) {
-      saveCbcState();
-      renderCbc(true);
-    } else {
-      cbcPhase = 'before';
-      saveCbcState();
-      renderCbc(true);
-    }
   }
 }
 
@@ -2162,14 +2210,16 @@ function tapCbcOption(btn) {
 
   if (isCorrect) {
     resultEl.innerHTML = '';
-    // Flash the button green, then animate transition
     btn.classList.add('cbc-correct');
-    // Disable all buttons during animation
     document.getElementById('cbc-bank').querySelectorAll('.cbc-option').forEach(function(b) {
       b.disabled = true;
     });
     setTimeout(function() {
-      cbcAdvance();
+      if (cbcPhase === 'before') {
+        cbcFillBefore();
+      } else {
+        cbcSlideForward();
+      }
     }, 350);
   } else {
     btn.classList.add('chunk-pill--wrong');

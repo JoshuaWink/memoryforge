@@ -2543,22 +2543,23 @@ body {
 .drill-cbc__display {
   margin: var(--cup-space-md) 0;
   min-height: 4rem;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.drill-cbc__display.cbc-exit {
-  opacity: 0;
-  transform: translateX(-14px);
-}
-.drill-cbc__display.cbc-enter {
-  opacity: 0;
-  transform: translateX(14px);
+  overflow: hidden;
 }
 .cbc-flow {
   display: flex;
   align-items: stretch;
   gap: var(--cup-space-xs);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+.cbc-flow.cbc-slide-left {
+  transform: translateX(-25%);
+  opacity: 0;
+}
+.cbc-flow.cbc-slide-right {
+  transform: translateX(25%);
+  opacity: 0;
 }
 .cbc-slot {
   padding: var(--cup-space-sm) var(--cup-space-md);
@@ -2567,7 +2568,8 @@ body {
   line-height: 1.4;
   text-align: center;
   max-width: 14rem;
-  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition: background 0.3s ease, border-color 0.3s ease,
+              color 0.3s ease, transform 0.2s ease;
 }
 .cbc-slot--center {
   background: var(--cup-color-primary);
@@ -2586,6 +2588,7 @@ body {
 .cbc-slot--filled {
   background: var(--cup-color-success);
   color: #fff;
+  border: 2px solid var(--cup-color-success);
 }
 .cbc-arrow {
   display: flex;
@@ -2600,7 +2603,7 @@ body {
   justify-content: center;
   margin-top: var(--cup-space-sm);
   min-height: 3rem;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
 .drill-cbc__bank.cbc-exit { opacity: 0; }
 .cbc-option {
@@ -2612,5 +2615,5 @@ body {
   transform: scale(1.08);
 }
 #cbc-prompt {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
