@@ -1073,8 +1073,11 @@ function renderFillBlank() {
     if (!it.blanked) {
       html += escapeHtmlScripture(it.word) + ' ';
     } else if (it.filled) {
-      var cls = it.correct ? 'blank-slot blank-slot--filled blank-slot--correct' : 'blank-slot blank-slot--filled blank-slot--wrong';
-      html += '<span class="' + cls + '">' + escapeHtmlScripture(it.filledWord || '') + '</span> ';
+      if (it.correct) {
+        html += '<span class="blank-slot blank-slot--filled blank-slot--correct">' + escapeHtmlScripture(it.filledWord || '') + '</span> ';
+      } else {
+        html += '<span class="blank-slot blank-slot--filled blank-slot--wrong" data-undo-idx="' + i + '">' + escapeHtmlScripture(it.filledWord || '') + '</span> ';
+      }
     } else if (i === fillBlankCurrentIdx) {
       html += '<span class="blank-slot" id="current-blank">___</span> ';
     } else {
@@ -1092,6 +1095,26 @@ function renderFillBlank() {
 
   bankEl.querySelectorAll('.word-option').forEach(function(btn) {
     btn.addEventListener('click', function() { tapFillBlankWord(btn); });
+  });
+
+  // Tap wrong-filled blanks to undo
+  verseEl.querySelectorAll('[data-undo-idx]').forEach(function(slot) {
+    slot.addEventListener('click', function() {
+      var idx = parseInt(slot.dataset.undoIdx);
+      var it = fillBlankItems[idx];
+      if (!it || !it.filled || it.correct) return;
+      it.filled = false;
+      it.filledWord = null;
+      it.correct = false;
+      delete it.bankUsed;
+      // Reset current index to the earliest unfilled blank
+      fillBlankCurrentIdx = 0;
+      while (fillBlankCurrentIdx < fillBlankItems.length &&
+             (!fillBlankItems[fillBlankCurrentIdx].blanked || fillBlankItems[fillBlankCurrentIdx].filled)) {
+        fillBlankCurrentIdx++;
+      }
+      renderFillBlank();
+    });
   });
 }
 

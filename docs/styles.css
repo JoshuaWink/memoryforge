@@ -2049,6 +2049,11 @@ body {
   color: var(--cup-color-error);
   background: rgba(255, 71, 87, 0.1);
   animation: shake 0.3s ease;
+  cursor: pointer;
+}
+.blank-slot--wrong:hover {
+  opacity: 0.6;
+  text-decoration: line-through;
 }
 
 .drill-fill-blank__bank {
