@@ -2503,3 +2503,15 @@ body {
 #library-passages-section .passage-list {
   margin-top: 0;
 }
+
+/* Drill navigation bar — shown after drill completion */
+.drill-nav {
+  display: flex;
+  gap: var(--cup-space-sm);
+  justify-content: center;
+  margin-top: var(--cup-space-md);
+}
+.drill-nav__btn {
+  flex: 1;
+  max-width: 10rem;
+}

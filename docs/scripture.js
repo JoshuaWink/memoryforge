@@ -1117,7 +1117,7 @@ function startScriptureDrill(ref) {
   var ds = document.getElementById('drill-settings');
   if (ds) ds.removeAttribute('open');
   $('#sdrill-ref').textContent = verse.reference;
-  $('#btn-sdrill-next').style.display = 'none';
+  $('#drill-nav').style.display = 'none';
   var drillEditBtn = document.getElementById('btn-drill-edit-chunks');
   if (drillEditBtn) drillEditBtn.style.display = '';
   hideAllDrillSubs();
@@ -1162,7 +1162,7 @@ function checkScriptureDrill() {
   var diffContainer = $('#sdrill-diff');
   diffContainer.style.display = '';
   renderDiff(diff, diffContainer);
-  $('#btn-sdrill-next').style.display = '';
+  $('#drill-nav').style.display = '';
   var score = scoreDiff(diff);
   var quality = score >= 1.0 ? 5 : score >= 0.8 ? 4 : score >= 0.5 ? 3 : 2;
   drillUpdateSR(ref, quality);
@@ -1187,7 +1187,7 @@ function revealFlashcard() {
 function rateFlashcard(quality) {
   var ref = drillCurrentVerse ? drillCurrentVerse.reference : '';
   drillUpdateSR(ref, quality);
-  $('#btn-sdrill-next').style.display = '';
+  $('#drill-nav').style.display = '';
 }
 
 // == Mode 2: Chunk Ordering ==
@@ -1263,7 +1263,7 @@ function tapChunkPill(pill) {
     var resultEl = document.getElementById('chunk-order-result');
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! All chunks in order.</div>';
     drillUpdateSR(drillCurrentVerse.reference, 5);
-    $('#btn-sdrill-next').style.display = '';
+    $('#drill-nav').style.display = '';
   }
 }
 
@@ -1401,7 +1401,7 @@ function tapFillBlankWord(btn) {
       resultEl.innerHTML = '<div class="drill-result drill-result--retry">' + correctCount + '/' + totalBlanks + ' correct (' + scorePct + '%). Keep practicing!</div>';
       drillUpdateSR(drillCurrentVerse.reference, 2);
     }
-    $('#btn-sdrill-next').style.display = '';
+    $('#drill-nav').style.display = '';
   }
 }
 
@@ -1447,7 +1447,7 @@ function renderFlTap() {
     bankEl.innerHTML = '';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! Every word recalled.</div>';
     drillUpdateSR(drillCurrentVerse.reference, 5);
-    $('#btn-sdrill-next').style.display = '';
+    $('#drill-nav').style.display = '';
     return;
   }
 
@@ -1817,7 +1817,7 @@ function startPassageDrill(ref) {
   var ds = document.getElementById('drill-settings');
   if (ds) ds.removeAttribute('open');
   document.getElementById('sdrill-ref').textContent = passage.reference + ' (' + verses.length + ' verses)';
-  document.getElementById('btn-sdrill-next').style.display = 'none';
+  document.getElementById('drill-nav').style.display = 'none';
   var drillEditBtnP = document.getElementById('btn-drill-edit-chunks');
   if (drillEditBtnP) drillEditBtnP.style.display = 'none';
   hideAllDrillSubs();
@@ -1860,7 +1860,7 @@ function showBridgeQuestion(passage, verses, idx) {
     document.getElementById('bridge-prompt').innerHTML = '';
     document.getElementById('bridge-bank').innerHTML = '';
     document.getElementById('bridge-result').innerHTML = '<div class="drill-result drill-result--perfect"><p>All transitions drilled!</p></div>';
-    document.getElementById('btn-sdrill-next').style.display = '';
+    document.getElementById('drill-nav').style.display = '';
     return;
   }
   bridgeCurrentIdx = idx;
@@ -2073,12 +2073,43 @@ function startPassageFlTap(passage, verses) {
     }
   });
 
+  // Drill navigation: Repeat / Previous / Next
+  var repeatBtn = $('#btn-sdrill-repeat');
+  if (repeatBtn) repeatBtn.addEventListener('click', function() {
+    if (scriptureDrillScale === 'verse' && drillCurrentVerse) {
+      startScriptureDrill(drillCurrentVerse.reference);
+    } else if (scriptureDrillScale !== 'verse' && drillCurrentPassage) {
+      startPassageDrill(drillCurrentPassage.reference);
+    }
+  });
+
+  var prevBtn = $('#btn-sdrill-prev');
+  if (prevBtn) prevBtn.addEventListener('click', function() {
+    var pickerId = scriptureDrillScale === 'verse' ? 'drill-verse-picker' : 'drill-passage-picker';
+    var p = document.getElementById(pickerId);
+    if (!p) return;
+    var idx = p.selectedIndex;
+    if (idx > 1) {
+      p.selectedIndex = idx - 1;
+      if (scriptureDrillScale === 'verse') startScriptureDrill(p.value);
+      else startPassageDrill(p.value);
+    }
+  });
+
   var nextBtn = $('#btn-sdrill-next');
   if (nextBtn) nextBtn.addEventListener('click', function() {
-    var p = $('#drill-verse-picker');
+    var pickerId = scriptureDrillScale === 'verse' ? 'drill-verse-picker' : 'drill-passage-picker';
+    var p = document.getElementById(pickerId);
+    if (!p) return;
     var idx = p.selectedIndex;
-    if (idx < p.options.length - 1) { p.selectedIndex = idx + 1; startScriptureDrill(p.value); }
-    else { p.selectedIndex = 0; $('#scripture-drill-area').style.display = 'none'; }
+    if (idx < p.options.length - 1) {
+      p.selectedIndex = idx + 1;
+      if (scriptureDrillScale === 'verse') startScriptureDrill(p.value);
+      else startPassageDrill(p.value);
+    } else {
+      p.selectedIndex = 0;
+      $('#scripture-drill-area').style.display = 'none';
+    }
   });
 
   // Import/Export listeners
