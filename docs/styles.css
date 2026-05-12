@@ -2617,3 +2617,20 @@ body {
 #cbc-prompt {
   transition: opacity 0.25s ease;
 }
+
+/* Sequential direction toggle + type area */
+.cbc-dir-toggle {
+  display: flex;
+  gap: 2px;
+}
+.cbc-dir.active {
+  background: var(--cup-color-primary);
+  color: var(--cup-color-on-primary);
+}
+.cbc-type-area {
+  margin-top: var(--cup-space-sm);
+  max-width: 400px;
+}
+.cbc-type-area .field-input {
+  font-size: var(--cup-font-size-base);
+}

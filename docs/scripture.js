@@ -1132,6 +1132,8 @@ function startScriptureDrill(ref) {
     startFlTap(verse);
   } else if (scriptureDrillMode === 'chunk-by-chunk') {
     startChunkByChunk(verse);
+  } else if (scriptureDrillMode === 'sequential') {
+    startSequential(verse);
   } else {
     // Legacy typing modes
     document.getElementById('drill-typing-area').style.display = '';
@@ -1839,6 +1841,8 @@ function startPassageDrill(ref) {
     startPassageFlTap(passage, verses);
   } else if (scriptureDrillMode === 'chunk-by-chunk') {
     startPassageChunkByChunk(passage, verses);
+  } else if (scriptureDrillMode === 'sequential') {
+    startPassageSequential(passage, verses);
   } else {
     startBridgeDrill(passage, verses);
   }
@@ -1927,6 +1931,186 @@ function showBridgeQuestion(passage, verses, idx) {
 
 
 
+// == Mode: Sequential ==
+var seqChunks = [];
+var seqCurrentIdx = 0;
+var seqDirection = 'ltr'; // 'ltr' | 'rtl'
+var seqRef = '';
+var seqIsActive = false;
+var SEQ_PROG_KEY = 'mf_seq_prog';
+
+function saveSeqState() {
+  try {
+    var all = JSON.parse(localStorage.getItem(SEQ_PROG_KEY) || '{}');
+    all[seqRef] = { idx: seqCurrentIdx, dir: seqDirection };
+    localStorage.setItem(SEQ_PROG_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+function loadSeqState(ref) {
+  try {
+    var all = JSON.parse(localStorage.getItem(SEQ_PROG_KEY) || '{}');
+    return all[ref] || null;
+  } catch (e) { return null; }
+}
+
+function clearSeqState(ref) {
+  try {
+    var all = JSON.parse(localStorage.getItem(SEQ_PROG_KEY) || '{}');
+    delete all[ref];
+    localStorage.setItem(SEQ_PROG_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+function startSequential(verse) {
+  var chunks = verse.customChunks || verse.chunks || chunkVerse(verse.text);
+  seqChunks = chunks;
+  seqRef = verse.reference;
+  seqIsActive = true;
+  var saved = loadSeqState(seqRef);
+  if (saved && saved.idx < chunks.length) {
+    seqCurrentIdx = saved.idx;
+    seqDirection = saved.dir || 'ltr';
+  } else {
+    seqCurrentIdx = 0;
+    seqDirection = 'ltr';
+  }
+  initSequentialUI();
+}
+
+function startPassageSequential(passage, verses) {
+  var allChunks = [];
+  verses.forEach(function(v) {
+    (v.customChunks || v.chunks || chunkVerse(v.text)).forEach(function(ch) { allChunks.push(ch); });
+  });
+  seqChunks = allChunks;
+  seqRef = passage.reference;
+  seqIsActive = true;
+  drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
+  var saved = loadSeqState(seqRef);
+  if (saved && saved.idx < allChunks.length) {
+    seqCurrentIdx = saved.idx;
+    seqDirection = saved.dir || 'ltr';
+  } else {
+    seqCurrentIdx = 0;
+    seqDirection = 'ltr';
+  }
+  initSequentialUI();
+}
+
+function initSequentialUI() {
+  document.getElementById('drill-cbc').style.display = '';
+  // Hide cbc-specific elements, show sequential-specific ones
+  document.getElementById('cbc-bank').style.display = 'none';
+  document.getElementById('cbc-in-nav').style.display = 'none';
+  document.getElementById('cbc-type-area').style.display = '';
+  document.getElementById('cbc-dir-toggle').style.display = '';
+  // Set direction buttons
+  var ltrBtn = document.getElementById('btn-cbc-ltr');
+  var rtlBtn = document.getElementById('btn-cbc-rtl');
+  if (seqDirection === 'ltr') {
+    ltrBtn.classList.add('active');
+    rtlBtn.classList.remove('active');
+  } else {
+    rtlBtn.classList.add('active');
+    ltrBtn.classList.remove('active');
+  }
+  renderSequential();
+}
+
+function seqGetDisplayIdx() {
+  // In RTL mode, we walk from end to start
+  if (seqDirection === 'rtl') {
+    return seqChunks.length - 1 - seqCurrentIdx;
+  }
+  return seqCurrentIdx;
+}
+
+function renderSequential() {
+  var displayEl = document.getElementById('cbc-display');
+  var promptEl = document.getElementById('cbc-prompt');
+  var resultEl = document.getElementById('cbc-result');
+  var inputEl = document.getElementById('cbc-type-input');
+  resultEl.innerHTML = '';
+
+  // Progress
+  var progressEl = document.getElementById('cbc-progress');
+  progressEl.textContent = 'Chunk ' + (seqCurrentIdx + 1) + ' of ' + seqChunks.length;
+
+  var idx = seqGetDisplayIdx();
+
+  if (seqCurrentIdx >= seqChunks.length) {
+    displayEl.innerHTML = '';
+    promptEl.textContent = '';
+    document.getElementById('cbc-type-area').style.display = 'none';
+    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks complete! Well done.</div>';
+    clearSeqState(seqRef);
+    drillUpdateSR(drillCurrentVerse.reference, 5);
+    document.getElementById('drill-nav').style.display = '';
+    seqIsActive = false;
+    return;
+  }
+
+  // Build context: show up to 2 prior chunks (in traversal direction)
+  var html = '<div class="cbc-flow">';
+  var contextStart, contextEnd;
+  if (seqDirection === 'ltr') {
+    contextStart = Math.max(0, idx - 2);
+    for (var i = contextStart; i < idx; i++) {
+      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[i]) + '</span>';
+      html += '<span class="cbc-arrow">\u2192</span>';
+    }
+  } else {
+    contextStart = Math.min(seqChunks.length - 1, idx + 2);
+    for (var j = contextStart; j > idx; j--) {
+      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[j]) + '</span>';
+      html += '<span class="cbc-arrow">\u2192</span>';
+    }
+  }
+  html += '<span class="cbc-slot cbc-slot--empty">?</span>';
+  html += '</div>';
+
+  displayEl.innerHTML = html;
+  promptEl.textContent = seqDirection === 'ltr' ? 'What comes next?' : 'What comes before?';
+  inputEl.value = '';
+  inputEl.focus();
+}
+
+function checkSequentialAnswer() {
+  var inputEl = document.getElementById('cbc-type-input');
+  var resultEl = document.getElementById('cbc-result');
+  var answer = inputEl.value.trim().toLowerCase();
+  var idx = seqGetDisplayIdx();
+  var correct = seqChunks[idx].trim().toLowerCase();
+
+  // Normalize: strip trailing punctuation for comparison
+  var normAnswer = answer.replace(/[.,;:!?'"\-]+$/g, '').replace(/\s+/g, ' ');
+  var normCorrect = correct.replace(/[.,;:!?'"\-]+$/g, '').replace(/\s+/g, ' ');
+
+  if (normAnswer === normCorrect) {
+    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Correct!</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 5);
+    seqCurrentIdx++;
+    saveSeqState();
+    setTimeout(function() { renderSequential(); }, 600);
+  } else {
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite. The answer was: <strong>' + escapeHtmlScripture(seqChunks[idx]) + '</strong></div>';
+    drillUpdateSR(drillCurrentVerse.reference, 2);
+    inputEl.value = '';
+    inputEl.focus();
+  }
+}
+
+function skipSequentialChunk() {
+  var idx = seqGetDisplayIdx();
+  var resultEl = document.getElementById('cbc-result');
+  resultEl.innerHTML = '<div class="drill-result"><em>' + escapeHtmlScripture(seqChunks[idx]) + '</em></div>';
+  drillUpdateSR(drillCurrentVerse.reference, 1);
+  seqCurrentIdx++;
+  saveSeqState();
+  setTimeout(function() { renderSequential(); }, 1000);
+}
+
 // == Mode: Chunk by Chunk ==
 var cbcChunks = [];
 var cbcCurrentIdx = 0;
@@ -1959,6 +2143,12 @@ function clearCbcState(ref) {
 
 function startChunkByChunk(verse) {
   document.getElementById('drill-cbc').style.display = '';
+  // Reset shared UI to cbc mode
+  seqIsActive = false;
+  document.getElementById('cbc-bank').style.display = '';
+  document.getElementById('cbc-in-nav').style.display = '';
+  document.getElementById('cbc-type-area').style.display = 'none';
+  document.getElementById('cbc-dir-toggle').style.display = 'none';
   var chunks = verse.customChunks || verse.chunks || chunkVerse(verse.text);
   cbcChunks = chunks;
   cbcRef = verse.reference;
@@ -1975,6 +2165,12 @@ function startChunkByChunk(verse) {
 
 function startPassageChunkByChunk(passage, verses) {
   document.getElementById('drill-cbc').style.display = '';
+  // Reset shared UI to cbc mode
+  seqIsActive = false;
+  document.getElementById('cbc-bank').style.display = '';
+  document.getElementById('cbc-in-nav').style.display = '';
+  document.getElementById('cbc-type-area').style.display = 'none';
+  document.getElementById('cbc-dir-toggle').style.display = 'none';
   var allChunks = [];
   verses.forEach(function(v) {
     (v.customChunks || v.chunks || chunkVerse(v.text)).forEach(function(ch) { allChunks.push(ch); });
@@ -2707,6 +2903,33 @@ function startPassageFlTap(passage, verses) {
 
   // -- Chapter chunks reset --
 
+  // -- Sequential drill listeners --
+  var seqCheckBtn = document.getElementById('btn-cbc-type-check');
+  if (seqCheckBtn) seqCheckBtn.addEventListener('click', function() { if (seqIsActive) checkSequentialAnswer(); });
+  var seqSkipBtn = document.getElementById('btn-cbc-type-skip');
+  if (seqSkipBtn) seqSkipBtn.addEventListener('click', function() { if (seqIsActive) skipSequentialChunk(); });
+  var seqInput = document.getElementById('cbc-type-input');
+  if (seqInput) seqInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && seqIsActive) checkSequentialAnswer(); });
+  var ltrBtn = document.getElementById('btn-cbc-ltr');
+  var rtlBtn = document.getElementById('btn-cbc-rtl');
+  if (ltrBtn) ltrBtn.addEventListener('click', function() {
+    if (!seqIsActive) return;
+    seqDirection = 'ltr';
+    seqCurrentIdx = 0;
+    ltrBtn.classList.add('active');
+    rtlBtn.classList.remove('active');
+    saveSeqState();
+    renderSequential();
+  });
+  if (rtlBtn) rtlBtn.addEventListener('click', function() {
+    if (!seqIsActive) return;
+    seqDirection = 'rtl';
+    seqCurrentIdx = 0;
+    rtlBtn.classList.add('active');
+    ltrBtn.classList.remove('active');
+    saveSeqState();
+    renderSequential();
+  });
 
   renderVerseList();
   renderPassageList();
