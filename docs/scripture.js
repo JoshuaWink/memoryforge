@@ -2957,7 +2957,6 @@ function startPassageFlTap(passage, verses) {
   if (ltrBtn) ltrBtn.addEventListener('click', function() {
     if (!seqIsActive) return;
     seqDirection = 'ltr';
-    seqCurrentIdx = 0;
     ltrBtn.classList.add('active');
     rtlBtn.classList.remove('active');
     saveSeqState();
@@ -2966,7 +2965,6 @@ function startPassageFlTap(passage, verses) {
   if (rtlBtn) rtlBtn.addEventListener('click', function() {
     if (!seqIsActive) return;
     seqDirection = 'rtl';
-    seqCurrentIdx = 0;
     rtlBtn.classList.add('active');
     ltrBtn.classList.remove('active');
     saveSeqState();
