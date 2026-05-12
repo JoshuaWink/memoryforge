@@ -2000,10 +2000,9 @@ function startPassageSequential(passage, verses) {
 
 function initSequentialUI() {
   document.getElementById('drill-cbc').style.display = '';
-  // Hide cbc-specific elements, show sequential-specific ones
-  document.getElementById('cbc-bank').style.display = 'none';
+  // Hide cbc-specific, show sequential-specific
   document.getElementById('cbc-in-nav').style.display = 'none';
-  document.getElementById('cbc-type-area').style.display = '';
+  document.getElementById('cbc-bank').style.display = '';
   document.getElementById('cbc-dir-toggle').style.display = '';
   // Set direction buttons
   var ltrBtn = document.getElementById('btn-cbc-ltr');
@@ -2019,30 +2018,79 @@ function initSequentialUI() {
 }
 
 function seqGetDisplayIdx() {
-  // In RTL mode, we walk from end to start
   if (seqDirection === 'rtl') {
     return seqChunks.length - 1 - seqCurrentIdx;
   }
   return seqCurrentIdx;
 }
 
-function renderSequential() {
+function seqBuildContext(idx) {
+  var html = '<div class="cbc-flow">';
+  if (seqDirection === 'ltr') {
+    var start = Math.max(0, idx - 2);
+    for (var i = start; i < idx; i++) {
+      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[i]) + '</span>';
+      html += '<span class="cbc-arrow">\u2192</span>';
+    }
+  } else {
+    var end = Math.min(seqChunks.length - 1, idx + 2);
+    for (var j = end; j > idx; j--) {
+      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[j]) + '</span>';
+      html += '<span class="cbc-arrow">\u2192</span>';
+    }
+  }
+  html += '<span class="cbc-slot cbc-slot--empty">?</span>';
+  html += '</div>';
+  return html;
+}
+
+function seqBuildBank(idx) {
+  // Correct answer + nearby distractors (2-3 before, 2-3 after the target)
+  var correct = { text: seqChunks[idx], idx: idx };
+  var pool = [];
+  var radius = 3;
+  for (var i = Math.max(0, idx - radius); i <= Math.min(seqChunks.length - 1, idx + radius); i++) {
+    if (i !== idx) pool.push({ text: seqChunks[i], idx: i });
+  }
+  // If not enough distractors nearby, widen
+  if (pool.length < 3) {
+    for (var k = 0; k < seqChunks.length && pool.length < 3; k++) {
+      if (k !== idx && !pool.some(function(p) { return p.idx === k; })) {
+        pool.push({ text: seqChunks[k], idx: k });
+      }
+    }
+  }
+  // Pick up to 3 distractors
+  var distractors = drillShuffle(pool).slice(0, 3);
+  var options = drillShuffle([correct].concat(distractors));
+  return options.map(function(item) {
+    return '<button class="word-option cbc-option seq-option" data-seq-idx="' + item.idx + '">' + escapeHtmlScripture(item.text) + '</button>';
+  }).join('');
+}
+
+function seqWireBank() {
+  var bankEl = document.getElementById('cbc-bank');
+  bankEl.querySelectorAll('.seq-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapSeqOption(btn); });
+  });
+}
+
+function renderSequential(slideDir) {
   var displayEl = document.getElementById('cbc-display');
   var promptEl = document.getElementById('cbc-prompt');
+  var bankEl = document.getElementById('cbc-bank');
   var resultEl = document.getElementById('cbc-result');
-  var inputEl = document.getElementById('cbc-type-input');
   resultEl.innerHTML = '';
 
-  // Progress
   var progressEl = document.getElementById('cbc-progress');
-  progressEl.textContent = 'Chunk ' + (seqCurrentIdx + 1) + ' of ' + seqChunks.length;
+  progressEl.textContent = 'Chunk ' + Math.min(seqCurrentIdx + 1, seqChunks.length) + ' of ' + seqChunks.length;
 
   var idx = seqGetDisplayIdx();
 
   if (seqCurrentIdx >= seqChunks.length) {
     displayEl.innerHTML = '';
+    bankEl.innerHTML = '';
     promptEl.textContent = '';
-    document.getElementById('cbc-type-area').style.display = 'none';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks complete! Well done.</div>';
     clearSeqState(seqRef);
     drillUpdateSR(drillCurrentVerse.reference, 5);
@@ -2051,64 +2099,66 @@ function renderSequential() {
     return;
   }
 
-  // Build context: show up to 2 prior chunks (in traversal direction)
-  var html = '<div class="cbc-flow">';
-  var contextStart, contextEnd;
-  if (seqDirection === 'ltr') {
-    contextStart = Math.max(0, idx - 2);
-    for (var i = contextStart; i < idx; i++) {
-      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[i]) + '</span>';
-      html += '<span class="cbc-arrow">\u2192</span>';
-    }
-  } else {
-    contextStart = Math.min(seqChunks.length - 1, idx + 2);
-    for (var j = contextStart; j > idx; j--) {
-      html += '<span class="cbc-slot cbc-slot--filled">' + escapeHtmlScripture(seqChunks[j]) + '</span>';
-      html += '<span class="cbc-arrow">\u2192</span>';
-    }
+  function populate() {
+    displayEl.innerHTML = seqBuildContext(idx);
+    bankEl.innerHTML = seqBuildBank(idx);
+    promptEl.textContent = seqDirection === 'ltr' ? 'What comes next?' : 'What comes before?';
+    seqWireBank();
   }
-  html += '<span class="cbc-slot cbc-slot--empty">?</span>';
-  html += '</div>';
 
-  displayEl.innerHTML = html;
-  promptEl.textContent = seqDirection === 'ltr' ? 'What comes next?' : 'What comes before?';
-  inputEl.value = '';
-  inputEl.focus();
+  if (slideDir) {
+    var flow = displayEl.querySelector('.cbc-flow');
+    var exitClass = slideDir === 'left' ? 'cbc-slide-left' : 'cbc-slide-right';
+    if (flow) flow.classList.add(exitClass);
+    bankEl.classList.add('cbc-exit');
+    promptEl.style.opacity = '0';
+    setTimeout(function() {
+      if (flow) flow.classList.remove(exitClass);
+      bankEl.classList.remove('cbc-exit');
+      promptEl.style.opacity = '';
+      populate();
+    }, 350);
+  } else {
+    populate();
+  }
 }
 
-function checkSequentialAnswer() {
-  var inputEl = document.getElementById('cbc-type-input');
+function tapSeqOption(btn) {
+  var tappedIdx = parseInt(btn.dataset.seqIdx);
+  var targetIdx = seqGetDisplayIdx();
   var resultEl = document.getElementById('cbc-result');
-  var answer = inputEl.value.trim().toLowerCase();
-  var idx = seqGetDisplayIdx();
-  var correct = seqChunks[idx].trim().toLowerCase();
+  var displayEl = document.getElementById('cbc-display');
+  var bankEl = document.getElementById('cbc-bank');
 
-  // Normalize: strip trailing punctuation for comparison
-  var normAnswer = answer.replace(/[.,;:!?'"\-]+$/g, '').replace(/\s+/g, ' ');
-  var normCorrect = correct.replace(/[.,;:!?'"\-]+$/g, '').replace(/\s+/g, ' ');
+  if (tappedIdx === targetIdx) {
+    // Correct
+    btn.classList.add('cbc-correct');
+    bankEl.querySelectorAll('.seq-option').forEach(function(b) { b.disabled = true; });
+    resultEl.innerHTML = '';
 
-  if (normAnswer === normCorrect) {
-    resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Correct!</div>';
+    // Fill the empty slot with the answer
+    var emptySlot = displayEl.querySelector('.cbc-slot--empty');
+    if (emptySlot) {
+      emptySlot.textContent = escapeHtmlScripture(seqChunks[targetIdx]);
+      emptySlot.className = 'cbc-slot cbc-slot--filled cbc-slot--correct';
+    }
+
     drillUpdateSR(drillCurrentVerse.reference, 5);
     seqCurrentIdx++;
     saveSeqState();
-    setTimeout(function() { renderSequential(); }, 600);
-  } else {
-    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite. The answer was: <strong>' + escapeHtmlScripture(seqChunks[idx]) + '</strong></div>';
-    drillUpdateSR(drillCurrentVerse.reference, 2);
-    inputEl.value = '';
-    inputEl.focus();
-  }
-}
 
-function skipSequentialChunk() {
-  var idx = seqGetDisplayIdx();
-  var resultEl = document.getElementById('cbc-result');
-  resultEl.innerHTML = '<div class="drill-result"><em>' + escapeHtmlScripture(seqChunks[idx]) + '</em></div>';
-  drillUpdateSR(drillCurrentVerse.reference, 1);
-  seqCurrentIdx++;
-  saveSeqState();
-  setTimeout(function() { renderSequential(); }, 1000);
+    // Pause to show the filled answer, then slide
+    var slideDir = seqDirection === 'ltr' ? 'left' : 'right';
+    setTimeout(function() {
+      renderSequential(slideDir);
+    }, 500);
+  } else {
+    // Wrong
+    btn.classList.add('chunk-pill--wrong');
+    setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
+    resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
+    drillUpdateSR(drillCurrentVerse.reference, 2);
+  }
 }
 
 // == Mode: Chunk by Chunk ==
@@ -2147,7 +2197,6 @@ function startChunkByChunk(verse) {
   seqIsActive = false;
   document.getElementById('cbc-bank').style.display = '';
   document.getElementById('cbc-in-nav').style.display = '';
-  document.getElementById('cbc-type-area').style.display = 'none';
   document.getElementById('cbc-dir-toggle').style.display = 'none';
   var chunks = verse.customChunks || verse.chunks || chunkVerse(verse.text);
   cbcChunks = chunks;
@@ -2169,7 +2218,6 @@ function startPassageChunkByChunk(passage, verses) {
   seqIsActive = false;
   document.getElementById('cbc-bank').style.display = '';
   document.getElementById('cbc-in-nav').style.display = '';
-  document.getElementById('cbc-type-area').style.display = 'none';
   document.getElementById('cbc-dir-toggle').style.display = 'none';
   var allChunks = [];
   verses.forEach(function(v) {
@@ -2904,12 +2952,6 @@ function startPassageFlTap(passage, verses) {
   // -- Chapter chunks reset --
 
   // -- Sequential drill listeners --
-  var seqCheckBtn = document.getElementById('btn-cbc-type-check');
-  if (seqCheckBtn) seqCheckBtn.addEventListener('click', function() { if (seqIsActive) checkSequentialAnswer(); });
-  var seqSkipBtn = document.getElementById('btn-cbc-type-skip');
-  if (seqSkipBtn) seqSkipBtn.addEventListener('click', function() { if (seqIsActive) skipSequentialChunk(); });
-  var seqInput = document.getElementById('cbc-type-input');
-  if (seqInput) seqInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && seqIsActive) checkSequentialAnswer(); });
   var ltrBtn = document.getElementById('btn-cbc-ltr');
   var rtlBtn = document.getElementById('btn-cbc-rtl');
   if (ltrBtn) ltrBtn.addEventListener('click', function() {

@@ -2590,6 +2590,14 @@ body {
   color: #fff;
   border: 2px solid var(--cup-color-success);
 }
+.cbc-slot--correct {
+  animation: slot-pop 0.3s ease;
+}
+@keyframes slot-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 .cbc-arrow {
   display: flex;
   align-items: center;
@@ -2626,11 +2634,4 @@ body {
 .cbc-dir.active {
   background: var(--cup-color-primary);
   color: var(--cup-color-on-primary);
-}
-.cbc-type-area {
-  margin-top: var(--cup-space-sm);
-  max-width: 400px;
-}
-.cbc-type-area .field-input {
-  font-size: var(--cup-font-size-base);
 }
