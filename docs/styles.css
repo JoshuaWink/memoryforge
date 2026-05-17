@@ -2635,3 +2635,84 @@ body {
   background: var(--cup-color-primary);
   color: var(--cup-color-on-primary);
 }
+
+/* == Verse Order == */
+.vo-progress {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+  margin-bottom: var(--cup-space-sm);
+}
+.vo-slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cup-space-xs);
+}
+.vo-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cup-space-sm);
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  border: 2px dashed var(--cup-color-border, #555);
+  border-radius: var(--cup-radius-md, 8px);
+  min-height: 2.5em;
+  transition: border-color 0.3s, background 0.3s;
+}
+.vo-slot__num {
+  font-weight: bold;
+  color: var(--cup-color-text-muted);
+  flex-shrink: 0;
+}
+.vo-slot__text {
+  color: var(--cup-color-text-muted);
+  font-style: italic;
+}
+.vo-slot--filled {
+  border-color: var(--cup-color-success);
+  border-style: solid;
+  background: rgba(76, 175, 80, 0.08);
+  animation: slot-pop 0.35s ease;
+}
+.vo-slot--filled .vo-slot__text {
+  color: var(--cup-color-text);
+  font-style: normal;
+}
+.vo-slot--wrong {
+  border-color: var(--cup-color-error, #f44);
+  animation: shake 0.4s ease;
+}
+.vo-bank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cup-space-xs);
+}
+.vo-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  border: 1px solid var(--cup-color-border, #555);
+  border-radius: var(--cup-radius-md, 8px);
+  background: var(--cup-color-surface, #2a2a2a);
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.vo-option__ref {
+  font-size: var(--cup-font-size-xs, 0.75rem);
+  color: var(--cup-color-text-muted);
+  font-weight: bold;
+}
+.vo-option__preview {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text);
+}
+.vo-option--used {
+  opacity: 0.3;
+  pointer-events: none;
+  transform: scale(0.95);
+}
+.vo-option--wrong {
+  border-color: var(--cup-color-error, #f44);
+  animation: shake 0.4s ease;
+}

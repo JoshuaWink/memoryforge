@@ -585,6 +585,7 @@
                 <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-by-chunk">Chunk by Chunk</button>
                 <button class="btn btn-sm scripture-mode" data-mode="sequential">Sequential</button>
+                <button class="btn btn-sm scripture-mode" data-mode="verse-order">Verse Order</button>
                 <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
                 <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
@@ -666,6 +667,15 @@
             <p class="field-label" id="cbc-prompt"></p>
             <div class="drill-cbc__bank" id="cbc-bank"></div>
             <div id="cbc-result"></div>
+          </div>
+
+          <!-- Verse Order (passage scale) -->
+          <div class="drill-verse-order" id="drill-verse-order" style="display:none;">
+            <div class="vo-progress" id="vo-progress"></div>
+            <div class="vo-slots" id="vo-slots"></div>
+            <p class="field-label" style="margin-top:var(--cup-space-md)">Tap the next verse:</p>
+            <div class="vo-bank" id="vo-bank"></div>
+            <div id="vo-result"></div>
           </div>
 
           <!-- Bridge Drill (passage scale) -->

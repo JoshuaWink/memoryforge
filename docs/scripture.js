@@ -1094,7 +1094,7 @@ var bridgeCurrentIdx = 0;
 
 
 function hideAllDrillSubs() {
-  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge'];
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge', 'drill-verse-order'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -1134,6 +1134,9 @@ function startScriptureDrill(ref) {
     startChunkByChunk(verse);
   } else if (scriptureDrillMode === 'sequential') {
     startSequential(verse);
+  } else if (scriptureDrillMode === 'verse-order') {
+    // Single verse — fall back to chunk order
+    startChunkOrder(verse);
   } else {
     // Legacy typing modes
     document.getElementById('drill-typing-area').style.display = '';
@@ -1843,6 +1846,8 @@ function startPassageDrill(ref) {
     startPassageChunkByChunk(passage, verses);
   } else if (scriptureDrillMode === 'sequential') {
     startPassageSequential(passage, verses);
+  } else if (scriptureDrillMode === 'verse-order') {
+    startVerseOrder(passage, verses);
   } else {
     startBridgeDrill(passage, verses);
   }
@@ -1929,6 +1934,88 @@ function showBridgeQuestion(passage, verses, idx) {
   });
 }
 
+
+
+// == Mode: Verse Order ==
+var voVerses = [];
+var voCorrectOrder = [];
+var voSelectedCount = 0;
+
+function startVerseOrder(passage, verses) {
+  document.getElementById('drill-verse-order').style.display = '';
+  voVerses = verses;
+  voCorrectOrder = verses.map(function(v) { return v.reference; });
+  voSelectedCount = 0;
+
+  // Build slots
+  var slotsEl = document.getElementById('vo-slots');
+  slotsEl.innerHTML = verses.map(function(v, i) {
+    return '<div class="vo-slot" id="vo-slot-' + i + '">' +
+      '<span class="vo-slot__num">' + (i + 1) + '.</span>' +
+      '<span class="vo-slot__text">?</span>' +
+      '</div>';
+  }).join('');
+
+  // Build bank (scrambled verse snippets)
+  var pool = verses.map(function(v) {
+    var preview = v.text.length > 80 ? v.text.substring(0, 77) + '\u2026' : v.text;
+    return { ref: v.reference, preview: preview, text: v.text };
+  });
+  // Fisher-Yates shuffle
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+
+  var bankEl = document.getElementById('vo-bank');
+  bankEl.innerHTML = pool.map(function(item) {
+    return '<button class="vo-option" data-ref="' + escapeHtmlScripture(item.ref) + '">' +
+      '<span class="vo-option__ref">' + escapeHtmlScripture(item.ref) + '</span>' +
+      '<span class="vo-option__preview">' + escapeHtmlScripture(item.preview) + '</span>' +
+      '</button>';
+  }).join('');
+
+  bankEl.querySelectorAll('.vo-option').forEach(function(btn) {
+    btn.addEventListener('click', function() { tapVerseOrderOption(btn, passage); });
+  });
+
+  document.getElementById('vo-result').innerHTML = '';
+  document.getElementById('vo-progress').textContent = '0 / ' + verses.length;
+}
+
+function tapVerseOrderOption(btn, passage) {
+  if (btn.classList.contains('vo-option--used')) return;
+  var picked = btn.dataset.ref;
+  var expected = voCorrectOrder[voSelectedCount];
+  var slot = document.getElementById('vo-slot-' + voSelectedCount);
+
+  if (picked === expected) {
+    // Correct
+    btn.classList.add('vo-option--used');
+    var verse = voVerses[voSelectedCount];
+    slot.classList.add('vo-slot--filled');
+    slot.querySelector('.vo-slot__text').textContent = verse.text;
+    voSelectedCount++;
+    document.getElementById('vo-progress').textContent = voSelectedCount + ' / ' + voCorrectOrder.length;
+    document.getElementById('vo-result').innerHTML = '';
+
+    if (voSelectedCount === voCorrectOrder.length) {
+      document.getElementById('vo-result').innerHTML = '<div class="drill-result drill-result--perfect">All verses placed in order!</div>';
+      drillUpdateSR(passage.reference, 5);
+      document.getElementById('drill-nav').style.display = '';
+    }
+  } else {
+    // Wrong
+    btn.classList.add('vo-option--wrong');
+    slot.classList.add('vo-slot--wrong');
+    document.getElementById('vo-result').innerHTML = '<div class="drill-result drill-result--retry">That goes elsewhere \u2014 try again.</div>';
+    drillUpdateSR(passage.reference, 2);
+    setTimeout(function() {
+      btn.classList.remove('vo-option--wrong');
+      slot.classList.remove('vo-slot--wrong');
+    }, 600);
+  }
+}
 
 
 // == Mode: Sequential ==
