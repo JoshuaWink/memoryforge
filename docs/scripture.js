@@ -1970,8 +1970,7 @@ function startVerseOrder(passage, verses) {
   var bankEl = document.getElementById('vo-bank');
   bankEl.innerHTML = pool.map(function(item) {
     return '<button class="vo-option" data-ref="' + escapeHtmlScripture(item.ref) + '">' +
-      '<span class="vo-option__ref">' + escapeHtmlScripture(item.ref) + '</span>' +
-      '<span class="vo-option__preview">' + escapeHtmlScripture(item.preview) + '</span>' +
+      escapeHtmlScripture(item.preview) +
       '</button>';
   }).join('');
 
