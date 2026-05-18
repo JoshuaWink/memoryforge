@@ -63,16 +63,25 @@
 }
 
 /* ── Ultra Dark (pitch black OLED) ── */
+/* ── Ultra Dark (pitch black, zero blue light) ── */
 [data-theme="ultra-dark"] {
   --cup-color-surface:      #000000;
   --cup-color-surface-alt:  #0a0a0a;
   --cup-color-bg:           #000000;
   --cup-color-border:       #1a1a1a;
-  --cup-color-text:         #cccccc;
-  --cup-color-text-muted:   #777777;
-  --cup-color-on-surface:   #cccccc;
+  --cup-color-text:         #b0a090;
+  --cup-color-text-muted:   #6b5e52;
+  --cup-color-on-surface:   #b0a090;
+  --cup-color-primary:      #c0392b;
+  --cup-color-on-primary:   #000000;
+  --cup-color-secondary:    #8b7355;
+  --cup-color-focus:        #c0392b;
+  --cup-color-success:      #6b8e23;
+  --cup-color-warning:      #cc7722;
+  --cup-color-error:        #a03020;
+  --cup-color-placeholder:  #5a4a3a;
+  --cup-color-disabled:     #3a3030;
 }
-
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
