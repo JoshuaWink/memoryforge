@@ -2716,3 +2716,90 @@ body {
   border-color: var(--cup-color-error, #f44);
   animation: shake 0.4s ease;
 }
+
+/* == Recite (Voice) == */
+.recite-instruction {
+  color: var(--cup-color-text-muted);
+  font-style: italic;
+  margin-bottom: var(--cup-space-sm);
+}
+.recite-mic-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cup-space-xs);
+  margin: var(--cup-space-md) 0;
+}
+.recite-mic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--cup-color-border, #555);
+  background: var(--cup-color-surface, #2a2a2a);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.15s;
+}
+.recite-mic:active {
+  transform: scale(0.95);
+}
+.recite-mic--active {
+  border-color: var(--cup-color-error, #f44);
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.25);
+  animation: pulse-mic 1.5s ease-in-out infinite;
+}
+.recite-mic__icon {
+  font-size: 2rem;
+}
+.recite-mic__status {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+}
+@keyframes pulse-mic {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.25); }
+  50% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0.08); }
+}
+.recite-transcript {
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  background: var(--cup-color-surface, #2a2a2a);
+  border-radius: var(--cup-radius-md, 8px);
+  border: 1px solid var(--cup-color-border, #555);
+  min-height: 3em;
+  font-size: var(--cup-font-size-md, 1rem);
+  color: var(--cup-color-text);
+  line-height: 1.6;
+  margin-bottom: var(--cup-space-sm);
+}
+.recite-diff {
+  padding: var(--cup-space-sm) var(--cup-space-md);
+  background: var(--cup-color-surface, #2a2a2a);
+  border-radius: var(--cup-radius-md, 8px);
+  border: 1px solid var(--cup-color-border, #555);
+  line-height: 1.8;
+  margin-bottom: var(--cup-space-sm);
+}
+.recite-word {
+  display: inline;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+.recite-word--correct {
+  color: var(--cup-color-success, #4caf50);
+}
+.recite-word--missing {
+  color: var(--cup-color-error, #f44);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.recite-word--replace {
+  color: var(--cup-color-warning, #ff9800);
+  text-decoration: underline wavy;
+  cursor: help;
+}
+.recite-word--extra {
+  color: var(--cup-color-text-muted);
+  text-decoration: line-through;
+  opacity: 0.5;
+}

@@ -1094,7 +1094,7 @@ var bridgeCurrentIdx = 0;
 
 
 function hideAllDrillSubs() {
-  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge', 'drill-verse-order'];
+  var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge', 'drill-verse-order', 'drill-recite'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -1137,6 +1137,8 @@ function startScriptureDrill(ref) {
   } else if (scriptureDrillMode === 'verse-order') {
     // Single verse — fall back to chunk order
     startChunkOrder(verse);
+  } else if (scriptureDrillMode === 'recite') {
+    startRecite(verse.reference, verse.text);
   } else {
     // Legacy typing modes
     document.getElementById('drill-typing-area').style.display = '';
@@ -1848,6 +1850,9 @@ function startPassageDrill(ref) {
     startPassageSequential(passage, verses);
   } else if (scriptureDrillMode === 'verse-order') {
     startVerseOrder(passage, verses);
+  } else if (scriptureDrillMode === 'recite') {
+    var fullText = verses.map(function(v) { return v.text; }).join(' ');
+    startRecite(passage.reference, fullText);
   } else {
     startBridgeDrill(passage, verses);
   }
@@ -2013,6 +2018,184 @@ function tapVerseOrderOption(btn, passage) {
       btn.classList.remove('vo-option--wrong');
       slot.classList.remove('vo-slot--wrong');
     }, 600);
+  }
+}
+
+
+// == Mode: Recite (Voice) ==
+var reciteRecognition = null;
+var reciteExpectedText = '';
+var reciteRef = '';
+var reciteIsListening = false;
+var reciteTranscript = '';
+
+function startRecite(ref, text) {
+  document.getElementById('drill-recite').style.display = '';
+  reciteRef = ref;
+  reciteExpectedText = text;
+  reciteTranscript = '';
+  reciteIsListening = false;
+
+  document.getElementById('recite-instruction').textContent = 'Speak the verse aloud from memory';
+  document.getElementById('recite-mic-status').textContent = 'Tap to start';
+  document.getElementById('recite-mic-icon').textContent = '\u{1F3A4}';
+  document.getElementById('recite-transcript').style.display = 'none';
+  document.getElementById('recite-transcript').textContent = '';
+  document.getElementById('recite-diff').style.display = 'none';
+  document.getElementById('recite-diff').innerHTML = '';
+  document.getElementById('recite-result').innerHTML = '';
+  document.getElementById('btn-recite-mic').classList.remove('recite-mic--active');
+
+  // Check browser support
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('recite-result').innerHTML = '<div class="drill-result drill-result--retry">Voice recognition is not supported in this browser. Try Chrome or Safari.</div>';
+    return;
+  }
+
+  // Wire mic button
+  var micBtn = document.getElementById('btn-recite-mic');
+  var newBtn = micBtn.cloneNode(true);
+  micBtn.parentNode.replaceChild(newBtn, micBtn);
+  newBtn.addEventListener('click', function() { toggleReciteMic(); });
+}
+
+function toggleReciteMic() {
+  if (reciteIsListening) {
+    stopReciteMic();
+  } else {
+    startReciteMic();
+  }
+}
+
+function startReciteMic() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+
+  reciteTranscript = '';
+  reciteIsListening = true;
+  document.getElementById('btn-recite-mic').classList.add('recite-mic--active');
+  document.getElementById('recite-mic-icon').textContent = '\u{23F9}';
+  document.getElementById('recite-mic-status').textContent = 'Listening\u2026';
+  document.getElementById('recite-transcript').style.display = '';
+  document.getElementById('recite-transcript').textContent = '\u2026';
+  document.getElementById('recite-diff').style.display = 'none';
+  document.getElementById('recite-result').innerHTML = '';
+
+  reciteRecognition = new SpeechRecognition();
+  reciteRecognition.continuous = true;
+  reciteRecognition.interimResults = true;
+  reciteRecognition.lang = 'en-US';
+
+  reciteRecognition.onresult = function(event) {
+    var final = '';
+    var interim = '';
+    for (var i = 0; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        final += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    reciteTranscript = final;
+    var display = (final + interim).trim();
+    document.getElementById('recite-transcript').textContent = display || '\u2026';
+  };
+
+  reciteRecognition.onerror = function(event) {
+    if (event.error === 'no-speech') {
+      document.getElementById('recite-mic-status').textContent = 'No speech detected \u2014 try again';
+    } else if (event.error === 'not-allowed') {
+      document.getElementById('recite-mic-status').textContent = 'Microphone access denied';
+    }
+    stopReciteMic();
+  };
+
+  reciteRecognition.onend = function() {
+    if (reciteIsListening) {
+      // Stopped naturally — score it
+      reciteIsListening = false;
+      document.getElementById('btn-recite-mic').classList.remove('recite-mic--active');
+      document.getElementById('recite-mic-icon').textContent = '\u{1F3A4}';
+      document.getElementById('recite-mic-status').textContent = 'Tap to retry';
+      scoreRecitation();
+    }
+  };
+
+  reciteRecognition.start();
+}
+
+function stopReciteMic() {
+  reciteIsListening = false;
+  document.getElementById('btn-recite-mic').classList.remove('recite-mic--active');
+  document.getElementById('recite-mic-icon').textContent = '\u{1F3A4}';
+  document.getElementById('recite-mic-status').textContent = 'Scoring\u2026';
+  if (reciteRecognition) {
+    reciteRecognition.stop();
+  }
+  // onend will fire and call scoreRecitation via the flag check
+  // But since we set reciteIsListening=false before stop(), onend won't auto-score
+  // So score manually after a small delay for final results
+  setTimeout(function() { scoreRecitation(); }, 300);
+}
+
+function normalizeForCompare(s) {
+  return (s || '').toLowerCase().replace(/[^\w\s']/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function scoreRecitation() {
+  var expected = normalizeForCompare(reciteExpectedText);
+  var got = normalizeForCompare(reciteTranscript);
+
+  if (!got) {
+    document.getElementById('recite-mic-status').textContent = 'Tap to start';
+    document.getElementById('recite-result').innerHTML = '<div class="drill-result drill-result--retry">No speech captured \u2014 try again.</div>';
+    return;
+  }
+
+  var diff = diffWords(expected, got);
+  var total = 0;
+  var correct = 0;
+  diff.forEach(function(d) {
+    if (d.type === 'equal') { total++; correct++; }
+    else if (d.type === 'missing') { total++; }
+    else if (d.type === 'replace') { total++; }
+    // 'extra' words don't count against total
+  });
+
+  var pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+  // Build visual diff
+  var diffEl = document.getElementById('recite-diff');
+  diffEl.style.display = '';
+  diffEl.innerHTML = '<p class="field-label" style="margin-bottom:var(--cup-space-xs)">Comparison:</p>' +
+    diff.map(function(d) {
+      if (d.type === 'equal') return '<span class="recite-word recite-word--correct">' + escapeHtmlScripture(d.expected) + '</span>';
+      if (d.type === 'missing') return '<span class="recite-word recite-word--missing">' + escapeHtmlScripture(d.expected) + '</span>';
+      if (d.type === 'replace') return '<span class="recite-word recite-word--replace" title="You said: ' + escapeHtmlScripture(d.got) + '">' + escapeHtmlScripture(d.expected) + '</span>';
+      if (d.type === 'extra') return '<span class="recite-word recite-word--extra">' + escapeHtmlScripture(d.got) + '</span>';
+      return '';
+    }).join(' ');
+
+  // Quality rating for SR
+  var quality;
+  if (pct >= 95) quality = 5;
+  else if (pct >= 80) quality = 4;
+  else if (pct >= 60) quality = 3;
+  else if (pct >= 40) quality = 2;
+  else quality = 1;
+
+  var resultClass = pct >= 80 ? 'drill-result--perfect' : (pct >= 50 ? 'drill-result--retry' : 'drill-result--retry');
+  var emoji = pct >= 95 ? '\u{1F525}' : (pct >= 80 ? '\u2705' : (pct >= 50 ? '\u{1F4AA}' : '\u{1F4AD}'));
+
+  document.getElementById('recite-result').innerHTML = '<div class="drill-result ' + resultClass + '">' +
+    '<p>' + emoji + ' <strong>' + pct + '%</strong> accuracy (' + correct + '/' + total + ' words)</p>' +
+    '</div>';
+  document.getElementById('recite-mic-status').textContent = 'Tap to retry';
+
+  drillUpdateSR(reciteRef, quality);
+  if (pct >= 80) {
+    document.getElementById('drill-nav').style.display = '';
   }
 }
 

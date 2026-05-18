@@ -586,6 +586,7 @@
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-by-chunk">Chunk by Chunk</button>
                 <button class="btn btn-sm scripture-mode" data-mode="sequential">Sequential</button>
                 <button class="btn btn-sm scripture-mode" data-mode="verse-order">Verse Order</button>
+                <button class="btn btn-sm scripture-mode" data-mode="recite">Recite</button>
                 <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
                 <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
                 <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
@@ -676,6 +677,20 @@
             <p class="field-label" style="margin-top:var(--cup-space-md)">Tap the next verse:</p>
             <div class="vo-bank" id="vo-bank"></div>
             <div id="vo-result"></div>
+          </div>
+
+          <!-- Recite (voice) -->
+          <div class="drill-recite" id="drill-recite" style="display:none;">
+            <p class="recite-instruction" id="recite-instruction">Speak the verse aloud from memory</p>
+            <div class="recite-mic-area">
+              <button id="btn-recite-mic" class="btn recite-mic" title="Start listening">
+                <span class="recite-mic__icon" id="recite-mic-icon">&#127908;</span>
+              </button>
+              <span class="recite-mic__status" id="recite-mic-status">Tap to start</span>
+            </div>
+            <div class="recite-transcript" id="recite-transcript" style="display:none;"></div>
+            <div class="recite-diff" id="recite-diff" style="display:none;"></div>
+            <div id="recite-result"></div>
           </div>
 
           <!-- Bridge Drill (passage scale) -->
