@@ -62,6 +62,17 @@
   --cup-touch-min: 44px;
 }
 
+/* ── Ultra Dark (pitch black OLED) ── */
+[data-theme="ultra-dark"] {
+  --cup-color-surface:      #000000;
+  --cup-color-surface-alt:  #0a0a0a;
+  --cup-color-bg:           #000000;
+  --cup-color-border:       #1a1a1a;
+  --cup-color-text:         #cccccc;
+  --cup-color-text-muted:   #777777;
+  --cup-color-on-surface:   #cccccc;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;

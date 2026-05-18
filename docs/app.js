@@ -1811,6 +1811,27 @@ function renderStatsGroup(selector, data) {
 // ═══════════════════════════════════════════════════════════════════
 //  Data Management
 // ═══════════════════════════════════════════════════════════════════
+
+// Ultra Dark Mode toggle
+(function initUltraDark() {
+  var chk = document.getElementById('chk-ultra-dark');
+  if (!chk) return;
+  var saved = localStorage.getItem('mf_ultra_dark');
+  if (saved === '1') {
+    document.documentElement.setAttribute('data-theme', 'ultra-dark');
+    chk.checked = true;
+  }
+  chk.addEventListener('change', function() {
+    if (chk.checked) {
+      document.documentElement.setAttribute('data-theme', 'ultra-dark');
+      localStorage.setItem('mf_ultra_dark', '1');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('mf_ultra_dark', '0');
+    }
+  });
+})();
+
 $('#btn-export').addEventListener('click', async () => {
   try {
     const data = await dbExport();
