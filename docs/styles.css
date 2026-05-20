@@ -471,15 +471,37 @@ body {
 }
 
 /* ── Responsive ── */
-@media (max-width: 480px) {
+@media (max-width: 767px) {
   .app-header {
     flex-direction: column;
+    align-items: stretch;
     gap: var(--cup-space-sm);
     padding: var(--cup-space-sm) var(--cup-space-md);
   }
+
+  .app-title {
+    text-align: center;
+  }
+
+  .app-nav {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .nav-btn {
+    flex: 1 1 30%;
+    min-width: 92px;
+  }
+
   .app-main {
     padding: var(--cup-space-lg) var(--cup-space-md);
   }
+
+  .scripture-drill-area {
+    padding: var(--cup-space-md);
+  }
+
   .material-display {
     font-size: var(--cup-font-size-2xl);
   }
