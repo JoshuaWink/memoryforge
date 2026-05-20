@@ -200,6 +200,12 @@ body {
   box-shadow: 0 0 0 2px var(--cup-primary-a20);
 }
 
+.drill-picker-search {
+  font-size: var(--cup-font-size-base);
+  background: var(--cup-color-surface);
+  border: 1px solid var(--cup-color-border);
+}
+
 .field-textarea {
   resize: vertical;
   min-height: 80px;

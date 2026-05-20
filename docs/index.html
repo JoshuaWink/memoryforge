@@ -570,8 +570,9 @@
 
             <!-- Passage Picker (for section/chapter scale) -->
             <div class="drill-passage-select" id="drill-passage-select" style="display:none;">
-              <label class="field-label" for="drill-passage-picker">Passage</label>
-              <select id="drill-passage-picker" class="field-input">
+              <label class="field-label" for="drill-passage-search">Passage</label>
+              <input type="text" id="drill-passage-search" class="field-input drill-picker-search" placeholder="Type to search passages...">
+              <select id="drill-passage-picker" class="field-input" style="margin-top:var(--cup-space-xs);">
                 <option value="">Select a passage...</option>
               </select>
             </div>
@@ -593,8 +594,9 @@
               </div>
             </div>
             <div class="drill-verse-select">
-              <label class="field-label" for="drill-verse-picker">Verse</label>
-              <select id="drill-verse-picker" class="field-input">
+              <label class="field-label" for="drill-verse-search">Verse</label>
+              <input type="text" id="drill-verse-search" class="field-input drill-picker-search" placeholder="Type to search verses...">
+              <select id="drill-verse-picker" class="field-input" style="margin-top:var(--cup-space-xs);">
                 <option value="">Select a verse...</option>
               </select>
             </div>

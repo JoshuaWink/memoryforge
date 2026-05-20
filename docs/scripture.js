@@ -2751,6 +2751,28 @@ function startPassageFlTap(passage, verses) {
   renderFlTapStep();
 }
 
+function filterPickerOptions(pickerId, query) {
+  var select = document.getElementById(pickerId);
+  if (!select) return;
+  
+  var query_lower = (query || '').trim().toLowerCase();
+  var options = select.querySelectorAll('option');
+  var visibleCount = 0;
+  
+  options.forEach(function(option) {
+    // Keep the placeholder option always visible
+    if (option.value === '') {
+      option.style.display = '';
+      return;
+    }
+    
+    var text = (option.textContent || option.innerText || '').toLowerCase();
+    var matches = query_lower === '' || text.indexOf(query_lower) >= 0;
+    option.style.display = matches ? '' : 'none';
+    if (matches) visibleCount++;
+  });
+}
+
 (function initScripture() {
   $$('.scripture-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchScriptureTab(tab.dataset.stab); });
@@ -2859,6 +2881,22 @@ function startPassageFlTap(passage, verses) {
     if (picker.value) startScriptureDrill(picker.value);
     else $('#scripture-drill-area').style.display = 'none';
   });
+
+  // Verse picker search/filter
+  var verseSearchEl = document.getElementById('drill-verse-search');
+  if (verseSearchEl) {
+    verseSearchEl.addEventListener('input', function() {
+      filterPickerOptions('drill-verse-picker', verseSearchEl.value);
+    });
+  }
+
+  // Passage picker search/filter
+  var passageSearchEl = document.getElementById('drill-passage-search');
+  if (passageSearchEl) {
+    passageSearchEl.addEventListener('input', function() {
+      filterPickerOptions('drill-passage-picker', passageSearchEl.value);
+    });
+  }
 
   var drillCheckBtn = $('#btn-sdrill-check');
   if (drillCheckBtn) drillCheckBtn.addEventListener('click', checkScriptureDrill);
