@@ -535,22 +535,45 @@ async function dbClear() {
 
 async function dbExport() {
   const drills = await dbGetAll();
+  let speed_reading = null;
+  try {
+    const raw = localStorage.getItem('mf_speed_v1');
+    if (raw) speed_reading = JSON.parse(raw);
+  } catch (e) {}
   return {
-    version: 1,
+    version: 2,
     exported: new Date().toISOString().slice(0, 10),
     app: 'memoryforge',
-    data: { drills },
+    data: { drills, speed_reading },
   };
 }
 
 async function dbImport(blob, opts = {}) {
-  if (!blob || blob.version !== 1) throw new Error('Unsupported file version');
+  if (!blob || (blob.version !== 1 && blob.version !== 2)) throw new Error('Unsupported file version');
   if (!opts.merge) await dbClear();
   const db = await openDB();
+  // Import speed reading data (v2)
+  if (blob.version >= 2 && blob.data && blob.data.speed_reading) {
+    try {
+      if (opts.merge && typeof srStore !== 'undefined') {
+        const existing = srStore.get();
+        const incoming = blob.data.speed_reading;
+        const merged = Object.assign({}, existing, incoming);
+        if (incoming.sessions && existing.sessions) {
+          merged.sessions = existing.sessions.concat(incoming.sessions);
+        }
+        srStore.importData(merged);
+      } else if (typeof srStore !== 'undefined') {
+        srStore.importData(blob.data.speed_reading);
+      } else {
+        localStorage.setItem('mf_speed_v1', JSON.stringify(blob.data.speed_reading));
+      }
+    } catch (e) { console.warn('Speed reading import failed:', e); }
+  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    for (const d of blob.data.drills) {
+    for (const d of (blob.data.drills || [])) {
       const clean = { ...d };
       delete clean.id;
       store.add(clean);
@@ -585,6 +608,7 @@ function navigateTo(view, { pushState = true } = {}) {
   currentView = view;
   if (pushState) history.pushState({ view, panel: 'config' }, '', `#${view}`);
   if (view === 'stats') refreshStats();
+  if (view === 'speed-reading' && typeof srOnActivate === 'function') srOnActivate();
 }
 
 $$('.nav-btn').forEach(btn => {
@@ -1860,7 +1884,9 @@ $('#import-file').addEventListener('change', async (e) => {
     const data = JSON.parse(text);
     const merge = confirm('Merge with existing data? (Cancel = replace all)');
     await dbImport(data, { merge });
-    alert(`Imported ${data.data.drills.length} drills.`);
+    const drillCount = (data.data && data.data.drills) ? data.data.drills.length : 0;
+    const srMsg = (data.data && data.data.speed_reading) ? ' + speed reading data' : '';
+    alert(`Imported ${drillCount} drills${srMsg}.`);
     e.target.value = '';
   } catch (err) {
     console.error('Import failed:', err);
@@ -1908,6 +1934,7 @@ $('#btn-clear').addEventListener('click', async () => {
   if (!confirm('Delete ALL training data? This cannot be undone.')) return;
   try {
     await dbClear();
+    document.dispatchEvent(new CustomEvent('mf-data-cleared'));
     alert('All data cleared.');
     refreshStats();
   } catch (e) {

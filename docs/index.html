@@ -16,6 +16,7 @@
       <button class="nav-btn active" data-view="drill">Drill</button>
       <button class="nav-btn" data-view="learn">Learn</button>
       <button class="nav-btn" data-view="stats">Stats</button>
+      <button class="nav-btn" data-view="speed-reading">Speed</button>
       <button class="nav-btn" data-view="scripture">Scripture</button>
       <button class="nav-btn" data-view="data">Data</button>
     </nav>
@@ -747,6 +748,87 @@
       </div>
     </section>
 
+    <!-- ═══ SPEED READING VIEW ═══ -->
+    <section id="view-speed-reading" class="view">
+
+      <!-- Sub-navigation tabs -->
+      <div class="sr-tabs">
+        <button class="sr-tab active" data-sr-tab="home">Home</button>
+        <button class="sr-tab" data-sr-tab="progress">Progress</button>
+        <button class="sr-tab" data-sr-tab="lesson-list">Lessons</button>
+      </div>
+
+      <!-- HOME -->
+      <div class="sr-panel" id="sr-home">
+        <div id="sr-home-content"></div>
+      </div>
+
+      <!-- ASSESS -->
+      <div class="sr-panel" id="sr-assess" style="display:none">
+        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
+        <div id="sr-assess-content"></div>
+      </div>
+
+      <!-- RSVP -->
+      <div class="sr-panel" id="sr-rsvp" style="display:none">
+        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
+        <div id="sr-rsvp-content"></div>
+      </div>
+
+      <!-- READER -->
+      <div class="sr-panel" id="sr-reader" style="display:none">
+        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
+        <div id="sr-reader-content"></div>
+      </div>
+
+      <!-- SCHULTE -->
+      <div class="sr-panel" id="sr-schulte" style="display:none">
+        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
+        <div id="sr-schulte-content"></div>
+      </div>
+
+      <!-- PROGRESS -->
+      <div class="sr-panel" id="sr-progress" style="display:none">
+        <div id="sr-progress-content"></div>
+      </div>
+
+      <!-- LESSON LIST -->
+      <div class="sr-panel" id="sr-lesson-list" style="display:none">
+        <div id="sr-lesson-list-content"></div>
+      </div>
+
+      <!-- LESSON DETAIL -->
+      <div class="sr-panel" id="sr-lesson-detail" style="display:none">
+        <button class="btn btn-secondary btn-back" id="sr-lesson-back">&larr; Lessons</button>
+        <div id="sr-lesson-detail-content"></div>
+      </div>
+
+      <!-- QUIZ -->
+      <div class="sr-panel" id="sr-quiz" style="display:none">
+        <button class="btn btn-secondary btn-back" id="sr-quiz-back">&larr; Skip Quiz</button>
+        <h3 class="section-title" style="margin-bottom:1rem">Comprehension Check</h3>
+        <div id="sr-quiz-content"></div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="sr-panel" id="sr-result" style="display:none">
+        <div id="sr-result-content"></div>
+      </div>
+
+      <!-- 3-2-1 FIXATION DRILL -->
+      <div class="sr-panel" id="sr-fixation" style="display:none">
+        <button class="btn btn-secondary btn-back" id="sr-fixation-back">&larr; Back</button>
+        <div id="sr-fixation-content"></div>
+      </div>
+
+      <!-- SOFT FOCUS / PERIPHERAL DRILL -->
+      <div class="sr-panel" id="sr-periph" style="display:none">
+        <button class="btn btn-secondary btn-back" id="sr-periph-back">&larr; Back</button>
+        <div id="sr-periph-content"></div>
+      </div>
+
+    </section>
+
     <!-- ═══ TIMER SETUP PANEL ═══ -->
     <section id="timer-setup-panel" class="view timer-setup-panel" style="display: none;">
       <button id="btn-back-timer" class="btn btn-secondary btn-back">&larr; Back</button>
@@ -808,6 +890,7 @@
 
   <script src="app.js"></script>
   <script src="scripture.js"></script>
+  <script src="speed-reading.js"></script>
   <!-- Chunk Editor modal — lives at body level so position:fixed works regardless of parent visibility -->
   <div id="chunk-editor" class="chunk-editor" style="display:none;">
     <div class="chunk-editor__header">
