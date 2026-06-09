@@ -3161,14 +3161,17 @@ body {
   background: var(--cup-color-surface-alt, #16213e);
   border: 1px solid var(--cup-color-border, #2a2a45);
   border-radius: var(--cup-radius-md, 8px);
+  color: var(--cup-color-on-surface, #e0e0e0);
   cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
   padding: .875rem 1rem;
   text-align: left;
   transition: border-color 150ms ease;
   width: 100%;
 }
 .sr-passage-card:hover { border-color: var(--cup-color-primary, #4fc3f7); }
-.sr-passage-title { font-weight: 600; }
+.sr-passage-title { color: var(--cup-color-on-surface, #e0e0e0); font-weight: 600; }
 .sr-passage-meta { color: var(--cup-color-secondary, #b0bec5); font-size: .8rem; margin-top: .25rem; }
 
 /* ── RSVP stage ───────────────────────────────────────────────── */
