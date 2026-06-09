@@ -16,13 +16,14 @@ var srStore = (function () {
       mastery: {},            // {T1: 0–1, ...}
       settings: {
         rsvp_wpm: 250,
-        phrase_size: 1,
+        phrase_size: 3,
         mask_on: false,
         cursor_on: false,
         bionic: false,
         column_chars: 55,
         indent_mode: false,
         chunk_mode: false,
+        peripheral_mode: true,
       },
     };
   }
@@ -696,7 +697,8 @@ function srShowRsvp() {
   srShowPanel('sr-rsvp');
   var content = document.getElementById('sr-rsvp-content');
   var savedWpm = srStore.getSetting('rsvp_wpm') || 250;
-  var savedPhrase = srStore.getSetting('phrase_size') || 1;
+  var savedPhrase = srStore.getSetting('phrase_size') || 3;
+  var savedPeripheral = srStore.getSetting('peripheral_mode') !== false;
 
   content.innerHTML =
     '<h3 class="section-title">Guided Reading</h3>' +
@@ -704,13 +706,15 @@ function srShowRsvp() {
       '<label class="field-label">WPM: <span id="sr-rsvp-wpm-val">' + savedWpm + '</span>' +
         '<input type="range" id="sr-rsvp-wpm-slider" class="sr-slider" min="60" max="800" step="25" value="' + savedWpm + '">' +
       '</label>' +
-      '<div class="field-group"><label class="field-label" for="sr-rsvp-phrase">Highlight size</label>' +
+      '<div class="field-group"><label class="field-label" for="sr-rsvp-phrase">Fixation span</label>' +
         '<select id="sr-rsvp-phrase" class="field-input field-input-sm">' +
           '<option value="1"' + (savedPhrase === 1 ? ' selected' : '') + '>1 word</option>' +
           '<option value="2"' + (savedPhrase === 2 ? ' selected' : '') + '>2 words</option>' +
           '<option value="3"' + (savedPhrase === 3 ? ' selected' : '') + '>3 words</option>' +
         '</select>' +
       '</div>' +
+      '<label class="toggle-row"><span class="toggle-row__label">Peripheral mode</span>' +
+        '<input type="checkbox" id="sr-rsvp-peripheral" class="toggle-input"' + (savedPeripheral ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
     '</div>' +
     '<div id="sr-rsvp-picker"></div>';
 
@@ -722,6 +726,10 @@ function srShowRsvp() {
 
   document.getElementById('sr-rsvp-phrase').addEventListener('change', function () {
     srStore.setSetting({ phrase_size: parseInt(this.value) });
+  });
+
+  document.getElementById('sr-rsvp-peripheral').addEventListener('change', function () {
+    srStore.setSetting({ peripheral_mode: this.checked });
   });
 
   srPassagePicker(document.getElementById('sr-rsvp-picker'), function (pid) {
@@ -742,9 +750,25 @@ function srRsvpStart(passage) {
   });
   var total = _srRsvpEngine.totalTokens;
   var tokens = _srRsvpEngine.tokens;
+  var isPeripheral = srStore.getSetting('peripheral_mode') !== false;
 
-  // Build full-text guided reading view — each token is an individually addressable span
+  // Build full-text guided reading view.
+  // Peripheral mode: each token group renders as individual word spans; only the
+  // focal (center) word gets a subtle underline indicator — the reader uses
+  // peripheral vision for the surrounding words, training real page-reading eye movement.
+  // Word-by-word mode: full chunk highlights as a block.
   var textHtml = tokens.map(function (token, i) {
+    if (isPeripheral) {
+      var words = token.split(/\s+/);
+      var focalIdx = Math.floor(words.length / 2);
+      var innerHtml = words.map(function (w, wi) {
+        if (wi === focalIdx) {
+          return '<span class="sr-guide-word sr-guide-word--focal">' + escapeHtml(w) + '</span>';
+        }
+        return '<span class="sr-guide-word">' + escapeHtml(w) + '</span>';
+      }).join(' ');
+      return '<span class="sr-guide-token sr-guide-token--peripheral" data-idx="' + i + '">' + innerHtml + '</span>';
+    }
     return '<span class="sr-guide-token" data-idx="' + i + '">' + escapeHtml(token) + '</span>';
   }).join(' ');
 
