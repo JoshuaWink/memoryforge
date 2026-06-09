@@ -569,6 +569,7 @@ function srOnActivate() {
   srShowPanel('sr-home');
   srRenderHome();
 }
+window.srOnActivate = srOnActivate;
 
 // Passage picker (shared by Assess, RSVP, Reader)
 function srPassagePicker(container, onSelect) {
@@ -1178,6 +1179,9 @@ function srShowResult(wpm, comp, passageId, mode) {
   var isFirst = !st.baseline_wpm || mode === 'assess';
   if (isFirst) srStore.set({ baseline_wpm: wpm, baseline_comp: parseFloat(comp.toFixed(3)) });
 
+  // Feed Lane A Glicko-2 rating
+  if (window.mfGlickoUpdateReading) window.mfGlickoUpdateReading(wpm, comp);
+
   var g = srGearForWpm(wpm);
   var compPct = Math.round(comp * 100);
   var effWpm = session.effective_wpm;
@@ -1464,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Render home immediately if we land on speed-reading hash
-  if (location.hash === '#speed-reading') {
+  if (location.hash === '#speed-reading' || location.hash === '#view-speed-reading') {
     srOnActivate();
   }
 });

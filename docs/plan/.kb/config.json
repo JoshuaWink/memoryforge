@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "carrying_capacity": {
+    "root": 12,
+    "category": 15,
+    "subcategory": 10
+  },
+  "max_depth": 3,
+  "promotion_min": 5,
+  "merge_threshold": 0.7,
+  "drift_threshold": 0.4
+}

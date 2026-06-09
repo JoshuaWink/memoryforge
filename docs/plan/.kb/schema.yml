@@ -1,0 +1,12 @@
+# .kb/schema.yml — Frontmatter contract for knowledge base documents
+# Validated by: cup kb check
+
+required:
+  - title        # str — document title, drives slug and index
+  - tags         # list[str] — drives search, grouping, promotion
+  - created      # str (YYYY-MM-DD) — drives chronological sort
+
+optional:
+  - summary      # str — one-liner for INDEX.md
+  - aliases      # list[str] — grep synonyms
+  - category     # str — explicit category override

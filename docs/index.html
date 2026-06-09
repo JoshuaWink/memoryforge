@@ -14,9 +14,12 @@
     <h1 class="app-title">MemoryForge</h1>
     <nav class="app-nav">
       <button class="nav-btn active" data-view="drill">Drill</button>
+      <button class="nav-btn" data-view="home">Home</button>
+      <button class="nav-btn" data-view="speed-reading">Speed</button>
       <button class="nav-btn" data-view="learn">Learn</button>
       <button class="nav-btn" data-view="stats">Stats</button>
-      <button class="nav-btn" data-view="speed-reading">Speed</button>
+      <button class="nav-btn" data-view="assessment">Assess</button>
+      <button class="nav-btn" data-view="tools">Tools</button>
       <button class="nav-btn" data-view="scripture">Scripture</button>
       <button class="nav-btn" data-view="data">Data</button>
     </nav>
@@ -50,82 +53,192 @@
     <section id="view-drill" class="view active">
       <!-- Config panel -->
       <div class="drill-config" id="drill-config">
-        <h2 class="section-title">Configure Drill</h2>
+        <h2 class="section-title">Start a Training Session</h2>
+        <p class="section-desc">Most people do better with a coached starting point than a raw parameter form. Guided mode picks the drill recipe for you. Advanced mode keeps the full builder and tells you what your settings are actually training.</p>
 
-        <!-- Saved Configs -->
-        <div class="config-presets" id="config-presets">
-          <div class="config-presets__row">
-            <select id="config-preset-select" class="field-input config-presets__select">
-              <option value="">Saved Configs...</option>
-            </select>
-            <button id="btn-save-config" class="btn btn-secondary config-presets__save" title="Save current config">Save</button>
-            <button id="btn-delete-config" class="btn config-presets__delete" title="Delete selected config">&times;</button>
+        <div class="drill-setup-toggle" role="tablist" aria-label="Drill setup mode">
+          <button type="button" class="drill-setup-toggle__btn active" id="btn-setup-guided" data-setup-mode="guided" aria-selected="true">Guided</button>
+          <button type="button" class="drill-setup-toggle__btn" id="btn-setup-advanced" data-setup-mode="advanced" aria-selected="false">Advanced</button>
+        </div>
+
+        <div class="guided-drill" id="guided-drill">
+          <div class="guided-drill__intro card">
+            <h3 class="card-title">Choose the kind of practice you want</h3>
+            <p class="section-desc">These presets remove the guesswork. Pick the outcome, choose the intensity, and MemoryForge fills in the drill settings for you.</p>
+            <div class="guided-shortcuts">
+              <span class="guided-shortcuts__label">Other lanes:</span>
+              <button type="button" class="btn btn-sm btn-ghost" id="btn-open-speed-lab">Reading Velocity → Speed</button>
+              <button type="button" class="btn btn-sm btn-ghost" id="btn-open-focus-tools">Attention Control → Tools</button>
+            </div>
+          </div>
+
+          <div class="guided-plan-grid" id="guided-plan-grid">
+            <button type="button" class="guided-plan-card active" data-guided-plan="number-recall">
+              <span class="guided-plan-card__eyebrow">Working Memory</span>
+              <span class="guided-plan-card__title">Remember Numbers</span>
+              <span class="guided-plan-card__desc">See digits, hide them, then type them back from memory.</span>
+            </button>
+            <button type="button" class="guided-plan-card" data-guided-plan="letter-recall">
+              <span class="guided-plan-card__eyebrow">Working Memory</span>
+              <span class="guided-plan-card__title">Remember Letters</span>
+              <span class="guided-plan-card__desc">Train raw recall without semantic shortcuts.</span>
+            </button>
+            <button type="button" class="guided-plan-card" data-guided-plan="word-recall">
+              <span class="guided-plan-card__eyebrow">Working Memory + Integration</span>
+              <span class="guided-plan-card__title">Remember Words</span>
+              <span class="guided-plan-card__desc">Build retention on language-sized chunks instead of symbols.</span>
+            </button>
+            <button type="button" class="guided-plan-card" data-guided-plan="passage-recall">
+              <span class="guided-plan-card__eyebrow">Expression + Integration</span>
+              <span class="guided-plan-card__title">Memorize a Passage</span>
+              <span class="guided-plan-card__desc">Paste your own verse or paragraph, then reproduce it accurately.</span>
+            </button>
+            <button type="button" class="guided-plan-card" data-guided-plan="major-encode">
+              <span class="guided-plan-card__eyebrow">Integration</span>
+              <span class="guided-plan-card__title">Turn Numbers into Words</span>
+              <span class="guided-plan-card__desc">Use the Major System to encode digits into memorable words.</span>
+            </button>
+            <button type="button" class="guided-plan-card" data-guided-plan="major-decode">
+              <span class="guided-plan-card__eyebrow">Integration</span>
+              <span class="guided-plan-card__title">Turn Words into Numbers</span>
+              <span class="guided-plan-card__desc">See Major words and reconstruct the original digits.</span>
+            </button>
+          </div>
+
+          <div class="guided-level-group card">
+            <h3 class="card-title">Pick the intensity</h3>
+            <div class="guided-level-row" role="group" aria-label="Guided drill intensity">
+              <button type="button" class="guided-level-btn" data-guided-level="easy">Easy</button>
+              <button type="button" class="guided-level-btn active" data-guided-level="steady">Steady</button>
+              <button type="button" class="guided-level-btn" data-guided-level="hard">Hard</button>
+            </div>
+          </div>
+
+          <div class="field-group guided-custom-text" id="guided-custom-text-group" style="display:none;">
+            <label class="field-label" for="guided-custom-text">Paste the exact passage you want to memorize</label>
+            <textarea id="guided-custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text you want this guided drill to use..."></textarea>
+          </div>
+
+          <div class="guided-summary card" id="guided-summary-card">
+            <div class="guided-summary__eyebrow">What this session will do</div>
+            <h3 class="card-title" id="guided-summary-title">Remember Numbers · Steady</h3>
+            <p class="section-desc" id="guided-summary-copy">You will see a short set of digits, hide them, then type them back from memory.</p>
+            <div class="guided-summary__grid">
+              <div class="guided-summary__item">
+                <span class="guided-summary__label">Primary lane</span>
+                <span class="guided-summary__value" id="guided-summary-primary">Working Memory</span>
+              </div>
+              <div class="guided-summary__item">
+                <span class="guided-summary__label">Secondary lane</span>
+                <span class="guided-summary__value" id="guided-summary-secondary">Attention Control</span>
+              </div>
+              <div class="guided-summary__item guided-summary__item--wide">
+                <span class="guided-summary__label">Flow</span>
+                <span class="guided-summary__value" id="guided-summary-flow">See 6 digits for 5 seconds, then type them back immediately.</span>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button id="btn-start-guided" class="btn btn-primary btn-lg">Start Guided Session</button>
+              <button id="btn-guided-to-advanced" class="btn btn-secondary">Fine Tune in Advanced</button>
+            </div>
           </div>
         </div>
 
-        <div class="field-group">
-          <label class="field-label" for="drill-mode">Drill Mode</label>
-          <select id="drill-mode" class="field-input">
-            <option value="recall">Recall (see → remember → type)</option>
-            <option value="encode">Encode (digits → type the word)</option>
-            <option value="decode">Decode (word → type the digits)</option>
-          </select>
-        </div>
+        <div class="advanced-drill" id="advanced-drill" hidden>
+          <div class="card advanced-drill__summary">
+            <h3 class="card-title">What these settings train</h3>
+            <div class="guided-summary__grid">
+              <div class="guided-summary__item">
+                <span class="guided-summary__label">Primary lane</span>
+                <span class="guided-summary__value" id="advanced-summary-primary">Working Memory</span>
+              </div>
+              <div class="guided-summary__item">
+                <span class="guided-summary__label">Secondary lane</span>
+                <span class="guided-summary__value" id="advanced-summary-secondary">Attention Control</span>
+              </div>
+              <div class="guided-summary__item guided-summary__item--wide">
+                <span class="guided-summary__label">What will happen</span>
+                <span class="guided-summary__value" id="advanced-summary-flow">See 6 digits for 5 seconds, then type them back immediately.</span>
+              </div>
+            </div>
+            <p class="section-desc" id="advanced-summary-note">Use this mode when you know exactly what variable you want to change. The summary stays visible so the settings stay interpretable.</p>
+          </div>
 
-        <div class="field-group" id="type-group">
-          <label class="field-label" for="drill-type">Type</label>
-          <select id="drill-type" class="field-input">
-            <option value="digits">Digits (0-9)</option>
-            <option value="letters">Letters (A-Z)</option>
-            <option value="words">Words</option>
-            <option value="text">Custom Text</option>
-          </select>
-        </div>
+          <!-- Saved Configs -->
+          <div class="config-presets" id="config-presets">
+            <div class="config-presets__row">
+              <select id="config-preset-select" class="field-input config-presets__select">
+                <option value="">Saved Configs...</option>
+              </select>
+              <button id="btn-save-config" class="btn btn-secondary config-presets__save" title="Save current config">Save</button>
+              <button id="btn-delete-config" class="btn config-presets__delete" title="Delete selected config">&times;</button>
+            </div>
+          </div>
 
-        <div class="field-group" id="length-group">
-          <label class="field-label" for="drill-length">Length</label>
-          <input id="drill-length" type="number" class="field-input" value="6" min="1" max="200">
-        </div>
+          <div class="field-group">
+            <label class="field-label" for="drill-mode">Drill Mode</label>
+            <select id="drill-mode" class="field-input">
+              <option value="recall">Recall (see → remember → type)</option>
+              <option value="encode">Encode (digits → type the word)</option>
+              <option value="decode">Decode (word → type the digits)</option>
+            </select>
+          </div>
 
-        <div class="field-group" id="custom-text-group" style="display: none;">
-          <label class="field-label" for="custom-text">Paste Text</label>
-          <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
-        </div>
+          <div class="field-group" id="type-group">
+            <label class="field-label" for="drill-type">Type</label>
+            <select id="drill-type" class="field-input">
+              <option value="digits">Digits (0-9)</option>
+              <option value="letters">Letters (A-Z)</option>
+              <option value="words">Words</option>
+              <option value="text">Custom Text</option>
+            </select>
+          </div>
 
-        <div class="field-group" id="technique-group">
-          <label class="field-label" for="drill-technique">Technique</label>
-          <select id="drill-technique" class="field-input">
-            <option value="none">None (raw recall)</option>
-            <option value="chunking">Chunking</option>
-            <option value="number-shape">Number-Shape</option>
-            <option value="number-rhyme">Number-Rhyme</option>
-            <option value="major">Major System</option>
-            <option value="linking">Linking / Story</option>
-          </select>
-        </div>
+          <div class="field-group" id="length-group">
+            <label class="field-label" for="drill-length">Length</label>
+            <input id="drill-length" type="number" class="field-input" value="6" min="1" max="200">
+          </div>
 
-        <div class="field-group" id="chunk-group" style="display: none;">
-          <label class="field-label" for="chunk-size">Chunk Size</label>
-          <select id="chunk-size" class="field-input">
-            <option value="2">Pairs (2)</option>
-            <option value="3" selected>Triples (3)</option>
-            <option value="4">Quads (4)</option>
-          </select>
-        </div>
+          <div class="field-group" id="custom-text-group" style="display: none;">
+            <label class="field-label" for="custom-text">Paste Text</label>
+            <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
+          </div>
 
-        <div class="field-group" id="exposure-group">
-          <label class="field-label" for="exposure-time">Exposure (seconds)</label>
-          <input id="exposure-time" type="number" class="field-input" value="5" min="0" max="120">
-          <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
-        </div>
+          <div class="field-group" id="technique-group">
+            <label class="field-label" for="drill-technique">Technique</label>
+            <select id="drill-technique" class="field-input">
+              <option value="none">None (raw recall)</option>
+              <option value="chunking">Chunking</option>
+              <option value="number-shape">Number-Shape</option>
+              <option value="number-rhyme">Number-Rhyme</option>
+              <option value="major">Major System</option>
+              <option value="linking">Linking / Story</option>
+            </select>
+          </div>
 
-        <div class="field-group">
-          <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
-          <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
-          <div class="field-hint">Forces you to hold info in memory before typing. Use as encoding time.</div>
-        </div>
+          <div class="field-group" id="chunk-group" style="display: none;">
+            <label class="field-label" for="chunk-size">Chunk Size</label>
+            <select id="chunk-size" class="field-input">
+              <option value="2">Pairs (2)</option>
+              <option value="3" selected>Triples (3)</option>
+              <option value="4">Quads (4)</option>
+            </select>
+          </div>
 
-        <button id="btn-start" class="btn btn-primary btn-lg">Start Drill</button>
+          <div class="field-group" id="exposure-group">
+            <label class="field-label" for="exposure-time">Exposure (seconds)</label>
+            <input id="exposure-time" type="number" class="field-input" value="5" min="0" max="120">
+            <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
+            <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
+            <div class="field-hint">Forces you to hold info in memory before typing. Use as encoding time.</div>
+          </div>
+
+          <button id="btn-start" class="btn btn-primary btn-lg">Start Custom Drill</button>
+        </div>
       </div>
 
       <!-- Presentation panel -->
@@ -170,10 +283,260 @@
       </div>
     </section>
 
+    <!-- ═══ SPEED READING VIEW ═══ -->
+    <section id="view-speed-reading" class="view">
+      <div id="sr-home"          class="sr-panel"><div id="sr-home-content"></div></div>
+      <div id="sr-assess"        class="sr-panel" style="display:none"><div id="sr-assess-content"></div></div>
+      <div id="sr-rsvp"          class="sr-panel" style="display:none"><div id="sr-rsvp-content"></div></div>
+      <div id="sr-reader"        class="sr-panel" style="display:none"><div id="sr-reader-content"></div></div>
+      <div id="sr-schulte"       class="sr-panel" style="display:none"><div id="sr-schulte-content"></div></div>
+      <div id="sr-progress"      class="sr-panel" style="display:none"><div id="sr-progress-content"></div></div>
+      <div id="sr-lesson-list"   class="sr-panel" style="display:none"><div id="sr-lesson-list-content"></div></div>
+      <div id="sr-lesson-detail" class="sr-panel" style="display:none"><div id="sr-lesson-detail-content"></div></div>
+      <div id="sr-quiz"          class="sr-panel" style="display:none"><div id="sr-quiz-content"></div></div>
+      <div id="sr-result"        class="sr-panel" style="display:none"><div id="sr-result-content"></div></div>
+      <div id="sr-fixation"      class="sr-panel" style="display:none"><div id="sr-fixation-content"></div></div>
+      <div id="sr-periph"        class="sr-panel" style="display:none"><div id="sr-periph-content"></div></div>
+    </section>
+
+    <!-- ═══ TOOLS VIEW ═══ -->
+    <section id="view-tools" class="view">
+      <h2 class="section-title">Tool Rack</h2>
+      <div class="tools-grid">
+
+        <!-- RSVP Trainer -->
+        <div class="card">
+          <h3 class="card-title">RSVP Trainer <span class="lane-badge">Reading</span></h3>
+          <div class="field-group">
+            <label class="field-label" for="rsvp-text">Paste text</label>
+            <textarea id="rsvp-text" class="field-input field-textarea" rows="4" placeholder="Paste any text to flash word-by-word..."></textarea>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="rsvp-wpm">Speed (WPM)</label>
+            <input id="rsvp-wpm" type="number" class="field-input" value="320" min="60" max="1200">
+          </div>
+          <div class="btn-row">
+            <button id="rsvp-start" class="btn btn-primary">Start</button>
+            <button id="rsvp-pause" class="btn btn-secondary">Pause</button>
+            <button id="rsvp-reset" class="btn btn-ghost">Reset</button>
+          </div>
+          <div id="rsvp-display" class="rsvp-display">Ready</div>
+        </div>
+
+        <!-- Focus Timer -->
+        <div class="card">
+          <h3 class="card-title">Focus Timer <span class="lane-badge">Focus</span></h3>
+          <div class="field-group">
+            <label class="field-label" for="focus-minutes">Minutes</label>
+            <input id="focus-minutes" type="number" class="field-input" value="25" min="1" max="120">
+          </div>
+          <div class="btn-row">
+            <button id="focus-start" class="btn btn-primary">Start</button>
+            <button id="focus-stop" class="btn btn-secondary">Stop</button>
+          </div>
+          <div id="focus-display" class="rsvp-display" style="font-size:2.5rem">25:00</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══ HOME — COGNITIVE DASHBOARD ═══ -->
+    <section id="view-home" class="view">
+      <div class="dash-header">
+        <div>
+          <h2 class="section-title" style="margin-bottom:var(--cup-space-xs)">Cognitive Dashboard</h2>
+          <p class="section-desc" style="margin-bottom:0">Your mind at a glance. Train the highest-need lane first.</p>
+        </div>
+        <div class="dash-header__actions">
+          <button id="home-start-workout" class="btn btn-primary">Start Daily Workout</button>
+          <button id="home-refresh" class="btn btn-ghost btn-sm">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="dash-status-strip">
+        <div class="dash-stat"><span class="dash-stat__val" id="ds-streak">—</span><span class="dash-stat__lbl">Day streak</span></div>
+        <div class="dash-stat"><span class="dash-stat__val" id="ds-today">—</span><span class="dash-stat__lbl">Drills today</span></div>
+        <div class="dash-stat"><span class="dash-stat__val" id="ds-total">—</span><span class="dash-stat__lbl">Total drills</span></div>
+        <div class="dash-stat"><span class="dash-stat__val" id="ds-avg">—</span><span class="dash-stat__lbl">Avg score</span></div>
+        <div class="dash-stat"><span class="dash-stat__val" id="ds-wpm">—</span><span class="dash-stat__lbl">Current WPM</span></div>
+      </div>
+
+      <div class="dash-top-row">
+        <div class="card dash-radar-card">
+          <h3 class="card-title">Cognitive Profile</h3>
+          <p class="section-desc">Six lanes. Each axis = training need (outer = higher need).</p>
+          <canvas id="home-radar" class="dash-radar-canvas" aria-label="Radar chart of cognitive lane training needs"></canvas>
+          <p id="home-radar-note" class="section-desc" style="margin-top:var(--cup-space-sm);text-align:center;margin-bottom:0"></p>
+        </div>
+        <div class="card dash-action-card">
+          <h3 class="card-title">Today's Plan</h3>
+          <p id="home-split" class="mono-text" style="margin-bottom:var(--cup-space-md)">Save your baseline in Assess to get a personalized plan.</p>
+          <div id="home-plan-blocks"></div>
+          <p id="home-workout-plan" class="section-desc" style="margin-top:var(--cup-space-sm);margin-bottom:var(--cup-space-lg)"></p>
+        </div>
+      </div>
+
+      <div class="dash-charts-row">
+        <div class="card">
+          <h3 class="card-title">Drills Per Day <span class="dash-chart-subtitle">last 14 days</span></h3>
+          <canvas id="home-chart-daily" class="dash-chart-canvas" aria-label="Bar chart of drills per day"></canvas>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Score Trend <span class="dash-chart-subtitle">last 20 drills</span></h3>
+          <canvas id="home-chart-trend" class="dash-chart-canvas" aria-label="Line chart of last 20 drill scores"></canvas>
+        </div>
+      </div>
+
+      <h3 class="dash-section-header">The Six Cognitive Lanes</h3>
+      <p class="section-desc" style="margin-bottom:var(--cup-space-md)">These are the six systems MemoryForge trains. Understanding <em>what</em> each one is — and <em>why</em> it matters — is the foundation of deliberate practice. Tap any card to read the full guide.</p>
+      <div class="lanes-grid">
+        <div class="lane-card lane-card--expandable" data-lane="A" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Reading Velocity">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Reading Velocity</span>
+            <span class="lane-card__score" id="lc-score-A">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-A" style="width:0%"></div></div>
+          <p class="lane-card__teaser">How fast you absorb written information without losing meaning. Most adults are stuck at the speed they learned to read as children — not because of a ceiling, but because of an untrained habit.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> Your ability to process written information quickly without losing comprehension. Speed × retention = throughput.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> A 20% speed gain means reading 2.4 extra months of material per year at the same time investment. It compounds forever.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> RSVP flashing, fixation span expansion, meta-guiding, regression elimination, comprehension quizzes.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="learn">Explore Reading Skills →</button>
+          </div>
+        </div>
+        <div class="lane-card lane-card--expandable" data-lane="B" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Working Memory">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Working Memory</span>
+            <span class="lane-card__score" id="lc-score-B">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-B" style="width:0%"></div></div>
+          <p class="lane-card__teaser">The brain's active workspace — holding and manipulating information you're using right now. This is the bottleneck for nearly every complex cognitive task.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> Holding and manipulating multiple pieces of information in mind simultaneously while doing something else. The brain's RAM.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> Working memory is the bottleneck for nearly every complex cognitive task — arithmetic, conversation, writing under pressure. Expanding it compounds across everything you do.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> Digit spans, word recall ladders, sequence memory, Major System encoding, delayed recall challenges.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="drill">Open Drill →</button>
+          </div>
+        </div>
+        <div class="lane-card lane-card--expandable" data-lane="C" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Attention Control">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Attention Control</span>
+            <span class="lane-card__score" id="lc-score-C">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-C" style="width:0%"></div></div>
+          <p class="lane-card__teaser">The ability to direct and sustain focus deliberately — and to recover from distraction without losing momentum. Attention is not binary; it is a trainable resource.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> The ability to sustain deep focus and recover quickly after distraction. Not willpower — a trainable neurological habit.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> A single interruption steals 23 minutes of recovery time on average. Every reclaimed focus-minute compounds across a career.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> Timed focus blocks, task-switch drills, distraction resistance, ultradian rhythm alignment.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="learn">Explore Focus Skills →</button>
+          </div>
+        </div>
+        <div class="lane-card lane-card--expandable" data-lane="D" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Reasoning">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Reasoning</span>
+            <span class="lane-card__score" id="lc-score-D">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-D" style="width:0%"></div></div>
+          <p class="lane-card__teaser">Building and evaluating mental models — understanding why things happen, what will follow, and whether an argument holds up. Reasoning is leverage: it multiplies the value of everything else you know.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> Evaluating arguments, building mental models, identifying logical errors, and thinking in cause-and-effect chains.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> Reasoning is leverage — it turns raw information into good decisions. Better reasoning amplifies the value of every other cognitive skill.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> Causal mapping, analogy completion, argument structure drills, hypothesis testing, counter-argument generation.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="drill">Open Drill →</button>
+          </div>
+        </div>
+        <div class="lane-card lane-card--expandable" data-lane="E" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Expression">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Expression</span>
+            <span class="lane-card__score" id="lc-score-E">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-E" style="width:0%"></div></div>
+          <p class="lane-card__teaser">The output side of cognition — compressing and transmitting ideas with precision. Expression is thinking made visible. If you can't say it clearly, you haven't fully understood it.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> The ability to compress, structure, and transmit a complex idea so another person can receive it with minimum distortion. Thinking made visible.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> If you can't express an idea precisely, you can't build on it — and neither can anyone else. Expression is thinking's proof of work.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> One-sentence compression, semantic precision, structure drills, clarity scoring, vocabulary precision under time pressure.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="drill">Open Drill →</button>
+          </div>
+        </div>
+        <div class="lane-card lane-card--expandable" data-lane="F" role="button" tabindex="0" aria-expanded="false" aria-label="Read more about Integration">
+          <div class="lane-card__top">
+            <span class="lane-card__label">Integration</span>
+            <span class="lane-card__score" id="lc-score-F">—</span>
+          </div>
+          <div class="lane-card__need-bar"><div class="lane-card__need-fill" id="lc-bar-F" style="width:0%"></div></div>
+          <p class="lane-card__teaser">Cross-lane transfer — applying multiple cognitive skills simultaneously under real conditions. Training room performance and real-world performance are different things. Integration closes the gap.</p>
+          <div class="lane-card__detail" aria-hidden="true">
+            <p class="lane-card__what"><strong>What it is:</strong> Cross-lane transfer — applying multiple cognitive skills simultaneously. Real-world thinking doesn't happen in neat lanes.</p>
+            <p class="lane-card__why"><strong>Why it matters:</strong> Integration is what makes the other five lanes actually useful outside of training. The difference between isolated strength and general intelligence.</p>
+            <p class="lane-card__trains"><strong>You train:</strong> Mixed-mode circuits combining speed reading, recall, attention blocks, and reasoning in the same session.</p>
+            <button class="btn btn-sm btn-primary lane-card__cta" data-lane-view="drill">Open Drill →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ASSESSMENT LAB ═══ -->
+    <section id="view-assessment" class="view">
+      <h2 class="section-title">Assessment Lab</h2>
+      <p class="section-desc">Set your starting point. Higher need scores mean that lane deserves more training attention right now; lower scores indicate a current strength.</p>
+      <form id="assessment-form">
+        <div class="field-group">
+          <label class="field-label" for="asmnt-reading">Reading speed (WPM)</label>
+          <input id="asmnt-reading" type="number" class="field-input" value="220" min="50" max="2000">
+          <div class="field-hint">Your current comfortable reading speed with good comprehension.</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="asmnt-recall">Digit span (how many digits you can recall)</label>
+          <input id="asmnt-recall" type="number" class="field-input" value="7" min="1" max="80">
+          <div class="field-hint">How many digits can you reliably repeat back after hearing them once?</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="asmnt-focus">Sustained focus (minutes)</label>
+          <input id="asmnt-focus" type="number" class="field-input" value="15" min="1" max="120">
+          <div class="field-hint">How long can you hold focused attention on a single task without wandering?</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="asmnt-reasoning">Reasoning confidence (1–10)</label>
+          <input id="asmnt-reasoning" type="number" class="field-input" value="5" min="1" max="10">
+          <div class="field-hint">How confident are you evaluating arguments and spotting logical flaws?</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="asmnt-expression">Expression confidence (1–10)</label>
+          <input id="asmnt-expression" type="number" class="field-input" value="5" min="1" max="10">
+          <div class="field-hint">How precisely can you compress and transmit a complex idea on the spot?</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Save Baseline</button>
+          <button id="asmnt-reset" class="btn btn-ghost" type="button">Reset</button>
+        </div>
+      </form>
+      <div class="card" style="margin-top:var(--cup-space-lg)">
+        <h3 class="card-title">Current Priorities</h3>
+        <p class="section-desc">0/100 = current strength. 100/100 = biggest improvement opportunity.</p>
+        <p id="asmnt-output" class="mono-text">No baseline saved yet.</p>
+        <div class="scores-grid" style="margin-top:var(--cup-space-md)">
+          <div><span class="score-label">Reading</span><span id="score-reading" class="score-value">—</span></div>
+          <div><span class="score-label">Recall</span><span id="score-recall" class="score-value">—</span></div>
+          <div><span class="score-label">Focus</span><span id="score-focus" class="score-value">—</span></div>
+          <div><span class="score-label">Reasoning</span><span id="score-reasoning" class="score-value">—</span></div>
+          <div><span class="score-label">Expression</span><span id="score-expression" class="score-value">—</span></div>
+          <div><span class="score-label">Integration</span><span id="score-transfer" class="score-value">—</span></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══ LEARN VIEW ═══ -->
     <section id="view-learn" class="view">
-      <h2 class="section-title">Learn Techniques</h2>
+      <!-- Tab selector -->
+      <div class="learn-tabs" role="tablist">
+        <button class="learn-tab active" data-ltab="techniques" role="tab" aria-selected="true">Memory Techniques</button>
+        <button class="learn-tab" data-ltab="skills" role="tab" aria-selected="false">Cognitive Skills Guide</button>
+      </div>
 
+      <!-- ─── TECHNIQUES PANEL ─── -->
+      <div class="learn-panel" id="ltab-techniques">
       <div class="learn-grid" id="learn-grid">
         <div class="learn-card" data-technique="chunking">
           <div class="learn-card__level">Level 0</div>
@@ -300,6 +663,136 @@
         </div>
       </div>
 
+      </div><!-- /ltab-techniques -->
+
+      <!-- ─── COGNITIVE SKILLS GUIDE PANEL ─── -->
+      <div class="learn-panel" id="ltab-skills" style="display:none">
+        <p class="section-desc" style="margin-bottom:var(--cup-space-lg)">These are the six cognitive systems MemoryForge trains. Understanding <em>what</em> each one is — and <em>why</em> it matters — is the foundation of deliberate practice. Tap any card to read the full guide.</p>
+        <div class="skills-guide-grid">
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">📖</span>
+              <h3 class="skills-guide-card__title">Reading Velocity</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">How fast you absorb written information without losing meaning. Most adults are stuck at the speed they learned to read as children — not because of a ceiling, but because of an untrained habit.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>Reading speed is measured as Words Per Minute (WPM), but raw WPM is misleading. The real metric is <strong>Effective WPM = raw WPM × comprehension rate</strong>. A reader at 500 WPM with 50% comprehension is worse than one at 300 WPM with 90% (250 vs 270 effective WPM).</p>
+              <p>The average adult reads at 200–250 WPM — the same speed they were taught in grade school. This is not biological. It is the product of three bad habits: <strong>subvocalization</strong> (silently pronouncing every word, limiting speed to speech rate), <strong>regressions</strong> (re-reading words you already processed), and <strong>narrow fixation span</strong> (your eyes only capture one word per stop instead of three or four).</p>
+              <p>Each of these is trainable. RSVP (Rapid Serial Visual Presentation) breaks the subvocalization habit by flashing words faster than you can speak them. Meta-guiding trains your eyes to follow a moving pointer, eliminating regressions. Fixation expansion drills (Schulte tables) widen the span of text your eyes capture per stop.</p>
+              <p><strong>Why the compounding matters:</strong> At 250 WPM, reading for 30 minutes a day covers ~112,500 words per week. At 400 WPM (a modest trained improvement), that same 30 minutes covers 180,000 words — the equivalent of an extra 3.5 months of reading per year, every year, for the rest of your life.</p>
+              <h4>Key concepts to understand</h4>
+              <ul>
+                <li><strong>Fixation</strong> — each time your eye stops on the page. Untrained readers make 4–5 fixations per line; trained readers make 1–2.</li>
+                <li><strong>Saccade</strong> — the fast jump between fixations. You are blind during saccades.</li>
+                <li><strong>Peripheral vision</strong> — trained readers use peripheral vision to pre-process the next 3–4 words before the eye arrives.</li>
+                <li><strong>Comprehension floor</strong> — every reader has a minimum comprehension threshold below which retention is near zero. Speed training never sacrifices this floor; it raises speed while keeping comprehension above it.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">🧠</span>
+              <h3 class="skills-guide-card__title">Working Memory</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">The brain's active workspace — holding and manipulating information you're using right now. This is the bottleneck for nearly every complex cognitive task.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>Working memory is not the same as long-term memory. It is the temporary buffer your brain uses while <em>actively thinking</em> — the mental whiteboard where you hold partial calculations, keep track of a conversation, or maintain context while reading a complex argument.</p>
+              <p>The hard limit of working memory capacity is approximately <strong>4 ± 1 chunks</strong> for most people (Miller's Law, updated by Cowan 2001). A "chunk" is any meaningful unit — a single digit, a word, a concept, an image. The key insight is that <strong>a chunk can hold any amount of information you've learned to compress</strong>. The Major System, linking, and PAO systems all work by turning many items into one dense, memorable chunk — effectively multiplying working memory capacity.</p>
+              <p>When working memory is overloaded, you experience: losing your place mid-sentence, forgetting what you were about to say, needing to re-read paragraphs, feeling mentally exhausted after relatively simple cognitive work. These are not signs of low intelligence — they are signs of an undertrained system.</p>
+              <p><strong>What training does:</strong> Digit span drills directly measure and expand the raw capacity of your verbal working memory. Recall ladders build in delayed retrieval, which forces your hippocampus to reconstruct memories rather than just hold them — strengthening long-term consolidation as a side effect. The techniques taught in the Techniques tab (Major System, PAO) train encoding efficiency, which is the other half of the equation.</p>
+              <h4>The encoding-retrieval cycle</h4>
+              <p>Working memory operates in a continuous encode → hold → retrieve cycle. Most people are weak on encoding (converting incoming information into memorable form) and retrieval (accessing it after a delay). Drills here build both sides of that cycle simultaneously.</p>
+            </div>
+          </div>
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">🎯</span>
+              <h3 class="skills-guide-card__title">Attention Control</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">The ability to direct and sustain focus deliberately — and to recover from distraction without losing momentum. Attention is not binary; it is a trainable resource.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>Most people treat attention as a fixed personality trait — you either have focus or you don't. Neuroscience disagrees. The prefrontal cortex, which governs sustained attention, responds to training just like a muscle responds to progressive load. Consistent, structured focus practice measurably increases grey matter density in the PFC over 8–12 weeks.</p>
+              <p>Attention has three separable components that can each be trained independently:</p>
+              <ul>
+                <li><strong>Sustained attention</strong> — maintaining focus on a single task for an extended period without mind-wandering. Most untrained people can sustain deep focus for 47 seconds on average before being pulled off-task (Microsoft Research, 2015).</li>
+                <li><strong>Selective attention</strong> — filtering irrelevant stimuli. This is the ability to work in a noisy environment, to ignore a ringing phone, to stay on a conversation thread when multiple things are happening.</li>
+                <li><strong>Executive control</strong> — intentionally shifting attention between tasks without losing context in either. Every task switch has a "switch cost" — a period of reduced performance as your brain re-establishes context. Executive control training minimizes this cost.</li>
+              </ul>
+              <p><strong>The 23-minute rule:</strong> Research shows a meaningful interruption (not a brief glance, but actual context switching) takes an average of 23 minutes to fully recover from. This means a single distraction per hour costs roughly 38% of your productive time. Attention control training directly attacks this number.</p>
+              <p>Training works through <strong>timed focus blocks</strong> (progressive overload for sustained attention), <strong>task-switch drills</strong> (training rapid context restoration), and <strong>distraction resistance practice</strong> (deliberate exposure to distraction stimuli while maintaining task engagement).</p>
+            </div>
+          </div>
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">🔬</span>
+              <h3 class="skills-guide-card__title">Reasoning</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">Building and evaluating mental models — understanding why things happen, what will follow, and whether an argument holds up. Reasoning is leverage: it multiplies the value of everything else you know.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>Reasoning is not the same as intelligence. It is a skill: the practiced ability to construct accurate mental models, trace cause-and-effect chains, identify faulty assumptions, and generate counter-arguments. These are all learnable operations, and each one can be isolated and drilled.</p>
+              <p>Unlike memory, which stores facts, <strong>reasoning extracts and applies principles</strong>. A well-reasoned understanding of a subject survives when the specific facts change or are forgotten. This is why experts in a field can make good decisions in novel situations where their direct experience gives them nothing — they reason from underlying principles.</p>
+              <h4>The four core reasoning operations</h4>
+              <ul>
+                <li><strong>Causal mapping</strong> — identifying what causes what. "If X then Y" is the atomic unit of reasoning. Most errors in complex decisions come from wrong causal maps, not wrong values.</li>
+                <li><strong>Analogy recognition</strong> — seeing structural similarity between different domains. The best reasoners in any field are those who can transfer insights from unrelated areas because they see the underlying pattern, not just the surface content.</li>
+                <li><strong>Assumption surfacing</strong> — making implicit premises explicit. Every argument rests on hidden assumptions. Surfacing them is the first step to evaluating whether an argument is actually valid.</li>
+                <li><strong>Counter-argument generation</strong> — actively constructing the strongest possible case against your current position. This is the single most effective way to improve the quality of your own reasoning, and it is deeply uncomfortable for most people.</li>
+              </ul>
+              <p><strong>Why it compounds:</strong> Better reasoning is a force multiplier. It makes your memory more useful (you can retrieve the right fact for the right situation), your expression sharper (you can structure arguments rather than just assert them), and your attention more valuable (you're focused on understanding, not just processing).</p>
+            </div>
+          </div>
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">✍️</span>
+              <h3 class="skills-guide-card__title">Expression</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">The output side of cognition — compressing and transmitting ideas with precision. Expression is thinking made visible. If you can't say it clearly, you haven't fully understood it.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>Most people have thought experiences that exceed their ability to express them — a rough sense of something true that they can't quite put into words. That gap between internal thought and external expression is not fixed. It is a skill gap, and it is trainable.</p>
+              <p>Expression requires three things working together:</p>
+              <ul>
+                <li><strong>Vocabulary precision</strong> — having a word for the exact concept, not just the approximate one. "Frustrated" is not "disappointed" is not "overwhelmed" is not "resigned." Precise vocabulary compresses complex internal states into transmittable units.</li>
+                <li><strong>Structural thinking</strong> — ordering information before speaking or writing. The best communicators do not think aloud; they structure first, then transmit. Even a one-sentence structure (topic → detail → implication) dramatically improves clarity.</li>
+                <li><strong>Compression skill</strong> — turning 500-word thoughts into 50-word communications without losing essential meaning. This is the hardest skill, and the most valuable. The ability to compress ideas forces you to identify what is actually essential versus what is filler.</li>
+              </ul>
+              <p><strong>Expression as proof of understanding:</strong> The Feynman Technique — explaining something in simple terms as if to a beginner — is a famous test of understanding because it requires all three expression components simultaneously. If you can't explain it simply, you have memorized it but not understood it. Drilling expression forces your understanding to become explicit.</p>
+              <p><strong>In practice here:</strong> Expression drills use time-pressured compression tasks, precision vocabulary challenges, and structured argument-building exercises. The goal is not eloquence — it is precision and efficiency.</p>
+            </div>
+          </div>
+
+          <div class="skills-guide-card">
+            <div class="skills-guide-card__header">
+              <span class="skills-guide-card__icon">🔗</span>
+              <h3 class="skills-guide-card__title">Integration</h3>
+              <button class="skills-guide-card__toggle btn btn-xs btn-ghost" aria-expanded="false">Read more</button>
+            </div>
+            <p class="skills-guide-card__summary">Cross-lane transfer — applying multiple cognitive skills simultaneously under real conditions. Training room performance and real-world performance are different things. Integration closes the gap.</p>
+            <div class="skills-guide-card__body" style="display:none">
+              <p>You can have excellent lane-specific scores — high WPM, long digit span, good focus blocks — and still struggle in real cognitive work. The reason: real work is not lane-separated. When you read a difficult technical document, you are simultaneously processing quickly (Reading Velocity), holding context (Working Memory), filtering distractions (Attention Control), evaluating claims (Reasoning), and preparing to communicate what you learned (Expression). All five lanes run at once.</p>
+              <p><strong>Transfer is not automatic.</strong> Research on skill transfer consistently shows that isolated skill training does not automatically transfer to complex, multi-skill performance. A chess player who trains tactics in isolation does not automatically become better at full-game positions. A memory athlete who drills digit spans does not automatically become better at remembering conversations. Transfer requires deliberate practice in conditions that resemble the target performance.</p>
+              <p>Integration training uses <strong>circuit sessions</strong> that deliberately combine multiple lanes in a single session:</p>
+              <ul>
+                <li>Read a passage at near-max WPM → immediately recall key points → reason about the implications → express a one-sentence summary</li>
+                <li>Hold a sequence in working memory while solving an unrelated reasoning problem → retrieve the sequence afterward</li>
+                <li>Complete a focus block under simulated distraction conditions → measure both focus maintenance and post-distraction recovery</li>
+              </ul>
+              <p><strong>Why this is the hardest tier:</strong> Integration training is cognitively demanding in a qualitatively different way from lane-specific training. It is not harder because you are doing more work — it is harder because you are doing multiple things simultaneously, which exposes the interfaces between skills, not just the skills themselves. Those interfaces are where most real-world cognitive performance actually lives.</p>
+            </div>
+          </div>
+
+        </div><!-- /skills-guide-grid -->
+      </div><!-- /ltab-skills -->
+
       <!-- Major System Trainer -->
       <div class="trainer-panel" id="trainer-panel" style="display: none;">
         <button id="btn-back-trainer" class="btn btn-sm btn-ghost">← Back to techniques</button>
@@ -351,7 +844,8 @@
 
     <!-- ═══ STATS VIEW ═══ -->
     <section id="view-stats" class="view">
-      <h2 class="section-title">Statistics</h2>
+      <h2 class="section-title">Practice Stats</h2>
+      <p id="stats-summary" class="section-desc">These numbers track every completed drill. Visit Home for the full visual dashboard.</p>
       <div class="stats-grid" id="stats-grid">
         <div class="stat-card">
           <div class="stat-value" id="stat-total">0</div>
@@ -369,6 +863,21 @@
           <div class="stat-value" id="stat-today">0</div>
           <div class="stat-label">Today</div>
         </div>
+      </div>
+      <div class="dash-charts-row" style="margin-top:var(--cup-space-lg)">
+        <div class="card">
+          <h3 class="card-title">Score by Technique <span class="dash-chart-subtitle">avg %</span></h3>
+          <canvas id="stats-chart-technique" class="dash-chart-canvas" style="height:190px" aria-label="Bar chart of average score by technique"></canvas>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Drills by Type <span class="dash-chart-subtitle">count</span></h3>
+          <canvas id="stats-chart-type" class="dash-chart-canvas" aria-label="Bar chart of drill count by type"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-top:var(--cup-space-lg)">
+        <h3 class="card-title">Training Need by Lane</h3>
+        <p id="stats-profile-summary" class="section-desc">No baseline saved yet — visit Assess to set your starting point.</p>
+        <canvas id="stats-chart-need" class="dash-chart-canvas" style="height:180px;margin-top:var(--cup-space-sm)" aria-label="Bar chart of training need by lane"></canvas>
       </div>
       <h3 class="stats-section-title">By Type</h3>
       <div id="stats-by-type" class="stats-types"></div>
@@ -402,82 +911,157 @@
             <select id="verse-translation" class="field-input">
               <option value="KJV">KJV</option>
               <option value="ESV">ESV</option>
-              <option value="NASB">NASB</option>
-              <option value="NIV">NIV</option>
-              <option value="NLT">NLT</option>
-              <option value="NKJV">NKJV</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label class="field-label" for="verse-text">Text</label>
-            <textarea id="verse-text" class="field-input scripture-textarea" rows="3" placeholder="Type or paste the verse text..."></textarea>
-
-          </div>
-          <div class="field-group">
-            <label class="field-label" for="verse-notes">Story Notes (optional)</label>
-            <textarea id="verse-notes" class="field-input" rows="2" placeholder="Your imagery, scenes, memory aids..."></textarea>
-          </div>
-          <button id="btn-add-verse" class="btn btn-primary">Add Verse</button>
-        </div>
-
-        <!-- Import/Export Tools -->
-        <div class="scripture-tools">
-          <details class="import-section">
-            <summary class="btn btn-sm btn-secondary">Import / Export</summary>
-            <div class="import-section__body">
-              <div class="field-group">
-                <label class="field-label" for="bulk-paste-area">Bulk Paste (Bible app format)</label>
-                <textarea id="bulk-paste-area" class="field-input scripture-textarea" rows="4" placeholder="Paste from Bible app — e.g. Romans 1:1 NLT&#10;[1] This letter is from Paul...&#10;&#10;https://bible.com/..."></textarea>
-                <button id="btn-bulk-import" class="btn btn-sm btn-primary">Import Pasted Verses</button>
-              </div>
-              <div class="field-group" style="margin-top:var(--cup-space-sm)">
-                <label class="field-label" for="bible-url-input">Bible.com URL</label>
-                <div style="display:flex;gap:var(--cup-space-xs)">
-                  <input type="url" id="bible-url-input" class="field-input" placeholder="https://bible.com/bible/116/rom.1.1-5.NLT" style="flex:1">
-                  <button id="btn-fetch-bible-url" class="btn btn-sm btn-primary">Fetch</button>
+                <div class="drill-config__header">
+                  <div>
+                    <h2 class="section-title">Start a Training Session</h2>
+                    <p class="section-desc">Guided mode chooses the drill structure for you. Advanced mode exposes every setting and shows which cognitive systems your choices emphasize.</p>
+                  </div>
                 </div>
-                <p id="bible-url-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
-              </div>
-              <div class="import-export-row">
-                <button id="btn-export-json" class="btn btn-sm btn-secondary">Export JSON</button>
-                <label class="btn btn-sm btn-secondary import-file-label">
-                  Import JSON
-                  <input type="file" id="import-json-file" accept=".json" hidden>
-                </label>
-              </div>
-            </div>
-          </details>
 
-          <details class="import-section" style="margin-top:var(--cup-space-sm)">
-            <summary class="btn btn-sm btn-secondary">Import Chapter</summary>
-            <div class="import-section__body">
-              <div class="field-group">
-                <label class="field-label" for="ch-import-book">Book</label>
-                <input type="text" id="ch-import-book" class="field-input" placeholder="e.g. Romans, Genesis, Psalm" autocomplete="off">
-              </div>
-              <div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-xs)">
-                <div class="field-group" style="flex:1">
-                  <label class="field-label" for="ch-import-chapter">Chapter</label>
-                  <input type="number" id="ch-import-chapter" class="field-input" min="1" value="1">
+                <div class="drill-setup-toggle" id="drill-setup-toggle" role="tablist" aria-label="Drill setup mode">
+                  <button type="button" class="drill-setup-toggle__btn active" data-setup-mode="guided" aria-selected="true">Guided</button>
+                  <button type="button" class="drill-setup-toggle__btn" data-setup-mode="advanced" aria-selected="false">Advanced</button>
                 </div>
-                <div class="field-group" style="flex:1">
-                  <label class="field-label" for="ch-import-translation">Translation</label>
-                  <select id="ch-import-translation" class="field-input">
-                    <option value="nlt" data-vid="116">NLT</option>
-                    <option value="kjv" data-vid="1">KJV</option>
-                    <option value="esv" data-vid="59">ESV</option>
-                    <option value="niv" data-vid="111">NIV</option>
-                    <option value="nkjv" data-vid="114">NKJV</option>
-                    <option value="nasb" data-vid="100">NASB</option>
-                    <option value="web" data-vid="206">WEB</option>
-                    <option value="amp" data-vid="8">AMP</option>
-                    <option value="msg" data-vid="97">MSG</option>
-                  </select>
+
+                <div class="guided-drill" id="guided-drill">
+                  <div class="guided-drill__section">
+                    <h3 class="card-title">1. Choose a practice goal</h3>
+                    <p class="section-desc">Pick the outcome you want. MemoryForge will preconfigure the drill steps for you.</p>
+                    <div class="guided-plan-grid" id="guided-plan-grid">
+                      <button type="button" class="guided-plan active" data-guided-plan="number-recall">
+                        <span class="guided-plan__title">Remember Numbers</span>
+                        <span class="guided-plan__desc">See digits, hide them, then type them back from memory.</span>
+                      </button>
+                      <button type="button" class="guided-plan" data-guided-plan="letter-recall">
+                        <span class="guided-plan__title">Remember Letters</span>
+                        <span class="guided-plan__desc">Build short-term recall without number mnemonics.</span>
+                      </button>
+                      <button type="button" class="guided-plan" data-guided-plan="word-recall">
+                        <span class="guided-plan__title">Remember Words</span>
+                        <span class="guided-plan__desc">Practice word-list retention with a simple story chain.</span>
+                      </button>
+                      <button type="button" class="guided-plan" data-guided-plan="passage-recall">
+                        <span class="guided-plan__title">Memorize a Passage</span>
+                        <span class="guided-plan__desc">Paste a verse or paragraph, study it briefly, then reproduce it.</span>
+                      </button>
+                      <button type="button" class="guided-plan" data-guided-plan="number-encode">
+                        <span class="guided-plan__title">Turn Numbers into Words</span>
+                        <span class="guided-plan__desc">Use the Major System to encode digits into a memorable word.</span>
+                      </button>
+                      <button type="button" class="guided-plan" data-guided-plan="number-decode">
+                        <span class="guided-plan__title">Turn Words into Numbers</span>
+                        <span class="guided-plan__desc">Reverse a Major System word back into its original digits.</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="guided-drill__section">
+                    <h3 class="card-title">2. Choose intensity</h3>
+                    <div class="guided-levels" id="guided-levels" role="group" aria-label="Drill intensity">
+                      <button type="button" class="guided-level" data-guided-level="easy">Easy</button>
+                      <button type="button" class="guided-level active" data-guided-level="steady">Steady</button>
+                      <button type="button" class="guided-level" data-guided-level="challenge">Challenge</button>
+                    </div>
+                  </div>
+
+                  <div class="field-group guided-custom-text" id="guided-custom-text-group" style="display:none">
+                    <label class="field-label" for="guided-custom-text">Paste the exact passage you want to memorize</label>
+                    <textarea id="guided-custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text you want this guided drill to use..."></textarea>
+                  </div>
+
+                  <div class="guided-summary card" id="guided-summary">
+                    <div class="guided-summary__eyebrow">This session will</div>
+                    <h3 class="card-title" id="guided-summary-title">Remember Numbers · Steady</h3>
+                    <p class="guided-summary__flow" id="guided-summary-flow"></p>
+                    <div class="guided-chip-row" id="guided-summary-chips"></div>
+                  </div>
+
+                  <button id="btn-start-guided" class="btn btn-primary btn-lg">Start Guided Session</button>
                 </div>
-              </div>
-              <div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-sm)">
-                <button id="btn-ch-import" class="btn btn-sm btn-primary" style="flex:1">Import Chapter</button>
+
+                <div class="advanced-drill" id="advanced-drill" style="display:none">
+                  <!-- Saved Configs -->
+                  <div class="config-presets" id="config-presets">
+                    <div class="config-presets__row">
+                      <select id="config-preset-select" class="field-input config-presets__select">
+                        <option value="">Saved Configs...</option>
+                      </select>
+                      <button id="btn-save-config" class="btn btn-secondary config-presets__save" title="Save current config">Save</button>
+                      <button id="btn-delete-config" class="btn config-presets__delete" title="Delete selected config">&times;</button>
+                    </div>
+                  </div>
+
+                  <div class="field-group">
+                    <label class="field-label" for="drill-mode">Drill Mode</label>
+                    <select id="drill-mode" class="field-input">
+                      <option value="recall">Recall (see → remember → type)</option>
+                      <option value="encode">Encode (digits → type the word)</option>
+                      <option value="decode">Decode (word → type the digits)</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group" id="type-group">
+                    <label class="field-label" for="drill-type">Type</label>
+                    <select id="drill-type" class="field-input">
+                      <option value="digits">Digits (0-9)</option>
+                      <option value="letters">Letters (A-Z)</option>
+                      <option value="words">Words</option>
+                      <option value="text">Custom Text</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group" id="length-group">
+                    <label class="field-label" for="drill-length">Length</label>
+                    <input id="drill-length" type="number" class="field-input" value="6" min="1" max="200">
+                  </div>
+
+                  <div class="field-group" id="custom-text-group" style="display: none;">
+                    <label class="field-label" for="custom-text">Paste Text</label>
+                    <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
+                  </div>
+
+                  <div class="field-group" id="technique-group">
+                    <label class="field-label" for="drill-technique">Technique</label>
+                    <select id="drill-technique" class="field-input">
+                      <option value="none">None (raw recall)</option>
+                      <option value="chunking">Chunking</option>
+                      <option value="number-shape">Number-Shape</option>
+                      <option value="number-rhyme">Number-Rhyme</option>
+                      <option value="major">Major System</option>
+                      <option value="linking">Linking / Story</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group" id="chunk-group" style="display: none;">
+                    <label class="field-label" for="chunk-size">Chunk Size</label>
+                    <select id="chunk-size" class="field-input">
+                      <option value="2">Pairs (2)</option>
+                      <option value="3" selected>Triples (3)</option>
+                      <option value="4">Quads (4)</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group" id="exposure-group">
+                    <label class="field-label" for="exposure-time">Exposure (seconds)</label>
+                    <input id="exposure-time" type="number" class="field-input" value="5" min="0" max="120">
+                    <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
+                  </div>
+
+                  <div class="field-group">
+                    <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
+                    <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
+                    <div class="field-hint">Forces you to hold info in memory before typing. Use as encoding time.</div>
+                  </div>
+
+                  <div class="drill-training card" id="drill-training-summary">
+                    <div class="guided-summary__eyebrow">Training signal</div>
+                    <h3 class="card-title" id="drill-training-title">Working Memory first</h3>
+                    <p class="guided-summary__flow" id="drill-training-copy"></p>
+                    <div class="guided-chip-row" id="drill-training-chips"></div>
+                  </div>
+
+                  <button id="btn-start" class="btn btn-primary btn-lg">Start Custom Drill</button>
+                </div>
                 <button id="btn-book-import" class="btn btn-sm btn-secondary" style="flex:1">Import Book</button>
               </div>
               <p id="ch-import-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
@@ -734,7 +1318,8 @@
         </label>
       </div>
       <div class="data-actions">
-        <button id="btn-export" class="btn btn-primary">Export Data (JSON)</button>
+        <button id="btn-export" class="btn btn-primary">Download My Data</button>
+        <button id="btn-export-demo" class="btn btn-secondary">Download Demo Profile</button>
         <button id="btn-import" class="btn btn-secondary">Import Data</button>
         <input type="file" id="import-file" accept=".json" style="display: none;">
       </div>
@@ -746,87 +1331,6 @@
         <button id="btn-test-notif" class="btn btn-secondary">Test Notification</button>
         <button id="btn-clear" class="btn btn-danger">Clear All Data</button>
       </div>
-    </section>
-
-    <!-- ═══ SPEED READING VIEW ═══ -->
-    <section id="view-speed-reading" class="view">
-
-      <!-- Sub-navigation tabs -->
-      <div class="sr-tabs">
-        <button class="sr-tab active" data-sr-tab="home">Home</button>
-        <button class="sr-tab" data-sr-tab="progress">Progress</button>
-        <button class="sr-tab" data-sr-tab="lesson-list">Lessons</button>
-      </div>
-
-      <!-- HOME -->
-      <div class="sr-panel" id="sr-home">
-        <div id="sr-home-content"></div>
-      </div>
-
-      <!-- ASSESS -->
-      <div class="sr-panel" id="sr-assess" style="display:none">
-        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
-        <div id="sr-assess-content"></div>
-      </div>
-
-      <!-- RSVP -->
-      <div class="sr-panel" id="sr-rsvp" style="display:none">
-        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
-        <div id="sr-rsvp-content"></div>
-      </div>
-
-      <!-- READER -->
-      <div class="sr-panel" id="sr-reader" style="display:none">
-        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
-        <div id="sr-reader-content"></div>
-      </div>
-
-      <!-- SCHULTE -->
-      <div class="sr-panel" id="sr-schulte" style="display:none">
-        <button class="btn btn-secondary btn-back sr-back-btn">&larr; Back</button>
-        <div id="sr-schulte-content"></div>
-      </div>
-
-      <!-- PROGRESS -->
-      <div class="sr-panel" id="sr-progress" style="display:none">
-        <div id="sr-progress-content"></div>
-      </div>
-
-      <!-- LESSON LIST -->
-      <div class="sr-panel" id="sr-lesson-list" style="display:none">
-        <div id="sr-lesson-list-content"></div>
-      </div>
-
-      <!-- LESSON DETAIL -->
-      <div class="sr-panel" id="sr-lesson-detail" style="display:none">
-        <button class="btn btn-secondary btn-back" id="sr-lesson-back">&larr; Lessons</button>
-        <div id="sr-lesson-detail-content"></div>
-      </div>
-
-      <!-- QUIZ -->
-      <div class="sr-panel" id="sr-quiz" style="display:none">
-        <button class="btn btn-secondary btn-back" id="sr-quiz-back">&larr; Skip Quiz</button>
-        <h3 class="section-title" style="margin-bottom:1rem">Comprehension Check</h3>
-        <div id="sr-quiz-content"></div>
-      </div>
-
-      <!-- RESULT -->
-      <div class="sr-panel" id="sr-result" style="display:none">
-        <div id="sr-result-content"></div>
-      </div>
-
-      <!-- 3-2-1 FIXATION DRILL -->
-      <div class="sr-panel" id="sr-fixation" style="display:none">
-        <button class="btn btn-secondary btn-back" id="sr-fixation-back">&larr; Back</button>
-        <div id="sr-fixation-content"></div>
-      </div>
-
-      <!-- SOFT FOCUS / PERIPHERAL DRILL -->
-      <div class="sr-panel" id="sr-periph" style="display:none">
-        <button class="btn btn-secondary btn-back" id="sr-periph-back">&larr; Back</button>
-        <div id="sr-periph-content"></div>
-      </div>
-
     </section>
 
     <!-- ═══ TIMER SETUP PANEL ═══ -->
@@ -888,6 +1392,7 @@
 
   </main>
 
+  <script src="ratings.js"></script>
   <script src="app.js"></script>
   <script src="scripture.js"></script>
   <script src="speed-reading.js"></script>

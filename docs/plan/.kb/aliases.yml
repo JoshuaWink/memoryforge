@@ -1,0 +1,7 @@
+# .kb/aliases.yml — Tag alias map (auto-maintained by cup kb rebalance)
+# Format: drifted_term: canonical_term
+#
+# Example:
+#   container: docker
+#   k8s: kubernetes
+#   ci: ci-cd

@@ -533,47 +533,126 @@ async function dbClear() {
   });
 }
 
+const CG_PROFILE_KEY = 'cg_profile';
+const CG_LANE_NAMES = { A: 'Reading', B: 'Recall', C: 'Focus', D: 'Reasoning', E: 'Expression', F: 'Integration' };
+const CG_LANE_VIEWS = { A: 'speed-reading', B: 'drill', C: 'tools', D: 'drill', E: 'drill', F: 'drill' };
+const TRACKED_STORAGE_KEYS = [
+  'cg_profile',
+  'mf_ultra_dark',
+  'mf_last_config',
+  'mf_saved_configs',
+  'mf_recall_timer',
+  'mf_reminders',
+  'mf_speed_v1',
+  'mf_scripture_library',
+  'mf_seq_prog',
+  'mf_cbc_prog',
+  'memoryforge_flashcards',
+  'memoryforge_trainer',
+  'mf_glicko',
+  'mf_glicko_backfilled',
+];
+
+function getCgDefaultProfile() {
+  return { reading: 220, recall: 72, focus: 14, reasoning: 6, expression: 6 };
+}
+
+function loadCgProfile() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CG_PROFILE_KEY) || 'null');
+    if (raw) return Object.assign({}, getCgDefaultProfile(), raw);
+  } catch (_) {}
+  return getCgDefaultProfile();
+}
+
+function computeCgNeedScores(profile) {
+  const laneA = Math.max(10, 100 - Math.round(profile.reading / 6));
+  const laneB = Math.max(10, 100 - profile.recall);
+  const laneC = Math.max(10, 100 - Math.round(profile.focus * 4));
+  const laneD = Math.max(10, 100 - profile.reasoning * 10);
+  const laneE = Math.max(10, 100 - profile.expression * 10);
+  const laneF = Math.round((laneA + laneB + laneC + laneD + laneE) / 5);
+  return { A: laneA, B: laneB, C: laneC, D: laneD, E: laneE, F: laneF };
+}
+
+function rankCgNeedScores(scores) {
+  return Object.entries(scores).sort((a, b) => b[1] - a[1]);
+}
+
+function getCgPriorityData(profile) {
+  const scores = computeCgNeedScores(profile);
+  const ranked = rankCgNeedScores(scores);
+  return {
+    scores,
+    priorityKey: ranked[0][0],
+    secondaryKey: ranked[1][0],
+    strengthKey: ranked[ranked.length - 1][0],
+  };
+}
+
+function needOrdinal(n) {
+  var s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function formatNeedScore(score) {
+  return needOrdinal(score) + ' percentile';
+}
+
+function readStoredValue(key) {
+  const raw = localStorage.getItem(key);
+  if (raw == null) return null;
+  try { return JSON.parse(raw); } catch (_) { return raw; }
+}
+
+function writeStoredValue(key, value) {
+  if (value == null) {
+    localStorage.removeItem(key);
+    return;
+  }
+  if (typeof value === 'string') localStorage.setItem(key, value);
+  else localStorage.setItem(key, JSON.stringify(value));
+}
+
+function readTrackedStorageSnapshot() {
+  const snapshot = {};
+  TRACKED_STORAGE_KEYS.forEach((key) => {
+    const value = readStoredValue(key);
+    if (value != null) snapshot[key] = value;
+  });
+  return snapshot;
+}
+
+function clearTrackedStorage() {
+  TRACKED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
+function writeTrackedStorageSnapshot(snapshot, opts = {}) {
+  if (!opts.merge) clearTrackedStorage();
+  TRACKED_STORAGE_KEYS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(snapshot, key)) {
+      writeStoredValue(key, snapshot[key]);
+    }
+  });
+}
+
 async function dbExport() {
   const drills = await dbGetAll();
-  let speed_reading = null;
-  try {
-    const raw = localStorage.getItem('mf_speed_v1');
-    if (raw) speed_reading = JSON.parse(raw);
-  } catch (e) {}
   return {
-    version: 2,
+    version: 1,
     exported: new Date().toISOString().slice(0, 10),
     app: 'memoryforge',
-    data: { drills, speed_reading },
+    data: { drills },
   };
 }
 
 async function dbImport(blob, opts = {}) {
-  if (!blob || (blob.version !== 1 && blob.version !== 2)) throw new Error('Unsupported file version');
+  if (!blob || blob.version !== 1) throw new Error('Unsupported file version');
   if (!opts.merge) await dbClear();
   const db = await openDB();
-  // Import speed reading data (v2)
-  if (blob.version >= 2 && blob.data && blob.data.speed_reading) {
-    try {
-      if (opts.merge && typeof srStore !== 'undefined') {
-        const existing = srStore.get();
-        const incoming = blob.data.speed_reading;
-        const merged = Object.assign({}, existing, incoming);
-        if (incoming.sessions && existing.sessions) {
-          merged.sessions = existing.sessions.concat(incoming.sessions);
-        }
-        srStore.importData(merged);
-      } else if (typeof srStore !== 'undefined') {
-        srStore.importData(blob.data.speed_reading);
-      } else {
-        localStorage.setItem('mf_speed_v1', JSON.stringify(blob.data.speed_reading));
-      }
-    } catch (e) { console.warn('Speed reading import failed:', e); }
-  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    for (const d of (blob.data.drills || [])) {
+    for (const d of blob.data.drills || []) {
       const clean = { ...d };
       delete clean.id;
       store.add(clean);
@@ -581,6 +660,97 @@ async function dbImport(blob, opts = {}) {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+async function appExportBundle() {
+  const drills = await dbGetAll();
+  return {
+    version: 2,
+    exported: new Date().toISOString().slice(0, 10),
+    app: 'memoryforge',
+    data: {
+      drills,
+      storage: readTrackedStorageSnapshot(),
+    },
+  };
+}
+
+function createDemoBundle() {
+  const now = Date.now();
+  const demoProfile = { reading: 180, recall: 58, focus: 9, reasoning: 5, expression: 4 };
+  const at = (daysAgo, hoursAgo) => now - (daysAgo * 24 * 60 * 60 * 1000) - (hoursAgo * 60 * 60 * 1000);
+  const demoDrills = [
+    { type: 'digits',  length: 8,  material: '48102937', answer: '48102937', score: 100, timestamp: at(0, 2),  technique: 'chunking', drillMode: 'recall' },
+    { type: 'words',   length: 5,  material: 'river ember stone field glass', answer: 'river ember stone field', score: 80, timestamp: at(0, 6),  technique: 'linking', drillMode: 'recall' },
+    { type: 'digits',  length: 4,  material: '5812', answer: 'cloth', score: 100, timestamp: at(1, 3), technique: 'major', drillMode: 'encode' },
+    { type: 'digits',  length: 4,  material: '9041', answer: 'bus-door', score: 0, timestamp: at(1, 8), technique: 'number-shape', drillMode: 'encode' },
+    { type: 'letters', length: 7,  material: 'LQPMRTA', answer: 'LQPMRTA', score: 100, timestamp: at(2, 4), technique: 'none', drillMode: 'recall' },
+    { type: 'digits',  length: 6,  material: '718409', answer: '718490', score: 67, timestamp: at(2, 9), technique: 'chunking', drillMode: 'recall' },
+    { type: 'words',   length: 6,  material: 'anchor lantern marble current velvet compass', answer: 'anchor lantern current velvet compass', score: 83, timestamp: at(3, 2), technique: 'linking', drillMode: 'recall' },
+    { type: 'digits',  length: 4,  material: '8207', answer: 'fan-cake', score: 100, timestamp: at(3, 7), technique: 'major', drillMode: 'encode' },
+    { type: 'digits',  length: 4,  material: '6194', answer: 'sheet-bear', score: 100, timestamp: at(4, 5), technique: 'number-rhyme', drillMode: 'encode' },
+    { type: 'text',    length: 12, material: 'Small disciplines turn scattered effort into measurable growth over time.', answer: 'Small disciplines turn scattered effort into growth over time.', score: 83, timestamp: at(4, 11), technique: 'none', drillMode: 'recall' },
+    { type: 'digits',  length: 4,  material: '7509', answer: 'glass-bus', score: 100, timestamp: at(5, 4), technique: 'major', drillMode: 'encode' },
+    { type: 'words',   length: 4,  material: 'crystal meadow thunder summit', answer: 'crystal meadow thunder', score: 75, timestamp: at(5, 10), technique: 'linking', drillMode: 'recall' },
+    { type: 'digits',  length: 4,  material: '3621', answer: 'moon-shoe', score: 0, timestamp: at(6, 2), technique: 'decode', drillMode: 'decode' },
+    { type: 'digits',  length: 4,  material: '4308', answer: '4308', score: 100, timestamp: at(6, 8), technique: 'number-shape', drillMode: 'recall' },
+  ];
+  const demoSpeed = {
+    baseline_wpm: 182,
+    baseline_comp: 0.74,
+    sessions: [
+      { date: at(8, 2), wpm: 182, comp: 0.74, effective_wpm: 135, mode: 'assess', technique: null, passage_id: 'p2' },
+      { date: at(6, 3), wpm: 205, comp: 0.78, effective_wpm: 160, mode: 'reader', technique: null, passage_id: 'p6' },
+      { date: at(4, 4), wpm: 220, comp: 0.76, effective_wpm: 167, mode: 'rsvp', technique: 'T6', passage_id: 'p3' },
+      { date: at(2, 5), wpm: 238, comp: 0.8, effective_wpm: 190, mode: 'reader', technique: 'T2', passage_id: 'p1' },
+      { date: at(0, 7), wpm: 252, comp: 0.82, effective_wpm: 207, mode: 'rsvp', technique: 'T6', passage_id: 'p5' },
+    ],
+    schulte_history: [
+      { date: at(6, 1), elapsed: 46200, errors: 3, size: 5 },
+      { date: at(4, 1), elapsed: 41800, errors: 2, size: 5 },
+      { date: at(2, 1), elapsed: 38400, errors: 1, size: 5 },
+      { date: at(0, 1), elapsed: 35200, errors: 1, size: 5 },
+    ],
+    mastery: { T1: 0.62, T2: 0.56, T3: 0.34, T6: 0.58, T9: 0.49, T12: 0.28, T13: 0.22, T15: 0.19 },
+    settings: {
+      rsvp_wpm: 275,
+      phrase_size: 2,
+      mask_on: true,
+      cursor_on: true,
+      bionic: false,
+      column_chars: 55,
+      indent_mode: true,
+      chunk_mode: true,
+    },
+  };
+
+  return {
+    version: 2,
+    exported: new Date().toISOString().slice(0, 10),
+    app: 'memoryforge',
+    data: {
+      drills: demoDrills,
+      storage: {
+        cg_profile: demoProfile,
+        mf_speed_v1: demoSpeed,
+        mf_ultra_dark: '0',
+      },
+    },
+  };
+}
+
+async function appImportBundle(blob, opts = {}) {
+  if (!blob || !blob.version) throw new Error('Unsupported file version');
+  if (blob.version === 1) {
+    if (!opts.merge) clearTrackedStorage();
+    await dbImport(blob, opts);
+    return { drillCount: ((blob.data && blob.data.drills) || []).length };
+  }
+  if (blob.version !== 2) throw new Error('Unsupported file version');
+  const payload = blob.data || {};
+  await dbImport({ version: 1, data: { drills: payload.drills || [] } }, opts);
+  writeTrackedStorageSnapshot(payload.storage || {}, { merge: !!opts.merge });
+  return { drillCount: (payload.drills || []).length };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -608,7 +778,12 @@ function navigateTo(view, { pushState = true } = {}) {
   currentView = view;
   if (pushState) history.pushState({ view, panel: 'config' }, '', `#${view}`);
   if (view === 'stats') refreshStats();
-  if (view === 'speed-reading' && typeof srOnActivate === 'function') srOnActivate();
+  if (view === 'speed-reading' && typeof window.srOnActivate === 'function') {
+    window.srOnActivate();
+  }
+  if (view === 'home' && typeof window.mfHomeActivate === 'function') {
+    window.mfHomeActivate();
+  }
 }
 
 $$('.nav-btn').forEach(btn => {
@@ -637,7 +812,233 @@ window.addEventListener('popstate', (e) => {
 });
 
 // Replace initial state so first back doesn't exit
-history.replaceState({ view: 'drill', panel: 'config' }, '', '#drill');
+const initialView = (() => {
+  const hashView = (location.hash || '').replace('#', '');
+  if (hashView && document.querySelector(`#view-${hashView}`)) return hashView;
+  return 'home';
+})();
+history.replaceState({ view: initialView, panel: 'config' }, '', `#${initialView}`);
+navigateTo(initialView, { pushState: false });
+if (initialView === 'drill') showPanel('config');
+
+// Backfill Glicko-2 ratings from existing drill history (runs once)
+if (window.mfGlickoBackfill) {
+  dbGetAll().then(function (drills) { window.mfGlickoBackfill(drills); });
+}
+
+var DRILL_LANE_LABELS = {
+  A: 'Reading Velocity',
+  B: 'Working Memory',
+  C: 'Attention Control',
+  D: 'Reasoning',
+  E: 'Expression',
+  F: 'Integration',
+};
+
+var GUIDED_DRILL_PLANS = {
+  'number-recall': {
+    title: 'Remember Numbers',
+    copy: 'Classic symbol recall. Best for building raw short-term retention and keeping a clean mental buffer under pressure.',
+    primary: 'B',
+    secondary: 'C',
+    configs: {
+      easy:   { 'drill-mode': 'recall', 'drill-type': 'digits',  'drill-length': '4', 'drill-technique': 'none',    'chunk-size': '3', 'exposure-time': '6', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'recall', 'drill-type': 'digits',  'drill-length': '6', 'drill-technique': 'chunking','chunk-size': '3', 'exposure-time': '5', 'recall-delay': '1', 'custom-text': '' },
+      hard:   { 'drill-mode': 'recall', 'drill-type': 'digits',  'drill-length': '8', 'drill-technique': 'chunking','chunk-size': '4', 'exposure-time': '4', 'recall-delay': '2', 'custom-text': '' },
+    },
+  },
+  'letter-recall': {
+    title: 'Remember Letters',
+    copy: 'Letters remove meaning and force cleaner working-memory retention. Useful when numbers feel too familiar.',
+    primary: 'B',
+    secondary: 'C',
+    configs: {
+      easy:   { 'drill-mode': 'recall', 'drill-type': 'letters', 'drill-length': '4', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '6', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'recall', 'drill-type': 'letters', 'drill-length': '6', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '5', 'recall-delay': '1', 'custom-text': '' },
+      hard:   { 'drill-mode': 'recall', 'drill-type': 'letters', 'drill-length': '7', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '4', 'recall-delay': '2', 'custom-text': '' },
+    },
+  },
+  'word-recall': {
+    title: 'Remember Words',
+    copy: 'Language-sized chunks bridge memory with meaning. Good when you want recall practice that feels closer to real reading and speaking.',
+    primary: 'B',
+    secondary: 'F',
+    configs: {
+      easy:   { 'drill-mode': 'recall', 'drill-type': 'words', 'drill-length': '4', 'drill-technique': 'none',    'chunk-size': '3', 'exposure-time': '8', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'recall', 'drill-type': 'words', 'drill-length': '5', 'drill-technique': 'linking', 'chunk-size': '3', 'exposure-time': '7', 'recall-delay': '1', 'custom-text': '' },
+      hard:   { 'drill-mode': 'recall', 'drill-type': 'words', 'drill-length': '7', 'drill-technique': 'linking', 'chunk-size': '3', 'exposure-time': '6', 'recall-delay': '2', 'custom-text': '' },
+    },
+  },
+  'passage-recall': {
+    title: 'Memorize a Passage',
+    copy: 'Use your own verse, quote, or paragraph. This is the most natural bridge from drills into actual expression and transfer.',
+    primary: 'E',
+    secondary: 'F',
+    configs: {
+      easy:   { 'drill-mode': 'recall', 'drill-type': 'text', 'drill-length': '1', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '15', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'recall', 'drill-type': 'text', 'drill-length': '1', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '12', 'recall-delay': '2', 'custom-text': '' },
+      hard:   { 'drill-mode': 'recall', 'drill-type': 'text', 'drill-length': '1', 'drill-technique': 'none', 'chunk-size': '3', 'exposure-time': '10', 'recall-delay': '4', 'custom-text': '' },
+    },
+  },
+  'major-encode': {
+    title: 'Turn Numbers into Words',
+    copy: 'Practice converting digits into memorable Major System words. This shifts you from raw storage into deliberate encoding.',
+    primary: 'F',
+    secondary: 'B',
+    configs: {
+      easy:   { 'drill-mode': 'encode', 'drill-type': 'digits', 'drill-length': '4', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '8', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'encode', 'drill-type': 'digits', 'drill-length': '6', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '7', 'recall-delay': '1', 'custom-text': '' },
+      hard:   { 'drill-mode': 'encode', 'drill-type': 'digits', 'drill-length': '8', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '6', 'recall-delay': '2', 'custom-text': '' },
+    },
+  },
+  'major-decode': {
+    title: 'Turn Words into Numbers',
+    copy: 'Decode Major words back into digits. This is harder than simple recall because you have to reconstruct the original numeric sequence.',
+    primary: 'F',
+    secondary: 'B',
+    configs: {
+      easy:   { 'drill-mode': 'decode', 'drill-type': 'digits', 'drill-length': '4', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '8', 'recall-delay': '0', 'custom-text': '' },
+      steady: { 'drill-mode': 'decode', 'drill-type': 'digits', 'drill-length': '6', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '7', 'recall-delay': '1', 'custom-text': '' },
+      hard:   { 'drill-mode': 'decode', 'drill-type': 'digits', 'drill-length': '8', 'drill-technique': 'major', 'chunk-size': '3', 'exposure-time': '6', 'recall-delay': '2', 'custom-text': '' },
+    },
+  },
+};
+
+var currentGuidedPlan = 'number-recall';
+var currentGuidedLevel = 'steady';
+
+function getGuidedPlanConfig(planKey, level) {
+  var plan = GUIDED_DRILL_PLANS[planKey] || GUIDED_DRILL_PLANS['number-recall'];
+  var cfg = Object.assign({}, plan.configs[level] || plan.configs.steady);
+  if (cfg['drill-type'] === 'text') {
+    var guidedText = $('#guided-custom-text') ? $('#guided-custom-text').value : '';
+    var existingText = $('#custom-text') ? $('#custom-text').value : '';
+    if (guidedText && $('#custom-text')) $('#custom-text').value = guidedText;
+    cfg['custom-text'] = guidedText || existingText || cfg['custom-text'] || '';
+  }
+  return cfg;
+}
+
+function describeDrillFlow(cfg) {
+  var mode = cfg['drill-mode'];
+  var type = cfg['drill-type'];
+  var length = parseInt(cfg['drill-length'], 10) || 0;
+  var exposure = parseInt(cfg['exposure-time'], 10) || 0;
+  var delay = parseInt(cfg['recall-delay'], 10) || 0;
+  var technique = cfg['drill-technique'];
+  var source = '';
+  if (type === 'digits') source = length + ' digits';
+  else if (type === 'letters') source = length + ' letters';
+  else if (type === 'words') source = length + ' words';
+  else source = 'your pasted passage';
+
+  var exposureText = exposure > 0 ? ('for ' + exposure + ' second' + (exposure === 1 ? '' : 's')) : 'until you tap “I\'ve got it”';
+  var delayText = delay > 0 ? (' wait ' + delay + ' second' + (delay === 1 ? '' : 's') + ' before answering') : ' answer immediately';
+  var techniqueText = technique && technique !== 'none' ? (' using ' + technique.replace('-', ' ')) : '';
+
+  if (mode === 'encode') return 'See ' + source + ' ' + exposureText + ', convert them into a Major word or image, then type your encoding.';
+  if (mode === 'decode') return 'See Major words ' + exposureText + ', reconstruct the original digits, then type the numeric sequence.';
+  return 'See ' + source + ' ' + exposureText + ',' + delayText + ', then type it back' + techniqueText + '.';
+}
+
+function getTrainingSignal(cfg) {
+  var mode = cfg['drill-mode'];
+  var type = cfg['drill-type'];
+  var technique = cfg['drill-technique'];
+  var delay = parseInt(cfg['recall-delay'], 10) || 0;
+  var exposure = parseInt(cfg['exposure-time'], 10) || 0;
+  var primary = 'B';
+  var secondary = 'C';
+  var note = 'This is a straightforward retention drill: see it, hold it, reproduce it.';
+
+  if (mode === 'encode' || mode === 'decode' || technique === 'major' || technique === 'number-shape' || technique === 'number-rhyme') {
+    primary = 'F';
+    secondary = 'B';
+    note = 'These settings push strategy transfer: you are not just storing information, you are converting it through a memory system.';
+  } else if (type === 'text') {
+    primary = 'E';
+    secondary = 'F';
+    note = 'Passage recall stresses expression because the target is structured language, not just raw symbols.';
+  } else if (type === 'words') {
+    primary = 'B';
+    secondary = technique === 'linking' ? 'F' : 'E';
+    note = technique === 'linking'
+      ? 'Linking turns plain recall into integrative encoding by forcing you to create relationships between words.'
+      : 'Word recall sits between raw memory and expressive reconstruction because meaning starts helping or hurting you.';
+  } else if (type === 'letters') {
+    primary = 'B';
+    secondary = 'C';
+    note = 'Letter strings strip away semantic meaning, which makes this a clean working-memory and attention-control challenge.';
+  }
+
+  if (delay >= 3) {
+    secondary = primary === 'B' ? 'F' : secondary;
+    note += ' The added recall delay increases the transfer load because you must actively maintain the trace before answering.';
+  }
+  if (exposure <= 3 && exposure > 0) {
+    note += ' Short exposure time also raises the attention demand.';
+  }
+
+  return {
+    primary: DRILL_LANE_LABELS[primary],
+    secondary: DRILL_LANE_LABELS[secondary],
+    note: note,
+    flow: describeDrillFlow(cfg),
+  };
+}
+
+function renderGuidedSummary() {
+  var plan = GUIDED_DRILL_PLANS[currentGuidedPlan] || GUIDED_DRILL_PLANS['number-recall'];
+  var cfg = getGuidedPlanConfig(currentGuidedPlan, currentGuidedLevel);
+  var signal = getTrainingSignal(cfg);
+  var levelLabel = currentGuidedLevel.charAt(0).toUpperCase() + currentGuidedLevel.slice(1);
+  var guidedCustomTextGroup = $('#guided-custom-text-group');
+
+  $$('.guided-plan-card').forEach(function (btn) {
+    btn.classList.toggle('active', btn.dataset.guidedPlan === currentGuidedPlan);
+  });
+  $$('.guided-level-btn').forEach(function (btn) {
+    btn.classList.toggle('active', btn.dataset.guidedLevel === currentGuidedLevel);
+  });
+  if (guidedCustomTextGroup) {
+    guidedCustomTextGroup.style.display = currentGuidedPlan === 'passage-recall' ? '' : 'none';
+  }
+
+  if ($('#guided-summary-title')) $('#guided-summary-title').textContent = plan.title + ' · ' + levelLabel;
+  if ($('#guided-summary-copy')) $('#guided-summary-copy').textContent = plan.copy;
+  if ($('#guided-summary-primary')) $('#guided-summary-primary').textContent = signal.primary;
+  if ($('#guided-summary-secondary')) $('#guided-summary-secondary').textContent = signal.secondary;
+  if ($('#guided-summary-flow')) $('#guided-summary-flow').textContent = signal.flow;
+}
+
+function renderAdvancedTrainingSummary() {
+  var cfg = readConfig();
+  var signal = getTrainingSignal(cfg);
+  if ($('#advanced-summary-primary')) $('#advanced-summary-primary').textContent = signal.primary;
+  if ($('#advanced-summary-secondary')) $('#advanced-summary-secondary').textContent = signal.secondary;
+  if ($('#advanced-summary-flow')) $('#advanced-summary-flow').textContent = signal.flow;
+  if ($('#advanced-summary-note')) $('#advanced-summary-note').textContent = signal.note;
+}
+
+function setDrillSetupMode(mode) {
+  var guided = $('#guided-drill');
+  var advanced = $('#advanced-drill');
+  if (guided) guided.hidden = mode !== 'guided';
+  if (advanced) advanced.hidden = mode !== 'advanced';
+  $$('.drill-setup-toggle__btn').forEach(function (btn) {
+    var active = btn.dataset.setupMode === mode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+
+function applyGuidedPlanToAdvanced() {
+  var cfg = getGuidedPlanConfig(currentGuidedPlan, currentGuidedLevel);
+  applyConfig(cfg);
+  updateConfigVisibility();
+  renderAdvancedTrainingSummary();
+  return cfg;
+}
 
 // ── Config toggles ──
 $('#drill-mode').addEventListener('change', updateConfigVisibility);
@@ -658,6 +1059,7 @@ function updateConfigVisibility() {
     $('#technique-group').style.display = 'none';
     $('#chunk-group').style.display = 'none';
     $('#exposure-group').style.display = mode === 'encode' ? '' : '';
+    renderAdvancedTrainingSummary();
     return;
   }
 
@@ -672,6 +1074,7 @@ function updateConfigVisibility() {
 
   // Show chunk size only when technique is chunking
   $('#chunk-group').style.display = technique === 'chunking' ? '' : 'none';
+  renderAdvancedTrainingSummary();
 }
 
 // ── Start Drill ──
@@ -989,6 +1392,7 @@ async function submitAnswer() {
     drillMode: currentDrillMode,
   };
   try { await dbSave(drillResult); } catch (e) { console.error('Failed to save:', e); }
+  if (window.mfGlickoUpdateDrill) window.mfGlickoUpdateDrill(drillResult);
 }
 
 function buildCharDiff(original, answer) {
@@ -1803,15 +2207,63 @@ $('#word-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') che
 async function refreshStats() {
   try {
     const drills = await dbGetAll();
+    // Update shared cache too
+    window._mf_drills_cache = drills;
     const stats = computeStats(drills);
+    const profile = loadCgProfile();
+    const priority = getCgPriorityData(profile);
     $('#stat-total').textContent = stats.totalDrills;
-    $('#stat-avg').textContent = stats.averageScore + '%';
-    $('#stat-best').textContent = stats.bestScore + '%';
+    $('#stat-avg').textContent = stats.totalDrills ? stats.averageScore + '%' : '—';
+    $('#stat-best').textContent = stats.totalDrills ? stats.bestScore + '%' : '—';
     $('#stat-today').textContent = stats.today.count;
+
+    const summary = $('#stats-summary');
+    if (summary) {
+      summary.textContent = stats.totalDrills
+        ? 'These numbers track every completed drill. The Home view has the full visual dashboard.'
+        : 'No drill sessions yet. Import the demo profile or finish a drill to populate practice history.';
+    }
+
+    const profileSummary = $('#stats-profile-summary');
+    if (profileSummary) {
+      profileSummary.textContent = `Primary focus: ${CG_LANE_NAMES[priority.priorityKey]} (${formatNeedScore(priority.scores[priority.priorityKey])}) · Secondary: ${CG_LANE_NAMES[priority.secondaryKey]} (${formatNeedScore(priority.scores[priority.secondaryKey])}) · Current strength: ${CG_LANE_NAMES[priority.strengthKey]} (${formatNeedScore(priority.scores[priority.strengthKey])}).`;
+    }
 
     renderStatsGroup('#stats-by-type', stats.byType);
     renderStatsGroup('#stats-by-technique', stats.byTechnique);
     renderStatsGroup('#stats-by-mode', stats.byMode);
+
+    // ── Stats charts ──────────────────────────────────────────────
+    if (typeof HOME_CHART !== 'undefined') {
+      // Score by technique bar chart
+      var techCanvas = document.getElementById('stats-chart-technique');
+      if (techCanvas) {
+        var techEntries = Object.entries(stats.byTechnique).sort(function (a, b) { return b[1].avgScore - a[1].avgScore; });
+        var techData = techEntries.map(function (e) { return e[1].avgScore; });
+        var techLabels = techEntries.map(function (e) {
+          var k = e[0]; return k === 'none' ? 'None' : k.replace(/-/g, ' ').split(' ').map(function (w) { return w[0].toUpperCase() + w.slice(1); }).join(' ');
+        });
+        HOME_CHART.bar(techCanvas, techData, techLabels, '#66bb6a');
+      }
+      // Drills by type bar chart
+      var typeCanvas = document.getElementById('stats-chart-type');
+      if (typeCanvas) {
+        var typeEntries = Object.entries(stats.byType).sort(function (a, b) { return b[1].count - a[1].count; });
+        var typeData = typeEntries.map(function (e) { return e[1].count; });
+        var typeLabels = typeEntries.map(function (e) {
+          return e[0].charAt(0).toUpperCase() + e[0].slice(1);
+        });
+        HOME_CHART.bar(typeCanvas, typeData, typeLabels, '#4fc3f7');
+      }
+      // Training need horizontal bar (using regular bar chart, one bar per lane)
+      var needCanvas = document.getElementById('stats-chart-need');
+      if (needCanvas) {
+        var laneOrder = ['A', 'B', 'C', 'D', 'E', 'F'];
+        var laneLabels = ['Reading', 'Recall', 'Focus', 'Reason', 'Express', 'Integrate'];
+        var needData = laneOrder.map(function (k) { return priority.scores[k] || 0; });
+        HOME_CHART.bar(needCanvas, needData, laneLabels, '#ffa726');
+      }
+    }
   } catch (e) {
     console.error('Failed to load stats:', e);
   }
@@ -1820,15 +2272,19 @@ async function refreshStats() {
 function renderStatsGroup(selector, data) {
   const el = $(selector);
   el.innerHTML = '';
-  for (const [key, d] of Object.entries(data)) {
+  const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+  for (const [key, d] of entries) {
+    const label = key === 'none'
+      ? 'No technique'
+      : key.replace(/-/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
     el.innerHTML += `
       <div class="type-stat">
-        <span class="type-name">${escapeHtml(key)}</span>
-        <span class="type-details">${d.count} drills · avg ${d.avgScore}% · best ${d.bestScore}%</span>
+        <span class="type-name">${escapeHtml(label)}</span>
+        <span class="type-details">${d.count} drills · average ${d.avgScore}% · best ${d.bestScore}%</span>
       </div>`;
   }
   if (Object.keys(data).length === 0) {
-    el.innerHTML = '<div class="type-stat"><span class="type-details">No data yet</span></div>';
+    el.innerHTML = '<div class="type-stat"><span class="type-details">No practice data yet. Import the demo profile or finish a drill to populate this view.</span></div>';
   }
 }
 
@@ -1858,7 +2314,7 @@ function renderStatsGroup(selector, data) {
 
 $('#btn-export').addEventListener('click', async () => {
   try {
-    const data = await dbExport();
+    const data = await appExportBundle();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1869,6 +2325,22 @@ $('#btn-export').addEventListener('click', async () => {
   } catch (e) {
     console.error('Export failed:', e);
     alert('Export failed. See console.');
+  }
+});
+
+$('#btn-export-demo').addEventListener('click', () => {
+  try {
+    const data = createDemoBundle();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'memoryforge-demo-profile.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Demo export failed:', e);
+    alert('Demo export failed. See console.');
   }
 });
 
@@ -1883,11 +2355,10 @@ $('#import-file').addEventListener('change', async (e) => {
     const text = await file.text();
     const data = JSON.parse(text);
     const merge = confirm('Merge with existing data? (Cancel = replace all)');
-    await dbImport(data, { merge });
-    const drillCount = (data.data && data.data.drills) ? data.data.drills.length : 0;
-    const srMsg = (data.data && data.data.speed_reading) ? ' + speed reading data' : '';
-    alert(`Imported ${drillCount} drills${srMsg}.`);
+    const result = await appImportBundle(data, { merge });
+    alert(`Imported ${result.drillCount} drills. Reloading to apply profile and progress data.`);
     e.target.value = '';
+    location.reload();
   } catch (err) {
     console.error('Import failed:', err);
     alert('Import failed: ' + err.message);
@@ -1931,12 +2402,12 @@ $('#btn-test-notif').addEventListener('click', function() {
 });
 
 $('#btn-clear').addEventListener('click', async () => {
-  if (!confirm('Delete ALL training data? This cannot be undone.')) return;
+  if (!confirm('Delete all drills, assessment profiles, and speed-reading data? This cannot be undone.')) return;
   try {
     await dbClear();
-    document.dispatchEvent(new CustomEvent('mf-data-cleared'));
-    alert('All data cleared.');
-    refreshStats();
+    clearTrackedStorage();
+    alert('All data cleared. Reloading...');
+    location.reload();
   } catch (e) {
     console.error('Clear failed:', e);
   }
@@ -2054,6 +2525,66 @@ $('#btn-delete-config').addEventListener('click', function() {
 // -- Init: load last config + render presets --
 loadLastConfig();
 renderConfigPresets();
+renderGuidedSummary();
+renderAdvancedTrainingSummary();
+
+$$('.drill-setup-toggle__btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    if (btn.dataset.setupMode === 'advanced') applyGuidedPlanToAdvanced();
+    setDrillSetupMode(btn.dataset.setupMode);
+  });
+});
+
+$$('.guided-plan-card').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    currentGuidedPlan = btn.dataset.guidedPlan;
+    renderGuidedSummary();
+  });
+});
+
+$$('.guided-level-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    currentGuidedLevel = btn.dataset.guidedLevel;
+    renderGuidedSummary();
+  });
+});
+
+$('#btn-guided-to-advanced').addEventListener('click', function () {
+  applyGuidedPlanToAdvanced();
+  setDrillSetupMode('advanced');
+});
+
+$('#btn-start-guided').addEventListener('click', function () {
+  var cfg = applyGuidedPlanToAdvanced();
+  if (cfg['drill-type'] === 'text' && !(cfg['custom-text'] || '').trim()) {
+    setDrillSetupMode('advanced');
+    $('#custom-text').focus();
+    alert('Paste the text you want to memorize first.');
+    return;
+  }
+  $('#btn-start').click();
+});
+
+$('#btn-open-speed-lab').addEventListener('click', function () { navigateTo('speed-reading'); });
+$('#btn-open-focus-tools').addEventListener('click', function () { navigateTo('tools'); });
+
+['drill-mode', 'drill-type', 'drill-length', 'drill-technique', 'chunk-size', 'exposure-time', 'recall-delay'].forEach(function (id) {
+  var el = $('#' + id);
+  if (el) el.addEventListener('change', renderAdvancedTrainingSummary);
+});
+if ($('#custom-text')) {
+  $('#custom-text').addEventListener('input', function () {
+    renderAdvancedTrainingSummary();
+    renderGuidedSummary();
+  });
+}
+if ($('#guided-custom-text')) {
+  $('#guided-custom-text').addEventListener('input', function () {
+    if ($('#custom-text')) $('#custom-text').value = $('#guided-custom-text').value;
+    renderGuidedSummary();
+    renderAdvancedTrainingSummary();
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  RECALL TIMER & NOTIFICATIONS
@@ -2445,3 +2976,618 @@ document.addEventListener('visibilitychange', function() {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Cognitive Gymnasium — Home, Assessment, Tools wiring
+// ═══════════════════════════════════════════════════════════════════
+
+(function () {
+  // ── Helpers ──────────────────────────────────────────────────────
+  function _profileFromInputs() {
+    return {
+      reading:    Number($('#asmnt-reading')?.value  || 220),
+      recall:     Number($('#asmnt-recall')?.value   || 72),
+      focus:      Number($('#asmnt-focus')?.value    || 14),
+      reasoning:  Number($('#asmnt-reasoning')?.value || 6),
+      expression: Number($('#asmnt-expression')?.value || 6),
+    };
+  }
+
+  function _laneScores(p) {
+    return computeCgNeedScores(p);
+  }
+
+  // ── Dashboard canvas charts ────────────────────────────────────────
+  window.HOME_CHART = (function () {
+    var BG = '#16213e', GRID = '#2a2a45', MUTED = '#888';
+    var PRIMARY = '#4fc3f7', SUCCESS = '#66bb6a', WARN = '#ffa726';
+
+    function setup(canvas) {
+      var rect = canvas.getBoundingClientRect();
+      var r = window.devicePixelRatio || 1;
+      canvas.width  = rect.width  * r;
+      canvas.height = rect.height * r;
+      var ctx = canvas.getContext('2d');
+      ctx.scale(r, r);
+      return { ctx: ctx, W: rect.width, H: rect.height };
+    }
+    function noData(canvas, msg) {
+      var s = setup(canvas); var ctx = s.ctx, W = s.W, H = s.H;
+      ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = MUTED; ctx.font = '13px system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(msg || 'No data yet.', W / 2, H / 2);
+    }
+
+    return {
+      // 6-axis radar for cognitive lane need scores (values 0-100)
+      radar: function (canvas, scores) {
+        var labels = ['Reading', 'Recall', 'Focus', 'Reason', 'Express', 'Integrate'];
+        var vals = [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F];
+        var s = setup(canvas); var ctx = s.ctx, W = s.W, H = s.H;
+        ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+        var cx = W / 2, cy = H / 2;
+        var maxR = Math.min(cx, cy) - 36;
+        var n = 6;
+        var rings = 4;
+
+        function angle(i) { return (Math.PI * 2 * i / n) - Math.PI / 2; }
+        function point(i, r) { return { x: cx + r * Math.cos(angle(i)), y: cy + r * Math.sin(angle(i)) }; }
+
+        // Grid rings
+        for (var ring = 1; ring <= rings; ring++) {
+          var rr = maxR * ring / rings;
+          ctx.beginPath();
+          for (var k = 0; k < n; k++) {
+            var pt = point(k, rr);
+            k === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.stroke();
+          // Ring label (rightmost vertex)
+          ctx.fillStyle = MUTED; ctx.font = '9px system-ui';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(String(Math.round(100 * ring / rings)), cx + rr + 3, cy);
+        }
+        // Axis spokes
+        for (var i = 0; i < n; i++) {
+          var pt = point(i, maxR);
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pt.x, pt.y);
+          ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.stroke();
+        }
+        // Labels
+        ctx.font = '11px system-ui'; ctx.fillStyle = MUTED;
+        for (var i = 0; i < n; i++) {
+          var pt = point(i, maxR + 18);
+          ctx.textAlign = (pt.x < cx - 2) ? 'right' : (pt.x > cx + 2) ? 'left' : 'center';
+          ctx.textBaseline = (pt.y < cy - 2) ? 'bottom' : (pt.y > cy + 2) ? 'top' : 'middle';
+          ctx.fillText(labels[i], pt.x, pt.y);
+        }
+        // Data polygon
+        ctx.beginPath();
+        for (var i = 0; i < n; i++) {
+          var r = maxR * (vals[i] / 100);
+          var pt = point(i, r);
+          i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(79,195,247,.18)'; ctx.fill();
+        ctx.strokeStyle = PRIMARY; ctx.lineWidth = 2; ctx.stroke();
+        // Dot on each vertex
+        for (var i = 0; i < n; i++) {
+          var r = maxR * (vals[i] / 100);
+          var pt = point(i, r);
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+          var v = vals[i];
+          ctx.fillStyle = v >= 70 ? WARN : v >= 40 ? PRIMARY : SUCCESS;
+          ctx.fill();
+        }
+      },
+
+      // Bar chart — data array, label array (short strings)
+      bar: function (canvas, data, labels, color) {
+        color = color || PRIMARY;
+        // Decide bottom padding: rotate labels if any label is wider than the slot
+        var slotW = canvas.getBoundingClientRect().width / (data.length || 1);
+        var maxLabelLen = labels.reduce(function (m, l) { return Math.max(m, l.length); }, 0);
+        var rotate = maxLabelLen * 6.5 > slotW; // ~6.5px per char at 10px font
+        var s = setup(canvas); var ctx = s.ctx, W = s.W, H = s.H;
+        var p = { t: 14, r: 12, b: rotate ? 58 : 34, l: 38 };
+        var w = W - p.l - p.r, h = H - p.t - p.b;
+        ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+        if (!data.length) { noData(canvas); return; }
+        var max = Math.max.apply(null, data) || 1;
+        var barW = (w / data.length) * 0.65;
+        var gap  = (w / data.length) * 0.35;
+        for (var i = 0; i <= 3; i++) {
+          var y = p.t + h * (1 - i / 3);
+          ctx.strokeStyle = GRID; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(p.l + w, y); ctx.stroke();
+          ctx.fillStyle = MUTED; ctx.font = '10px system-ui';
+          ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillText(Math.round(max * i / 3), p.l - 4, y);
+        }
+        data.forEach(function (v, i) {
+          var x = p.l + (w / data.length) * i + gap / 2;
+          var bh = h * (v / max); var y2 = p.t + h - bh;
+          ctx.fillStyle = v > 0 ? color : GRID;
+          ctx.beginPath();
+          var radius = 2;
+          ctx.moveTo(x + radius, y2);
+          ctx.lineTo(x + barW - radius, y2);
+          ctx.quadraticCurveTo(x + barW, y2, x + barW, y2 + radius);
+          ctx.lineTo(x + barW, y2 + bh);
+          ctx.lineTo(x, y2 + bh);
+          ctx.lineTo(x, y2 + radius);
+          ctx.quadraticCurveTo(x, y2, x + radius, y2);
+          ctx.fill();
+        });
+        ctx.fillStyle = MUTED; ctx.font = '10px system-ui';
+        var step = Math.max(1, Math.ceil(labels.length / 8));
+        if (rotate) {
+          labels.forEach(function (l, i) {
+            if (i % step !== 0) return;
+            var x = p.l + (w / data.length) * i + (w / data.length) / 2;
+            ctx.save();
+            ctx.translate(x, p.t + h + 6);
+            ctx.rotate(-Math.PI / 4);
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(l, 0, 0);
+            ctx.restore();
+          });
+        } else {
+          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          labels.forEach(function (l, i) {
+            if (i % step === 0) {
+              var x = p.l + (w / data.length) * i + (w / data.length) / 2;
+              ctx.fillText(l, x, H - 22);
+            }
+          });
+        }
+      },
+
+      // Line chart — single data array
+      line: function (canvas, data, yLabel, color) {
+        color = color || PRIMARY;
+        var s = setup(canvas); var ctx = s.ctx, W = s.W, H = s.H;
+        var p = { t: 14, r: 16, b: 30, l: 38 };
+        var w = W - p.l - p.r, h = H - p.t - p.b;
+        ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+        if (!data.length) { noData(canvas); return; }
+        var max = Math.max.apply(null, data) * 1.1 || 1;
+        var min = Math.min(0, Math.min.apply(null, data));
+        var range = max - min || 1;
+        for (var i = 0; i <= 3; i++) {
+          var val = min + range * i / 3;
+          var y = p.t + h * (1 - i / 3);
+          ctx.strokeStyle = GRID; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(p.l + w, y); ctx.stroke();
+          ctx.fillStyle = MUTED; ctx.font = '10px system-ui';
+          ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillText(Math.round(val) + '%', p.l - 4, y);
+        }
+        // Gradient fill under line
+        var grad = ctx.createLinearGradient(0, p.t, 0, p.t + h);
+        grad.addColorStop(0, 'rgba(79,195,247,.3)');
+        grad.addColorStop(1, 'rgba(79,195,247,.02)');
+        ctx.beginPath();
+        data.forEach(function (v, i) {
+          var x = p.l + w * (i / Math.max(1, data.length - 1));
+          var y = p.t + h * (1 - (v - min) / range);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.lineTo(p.l + w, p.t + h);
+        ctx.lineTo(p.l, p.t + h);
+        ctx.closePath();
+        ctx.fillStyle = grad; ctx.fill();
+        // Line
+        ctx.beginPath(); ctx.lineJoin = 'round'; ctx.lineWidth = 2; ctx.strokeStyle = color;
+        data.forEach(function (v, i) {
+          var x = p.l + w * (i / Math.max(1, data.length - 1));
+          var y = p.t + h * (1 - (v - min) / range);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        // Dots
+        data.forEach(function (v, i) {
+          var x = p.l + w * (i / Math.max(1, data.length - 1));
+          var y = p.t + h * (1 - (v - min) / range);
+          ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = color; ctx.fill();
+        });
+        if (yLabel) {
+          ctx.save(); ctx.translate(11, p.t + h / 2); ctx.rotate(-Math.PI / 2);
+          ctx.fillStyle = MUTED; ctx.font = '10px system-ui';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(yLabel, 0, 0); ctx.restore();
+        }
+      },
+    };
+  })();
+
+  // ── Home status strip + plan blocks + charts ──────────────────────
+  function _renderHomeStatus() {
+    // Pull drill data from IndexedDB if available (or use cached _lastDrills)
+    var drills = window._mf_drills_cache || [];
+    // Today
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var drillsToday = drills.filter(function (d) { return (d.date || '').slice(0, 10) === todayStr; }).length;
+    // Streak (consecutive days with at least one drill)
+    var daySet = {};
+    drills.forEach(function (d) { if (d.date) daySet[(d.date || '').slice(0, 10)] = true; });
+    var streak = 0;
+    var day = new Date();
+    for (var i = 0; i < 365; i++) {
+      var ds = day.toISOString().slice(0, 10);
+      if (daySet[ds]) { streak++; day.setDate(day.getDate() - 1); }
+      else if (i === 0) { day.setDate(day.getDate() - 1); } // skip today if nothing yet
+      else break;
+    }
+    var total = drills.length;
+    var scores = drills.map(function (d) { return d.score; }).filter(function (v) { return v !== undefined; });
+    var avg = scores.length ? Math.round(scores.reduce(function (a, b) { return a + b; }, 0) / scores.length) : null;
+    // WPM from localStorage
+    var srData = null;
+    try { srData = JSON.parse(localStorage.getItem('mf_speed_v1') || 'null'); } catch (e) {}
+    var wpm = srData && srData.sessions && srData.sessions.length ? srData.sessions[srData.sessions.length - 1].wpm : null;
+
+    var set = function (id, val) { var el = $('#' + id); if (el) el.textContent = val !== null && val !== undefined ? String(val) : '—'; };
+    set('ds-streak', streak > 0 ? streak + (streak === 1 ? ' day' : ' days') : '—');
+    set('ds-today', drillsToday);
+    set('ds-total', total);
+    set('ds-avg', avg !== null ? avg + '%' : '—');
+    set('ds-wpm', wpm ? wpm + ' wpm' : '—');
+  }
+
+  function _renderPlanBlocks(scores) {
+    var planEl = $('#home-plan-blocks');
+    if (!planEl) return;
+    var ranked = rankCgNeedScores(scores);
+    var icons = { A: '📖', B: '🧠', C: '🎯', D: '🔬', E: '✍️', F: '🔗' };
+    var drills_each = [10, 8, 6, 5, 4, 4];
+    planEl.innerHTML = '';
+    ranked.slice(0, 3).forEach(function (entry, idx) {
+      var key = entry[0]; var score = entry[1];
+      var block = document.createElement('div');
+      block.className = 'dash-plan-block' + (idx === 0 ? ' dash-plan-block--primary' : ' dash-plan-block--secondary');
+      block.innerHTML =
+        '<span class="dash-plan-block__icon">' + (icons[key] || '▪') + '</span>' +
+        '<div class="dash-plan-block__info">' +
+          '<div class="dash-plan-block__label">' + CG_LANE_NAMES[key] + '</div>' +
+          '<div class="dash-plan-block__detail">' + needOrdinal(score) + ' percentile' + (idx === 0 ? ' — top priority' : '') + '</div>' +
+        '</div>' +
+        '<span class="dash-plan-block__min">' + drills_each[idx] + ' min</span>';
+      planEl.appendChild(block);
+    });
+  }
+
+  function _renderHomeCharts(scores) {
+    // Radar
+    var radarCanvas = $('#home-radar');
+    if (radarCanvas) {
+      var hasProfile = Object.values(scores).some(function (v) { return v !== 50; });
+      if (hasProfile) {
+        HOME_CHART.radar(radarCanvas, scores);
+        var note = $('#home-radar-note');
+        if (note) note.textContent = 'Outer = higher training need · Inner = current strength';
+      } else {
+        HOME_CHART.radar(radarCanvas, scores);
+        var note = $('#home-radar-note');
+        if (note) note.textContent = 'Save your baseline in Assess to see a real profile.';
+      }
+    }
+
+    var drills = window._mf_drills_cache || [];
+    // Daily bar — last 14 days
+    var dailyCanvas = $('#home-chart-daily');
+    if (dailyCanvas) {
+      var days = 14; var dailyData = []; var dailyLabels = [];
+      for (var d = days - 1; d >= 0; d--) {
+        var dt = new Date(); dt.setDate(dt.getDate() - d);
+        var ds = dt.toISOString().slice(0, 10);
+        var count = drills.filter(function (x) { return (x.date || '').slice(0, 10) === ds; }).length;
+        dailyData.push(count);
+        dailyLabels.push(dt.getMonth() + 1 + '/' + dt.getDate());
+      }
+      HOME_CHART.bar(dailyCanvas, dailyData, dailyLabels);
+    }
+    // Score trend — last 20 drills
+    var trendCanvas = $('#home-chart-trend');
+    if (trendCanvas) {
+      var recent = drills.slice(-20).filter(function (d) { return d.score !== undefined; });
+      var trendData = recent.map(function (d) { return d.score; });
+      HOME_CHART.line(trendCanvas, trendData, 'Score', '#66bb6a');
+    }
+  }
+
+  function _renderProfile(p) {
+    var s = _laneScores(p);
+    var ranked = rankCgNeedScores(s);
+    var priorityKey = ranked[0][0];
+    var secondaryKey = ranked[1][0];
+    var strengthKey = ranked[ranked.length - 1][0];
+
+    // Assessment Lab output
+    var asmntOut = $('#asmnt-output');
+    if (asmntOut) {
+      asmntOut.textContent = 'Primary focus: ' + CG_LANE_NAMES[priorityKey] + ' (' + formatNeedScore(s[priorityKey]) + ' need) · Secondary: ' + CG_LANE_NAMES[secondaryKey] + ' (' + formatNeedScore(s[secondaryKey]) + ') · Current strength: ' + CG_LANE_NAMES[strengthKey] + ' (' + formatNeedScore(s[strengthKey]) + '). Higher need means more training attention.';
+    }
+    // Assessment score grid
+    var scoreMap = { 'score-reading': s.A, 'score-recall': s.B, 'score-focus': s.C,
+                     'score-reasoning': s.D, 'score-expression': s.E, 'score-transfer': s.F };
+    Object.entries(scoreMap).forEach(function (entry) {
+      var el = $('#' + entry[0]);
+      if (el) el.textContent = formatNeedScore(entry[1]);
+    });
+
+    // Home split text (used in action card)
+    var homeSplit = $('#home-split');
+    if (homeSplit) homeSplit.textContent = 'Focus: ' + CG_LANE_NAMES[priorityKey] + ' (' + formatNeedScore(s[priorityKey]) + ') · Strength: ' + CG_LANE_NAMES[strengthKey] + ' (' + formatNeedScore(s[strengthKey]) + ')';
+
+    // Plan blocks
+    _renderPlanBlocks(s);
+
+    // Lane cards — need bars + scores + priority badges
+    var laneScoreMap = { A: s.A, B: s.B, C: s.C, D: s.D, E: s.E, F: s.F };
+    $$('.lane-card').forEach(function (card) {
+      var lane = card.dataset.lane;
+      if (!lane) return;
+      var scoreEl = card.querySelector('.lane-card__score');
+      if (scoreEl) {
+        // Show Glicko-2 rating if the lane has enough games, otherwise fall back to need score
+        if (window.mfGlickoGetDisplay) {
+          var gd = window.mfGlickoGetDisplay(lane);
+          if (!gd.unranked) {
+            scoreEl.textContent = gd.label;
+          } else {
+            scoreEl.textContent = gd.games > 0
+              ? 'Calibrating (' + gd.games + '/' + 3 + ')'
+              : '—';
+          }
+        } else {
+          scoreEl.textContent = laneScoreMap[lane] !== undefined ? formatNeedScore(laneScoreMap[lane]) : '—';
+        }
+      }
+      var barFill = card.querySelector('.lane-card__need-fill');
+      if (barFill) barFill.style.width = (laneScoreMap[lane] || 0) + '%';
+      card.querySelectorAll('.lane-card__badge').forEach(function (badge) { badge.remove(); });
+      card.classList.remove('lane-card--priority', 'lane-card--strength');
+      if (lane === priorityKey) {
+        card.classList.add('lane-card--priority');
+        var badge = document.createElement('span');
+        badge.className = 'lane-card__badge lane-card__priority';
+        badge.textContent = 'Focus now';
+        card.querySelector('.lane-card__top').appendChild(badge);
+      } else if (lane === strengthKey) {
+        card.classList.add('lane-card--strength');
+        var sb = document.createElement('span');
+        sb.className = 'lane-card__badge lane-card__strength';
+        sb.textContent = 'Strength';
+        card.querySelector('.lane-card__top').appendChild(sb);
+      }
+    });
+
+    // Start button label
+    var homeStart = $('#home-start-workout');
+    if (homeStart) {
+      homeStart.dataset.targetLane = priorityKey;
+      homeStart.textContent = 'Start ' + CG_LANE_NAMES[priorityKey] + ' Block';
+    }
+
+    // Charts + status strip
+    _renderHomeStatus();
+    _renderHomeCharts(s);
+  }
+
+  // ── Load saved profile ────────────────────────────────────────────
+  var profile = loadCgProfile();
+
+  if ($('#asmnt-reading')) {
+    $('#asmnt-reading').value  = profile.reading;
+    $('#asmnt-recall').value   = profile.recall;
+    $('#asmnt-focus').value    = profile.focus;
+    $('#asmnt-reasoning').value = profile.reasoning;
+    $('#asmnt-expression').value = profile.expression;
+  }
+
+  // Prefetch drills into cache so charts have data on load
+  dbGetAll().then(function (drills) {
+    window._mf_drills_cache = drills;
+    _renderProfile(profile);
+    refreshStats();
+  }).catch(function () {
+    window._mf_drills_cache = [];
+    _renderProfile(profile);
+    refreshStats();
+  });
+
+  // ── Assessment form ───────────────────────────────────────────────
+  var asmntForm = $('#assessment-form');
+  if (asmntForm) {
+    asmntForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var next = _profileFromInputs();
+      profile = next;
+      localStorage.setItem(CG_PROFILE_KEY, JSON.stringify(next));
+      _renderProfile(next);
+      refreshStats();
+    });
+  }
+  var asmntReset = $('#asmnt-reset');
+  if (asmntReset) {
+    asmntReset.addEventListener('click', function () {
+      localStorage.removeItem(CG_PROFILE_KEY);
+      location.reload();
+    });
+  }
+
+  // ── Lane card expand/collapse ─────────────────────────────────────
+  $$('.lane-card--expandable').forEach(function (card) {
+    card.addEventListener('click', function (e) {
+      // If the click was on a CTA button inside, navigate instead of toggling
+      var cta = e.target.closest('.lane-card__cta');
+      if (cta) {
+        e.stopPropagation();
+        var targetView = cta.dataset.laneView;
+        if (targetView) navigateTo(targetView);
+        return;
+      }
+      var isOpen = card.classList.contains('lane-card--open');
+      // Close all other cards first
+      $$('.lane-card--expandable').forEach(function (other) {
+        if (other !== card) {
+          other.classList.remove('lane-card--open');
+          other.setAttribute('aria-expanded', 'false');
+          var otherDetail = other.querySelector('.lane-card__detail');
+          if (otherDetail) otherDetail.setAttribute('aria-hidden', 'true');
+        }
+      });
+      card.classList.toggle('lane-card--open', !isOpen);
+      card.setAttribute('aria-expanded', String(!isOpen));
+      var detail = card.querySelector('.lane-card__detail');
+      if (detail) detail.setAttribute('aria-hidden', String(isOpen));
+    });
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+  });
+
+  // ── Home CTA ──────────────────────────────────────────────────────
+  var homeStart = $('#home-start-workout');
+  if (homeStart) {
+    homeStart.addEventListener('click', function () {
+      var priority = getCgPriorityData(loadCgProfile());
+      navigateTo(CG_LANE_VIEWS[priority.priorityKey] || 'drill');
+    });
+  }
+  var homeRefresh = $('#home-refresh');
+  if (homeRefresh) {
+    homeRefresh.addEventListener('click', function () {
+      profile = loadCgProfile();
+      dbGetAll().then(function (drills) {
+        window._mf_drills_cache = drills;
+        _renderProfile(profile);
+        refreshStats();
+      });
+    });
+  }
+
+  // Expose home activate hook (called by navigateTo when switching to Home)
+  window.mfHomeActivate = function () {
+    profile = loadCgProfile();
+    dbGetAll().then(function (drills) {
+      window._mf_drills_cache = drills;
+      _renderProfile(profile);
+    });
+  };
+
+  // ── Learn tab switcher ───────────────────────────────────────────
+  (function () {
+    var tabs = document.querySelectorAll('.learn-tab');
+    var panels = { techniques: document.getElementById('ltab-techniques'), skills: document.getElementById('ltab-skills') };
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        var target = tab.dataset.ltab;
+        Object.keys(panels).forEach(function (key) {
+          if (panels[key]) panels[key].style.display = key === target ? '' : 'none';
+        });
+      });
+    });
+    // Skills Guide card expand/collapse
+    document.querySelectorAll('.skills-guide-card__toggle').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var card = btn.closest('.skills-guide-card');
+        var body = card.querySelector('.skills-guide-card__body');
+        var isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        btn.setAttribute('aria-expanded', String(!isOpen));
+        btn.textContent = isOpen ? 'Read more' : 'Collapse';
+      });
+    });
+  })();
+
+  // ── RSVP Trainer ─────────────────────────────────────────────────
+  var rsvpTimer = null;
+  var rsvpIndex = 0;
+  var rsvpWords = [];
+
+  function rsvpStop() { if (rsvpTimer) { clearInterval(rsvpTimer); rsvpTimer = null; } }
+
+  var rsvpStart = $('#rsvp-start');
+  if (rsvpStart) {
+    rsvpStart.addEventListener('click', function () {
+      rsvpStop();
+      rsvpWords = ($('#rsvp-text').value || '').trim().split(/\s+/).filter(Boolean);
+      rsvpIndex = 0;
+      if (!rsvpWords.length) { $('#rsvp-display').textContent = 'Add text first.'; return; }
+      var wpm = Number($('#rsvp-wpm').value || 320);
+      var ms = Math.max(60, Math.round(60000 / wpm));
+      rsvpTimer = setInterval(function () {
+        if (rsvpIndex >= rsvpWords.length) { rsvpStop(); $('#rsvp-display').textContent = 'Complete'; return; }
+        $('#rsvp-display').textContent = rsvpWords[rsvpIndex++];
+      }, ms);
+    });
+  }
+  var rsvpPause = $('#rsvp-pause');
+  if (rsvpPause) { rsvpPause.addEventListener('click', function () { rsvpStop(); $('#rsvp-display').textContent = 'Paused'; }); }
+  var rsvpReset = $('#rsvp-reset');
+  if (rsvpReset) { rsvpReset.addEventListener('click', function () { rsvpStop(); rsvpIndex = 0; $('#rsvp-display').textContent = 'Ready'; }); }
+
+  // ── Focus Timer ───────────────────────────────────────────────────
+  var focusHandle = null;
+
+  function focusFmt(s) {
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function focusStop() { if (focusHandle) { clearInterval(focusHandle); focusHandle = null; } }
+
+  var focusStart = $('#focus-start');
+  if (focusStart) {
+    focusStart.addEventListener('click', function () {
+      focusStop();
+      var left = Number($('#focus-minutes').value || 10) * 60;
+      $('#focus-display').textContent = focusFmt(left);
+      focusHandle = setInterval(function () {
+        left -= 1;
+        $('#focus-display').textContent = focusFmt(Math.max(0, left));
+        if (left <= 0) { focusStop(); $('#focus-display').textContent = 'Complete'; }
+      }, 1000);
+    });
+  }
+  var focusStop$ = $('#focus-stop');
+  if (focusStop$) {
+    focusStop$.addEventListener('click', function () {
+      focusStop();
+      $('#focus-display').textContent = focusFmt(Number($('#focus-minutes').value || 10) * 60);
+    });
+  }
+
+  // ── Recall Deck ───────────────────────────────────────────────────
+  var currentSeq = '3-8-1-9';
+  function genSeq() {
+    var parts = [];
+    for (var i = 0; i < 4; i++) parts.push(String(Math.floor(Math.random() * 9) + 1));
+    currentSeq = parts.join('-');
+    $('#recall-seq').textContent = currentSeq;
+    $('#recall-answer').value = '';
+    $('#recall-feedback').textContent = 'New sequence ready.';
+  }
+  var recallCheck = $('#recall-check');
+  if (recallCheck) {
+    recallCheck.addEventListener('click', function () {
+      var ok = ($('#recall-answer').value || '').trim() === currentSeq;
+      $('#recall-feedback').textContent = ok ? '✓ Correct. Increase difficulty next set.' : '✗ Not yet. Correct: ' + currentSeq;
+    });
+  }
+  var recallNext = $('#recall-next');
+  if (recallNext) { recallNext.addEventListener('click', genSeq); }
+
+})();
