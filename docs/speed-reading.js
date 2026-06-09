@@ -24,6 +24,7 @@ var srStore = (function () {
         indent_mode: false,
         chunk_mode: false,
         peripheral_mode: true,
+        guide_opacity: 18,
       },
     };
   }
@@ -699,6 +700,7 @@ function srShowRsvp() {
   var savedWpm = srStore.getSetting('rsvp_wpm') || 250;
   var savedPhrase = srStore.getSetting('phrase_size') || 3;
   var savedPeripheral = srStore.getSetting('peripheral_mode') !== false;
+  var savedGuideOpacity = srStore.getSetting('guide_opacity');
 
   content.innerHTML =
     '<h3 class="section-title">Guided Reading</h3>' +
@@ -713,9 +715,21 @@ function srShowRsvp() {
           '<option value="3"' + (savedPhrase === 3 ? ' selected' : '') + '>3 words</option>' +
         '</select>' +
       '</div>' +
+      '<label class="field-label">Guide opacity: <span id="sr-rsvp-guide-opacity-val">' + savedGuideOpacity + '%</span>' +
+        '<input type="range" id="sr-rsvp-guide-opacity" class="sr-slider" min="0" max="100" step="5" value="' + savedGuideOpacity + '">' +
+      '</label>' +
       '<label class="toggle-row"><span class="toggle-row__label">Peripheral mode</span>' +
         '<input type="checkbox" id="sr-rsvp-peripheral" class="toggle-input"' + (savedPeripheral ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
     '</div>' +
+    '<details class="sr-guide-roadmap">' +
+      '<summary>Roadmap</summary>' +
+      '<ul class="sr-guide-roadmap-list">' +
+        '<li>Overlay this guide on pasted articles, saved passages, and imported documents without changing the page typography.</li>' +
+        '<li>Fade the guide out automatically over time so the user gradually reads without visible scaffolding.</li>' +
+        '<li>Unify Guided Reading, Free Reader, and comprehension drills around the same plain-text reading surface.</li>' +
+        '<li>Build a browser extension that places the guide on real news sites and study pages in place.</li>' +
+      '</ul>' +
+    '</details>' +
     '<div id="sr-rsvp-picker"></div>';
 
   document.getElementById('sr-rsvp-wpm-slider').addEventListener('input', function () {
@@ -726,6 +740,12 @@ function srShowRsvp() {
 
   document.getElementById('sr-rsvp-phrase').addEventListener('change', function () {
     srStore.setSetting({ phrase_size: parseInt(this.value) });
+  });
+
+  document.getElementById('sr-rsvp-guide-opacity').addEventListener('input', function () {
+    var value = parseInt(this.value);
+    document.getElementById('sr-rsvp-guide-opacity-val').textContent = value + '%';
+    srStore.setSetting({ guide_opacity: value });
   });
 
   document.getElementById('sr-rsvp-peripheral').addEventListener('change', function () {
@@ -740,7 +760,8 @@ function srShowRsvp() {
 
 function srRsvpStart(passage) {
   var wpm = srStore.getSetting('rsvp_wpm') || 250;
-  var phraseSize = srStore.getSetting('phrase_size') || 1;
+  var phraseSize = srStore.getSetting('phrase_size') || 3;
+  var guideOpacity = srStore.getSetting('guide_opacity');
 
   if (_srRsvpEngine) _srRsvpEngine.destroy();
   if (_srRsvpKeyHandler) document.removeEventListener('keydown', _srRsvpKeyHandler);
@@ -775,9 +796,14 @@ function srRsvpStart(passage) {
   var content = document.getElementById('sr-rsvp-content');
   content.innerHTML =
     '<h3 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge" id="sr-rsvp-wpm-badge">' + wpm + ' WPM</span></h3>' +
-    '<p class="sr-guide-instr">Follow the highlight with your eyes. Train your gaze to sweep across the page naturally.</p>' +
+    '<p class="sr-guide-instr">Read this like a normal article. The guide sits under the text and can be faded until you barely need it.</p>' +
     '<div class="sr-progress-bar"><div class="sr-progress-fill" id="sr-rsvp-prog" style="width:0%"></div></div>' +
-    '<div class="sr-guide-text" id="sr-guide-text" aria-live="polite" aria-atomic="false">' + textHtml + '</div>' +
+    '<div class="sr-guide-toolbar">' +
+      '<label class="field-label sr-guide-toolbar__label">Guide opacity: <span id="sr-guide-opacity-val">' + guideOpacity + '%</span>' +
+        '<input type="range" id="sr-guide-opacity-slider" class="sr-slider" min="0" max="100" step="5" value="' + guideOpacity + '">' +
+      '</label>' +
+    '</div>' +
+    '<article class="sr-guide-text" id="sr-guide-text" aria-live="polite" aria-atomic="false">' + textHtml + '</article>' +
     '<div class="sr-rsvp-token-count" id="sr-rsvp-count">0 / ' + total + '</div>' +
     '<div class="sr-rsvp-controls">' +
       '<button class="btn btn-secondary btn-sm" id="sr-rsvp-prev" title="← Prev sentence">←</button>' +
@@ -790,6 +816,20 @@ function srRsvpStart(passage) {
 
   var tokenEls = content.querySelectorAll('.sr-guide-token');
   var lastActiveIdx = -1;
+  var guideEl = document.getElementById('sr-guide-text');
+
+  function applyGuideOpacity(value) {
+    guideEl.style.setProperty('--sr-guide-opacity', String(value / 100));
+    document.getElementById('sr-guide-opacity-val').textContent = value + '%';
+  }
+
+  applyGuideOpacity(guideOpacity);
+
+  document.getElementById('sr-guide-opacity-slider').addEventListener('input', function () {
+    var value = parseInt(this.value);
+    srStore.setSetting({ guide_opacity: value });
+    applyGuideOpacity(value);
+  });
 
   function highlight(idx) {
     if (lastActiveIdx >= 0 && tokenEls[lastActiveIdx]) {
