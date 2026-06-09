@@ -652,7 +652,7 @@ var _srAssessWpm = null;
 function srShowAssess() {
   srShowPanel('sr-assess');
   var content = document.getElementById('sr-assess-content');
-  content.innerHTML = '<h3 class="section-title">Baseline Assessment</h3><p class="sr-instr">Pick a passage, read it at your normal comfortable pace, then click <strong>Done</strong>. A comprehension quiz follows.</p>';
+  content.innerHTML = '<h2 class="section-title">Baseline Assessment</h2><p class="sr-instr">Pick a passage, read it at your normal comfortable pace, then click <strong>Done</strong>. A comprehension quiz follows.</p>';
   srPassagePicker(content.appendChild(document.createElement('div')), function (pid) {
     _srAssessPassage = srPassageById(pid);
     srAssessShowReady();
@@ -663,7 +663,7 @@ function srAssessShowReady() {
   var content = document.getElementById('sr-assess-content');
   var p = _srAssessPassage;
   content.innerHTML =
-    '<h3 class="section-title">' + escapeHtml(p.title) + '</h3>' +
+    '<h2 class="section-title">' + escapeHtml(p.title) + '</h2>' +
     '<p class="sr-instr">Click <strong>Start</strong> when you are ready to begin reading. Click <strong>Done</strong> when you finish.</p>' +
     '<button class="btn btn-primary" id="sr-assess-start-btn">Start Reading</button>' +
     '<div id="sr-assess-reading" style="display:none">' +
@@ -703,7 +703,7 @@ function srShowRsvp() {
   var savedGuideOpacity = srStore.getSetting('guide_opacity');
 
   content.innerHTML =
-    '<h3 class="section-title">Guided Reading</h3>' +
+    '<h2 class="section-title">Guided Reading</h2>' +
     '<div class="sr-rsvp-settings">' +
       '<label class="field-label">WPM: <span id="sr-rsvp-wpm-val">' + savedWpm + '</span>' +
         '<input type="range" id="sr-rsvp-wpm-slider" class="sr-slider" min="60" max="800" step="25" value="' + savedWpm + '">' +
@@ -786,8 +786,8 @@ function srRsvpStart(passage) {
 
   var content = document.getElementById('sr-rsvp-content');
   content.innerHTML =
-    '<h3 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge" id="sr-rsvp-wpm-badge">' + wpm + ' WPM</span></h3>' +
-    '<p class="sr-guide-instr">Read this like a normal article. The guide sits under the text and can be faded until you barely need it.</p>' +
+    '<h2 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge" id="sr-rsvp-wpm-badge">' + wpm + ' WPM</span></h2>' +
+    '<p class="sr-instr">Read this like a normal article. The guide sits under the text and can be faded until you barely need it.</p>' +
     '<div class="sr-progress-bar"><div class="sr-progress-fill" id="sr-rsvp-prog" style="width:0%"></div></div>' +
     '<div class="sr-guide-toolbar">' +
       '<label class="field-label sr-guide-toolbar__label">Guide opacity: <span id="sr-guide-opacity-val">' + guideOpacity + '%</span>' +
@@ -940,7 +940,7 @@ function srShowReader() {
   var wpm        = srStore.getSetting('rsvp_wpm') || 250;
 
   content.innerHTML =
-    '<h3 class="section-title">Free Reader</h3>' +
+    '<h2 class="section-title">Free Reader</h2>' +
     '<div class="sr-reader-settings">' +
       '<label class="toggle-row"><span class="toggle-row__label">Coverage Mask</span>' +
         '<input type="checkbox" id="sr-mask-toggle" class="toggle-input"' + (maskOn ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
@@ -987,15 +987,17 @@ function srReaderStart(passage) {
 
   var content = document.getElementById('sr-reader-content');
   content.innerHTML =
-    '<h3 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge">' + wpm + ' WPM</span></h3>' +
+    '<h2 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge">' + wpm + ' WPM</span></h2>' +
     '<p class="sr-instr">Read along with the pacing guide. Click <strong>Done</strong> when finished.</p>' +
     '<div class="sr-reader-pane' + (indentMode ? ' indent-mode' : '') + '" id="sr-reader-pane">' +
       '<div id="sr-reader-text">' + textHtml + '</div>' +
       (maskOn   ? '<div class="sr-coverage-mask" id="sr-mask" style="height:0%"></div>' : '') +
       (cursorOn ? '<div class="sr-pacing-cursor" id="sr-cursor" style="top:0%"></div>' : '') +
     '</div>' +
-    '<button class="btn btn-secondary" id="sr-reader-start-btn" style="margin-top:1rem">▶ Start Pacing</button>' +
-    '<button class="btn btn-primary" id="sr-reader-done-btn" style="margin-top:1rem;display:none">Done Reading</button>';
+    '<div class="sr-action-row">' +
+      '<button class="btn btn-secondary" id="sr-reader-start-btn">&#9654; Start Pacing</button>' +
+      '<button class="btn btn-primary" id="sr-reader-done-btn" style="display:none">Done Reading</button>' +
+    '</div>';
 
   var started = false;
 
@@ -1059,9 +1061,9 @@ function srShowSchulte() {
   srShowPanel('sr-schulte');
   var content = document.getElementById('sr-schulte-content');
   content.innerHTML =
-    '<h3 class="section-title">Schulte Tables</h3>' +
+    '<h2 class="section-title">Schulte Tables</h2>' +
     '<p class="sr-instr">Fix your gaze on the <span style="color:var(--cup-color-error)">center cell</span>. Find numbers 1 to N using only peripheral vision.</p>' +
-    '<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">' +
+    '<div class="sr-action-row">' +
       '<button class="btn btn-primary" id="sr-sch-5">5 × 5</button>' +
       '<button class="btn btn-secondary" id="sr-sch-7">7 × 7</button>' +
     '</div>' +
@@ -1160,7 +1162,7 @@ function srRenderProgress() {
     '</div>' +
     '<h3 class="section-title" style="margin-top:1.5rem">Technique Mastery</h3>' +
     '<div id="sr-mastery-list"></div>' +
-    '<div style="margin-top:1.5rem;display:flex;gap:.5rem;flex-wrap:wrap">' +
+    '<div class="sr-action-row">' +
       '<button class="btn btn-secondary btn-sm" id="sr-btn-reassess">Re-Assess Baseline</button>' +
     '</div>';
 
@@ -1244,7 +1246,7 @@ function srShowLesson(tid) {
   content.innerHTML =
     '<h2 class="section-title">' + escapeHtml(tech.name) + '</h2>' +
     '<div class="sr-lesson-body">' + tech.detail + '</div>' +
-    '<div style="margin-top:1.5rem;display:flex;gap:.5rem;flex-wrap:wrap">';
+    '<div class="sr-action-row">';
 
   if (tid === 'T6' || tid === 'T3') {
     content.innerHTML += '<button class="btn btn-primary" id="sr-lesson-rsvp">Practice in RSVP →</button>';
@@ -1301,7 +1303,7 @@ function srShowResult(wpm, comp, passageId, mode) {
       '<div class="sr-result-card"><div class="sr-result-val">Gear ' + g.gear + '</div><div class="sr-result-lbl">' + g.name + '</div></div>' +
     '</div>' +
     (isFirst ? '<p class="sr-instr" style="color:var(--cup-color-success)">Baseline saved! Your starting point is ' + wpm + ' WPM at ' + compPct + '% comprehension.</p>' : '') +
-    '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">' +
+    '<div class="sr-action-row">' +
       '<button class="btn btn-primary" id="sr-result-home">Home</button>' +
       '<button class="btn btn-secondary" id="sr-result-again">Another Session</button>' +
       '<button class="btn btn-secondary" id="sr-result-progress">View Progress</button>' +
@@ -1331,7 +1333,7 @@ function srShowFixation() {
   srShowPanel('sr-fixation');
   var content = document.getElementById('sr-fixation-content');
   content.innerHTML =
-    '<h3 class="section-title">3-2-1 Fixation Drill</h3>' +
+    '<h2 class="section-title">3-2-1 Fixation Drill</h2>' +
     '<p class="sr-instr">Land your eyes on the colored guide dots — let peripheral vision handle the rest. Three stops per sentence, then two, then one.</p>' +
     '<div id="sr-fixation-picker"></div>';
   srPassagePicker(document.getElementById('sr-fixation-picker'), function (pid) {
@@ -1366,7 +1368,7 @@ function srFixationRender() {
   dotsHtml += '</div>';
 
   content.innerHTML =
-    '<h3 class="section-title">3-2-1 Fixation Drill</h3>' +
+    '<h2 class="section-title">3-2-1 Fixation Drill</h2>' +
     '<div class="sr-fix-phase-bar">' +
       [1, 2, 3].map(function (p) {
         var active = p === _srFixPhase;
@@ -1380,7 +1382,7 @@ function srFixationRender() {
       dotsHtml +
       '<div class="sr-fix-sentence">' + escapeHtml(sent) + '</div>' +
     '</div>' +
-    '<div style="margin-top:1rem;display:flex;gap:.5rem;align-items:center">' +
+    '<div class="sr-action-row">' +
       '<button class="btn btn-primary" id="sr-fix-next">Next →</button>' +
       '<span class="sr-kbd-hint">or press <kbd>Space</kbd></span>' +
     '</div>';
@@ -1391,9 +1393,9 @@ function srFixationRender() {
     if (_srFixSentIdx >= perPhase * _srFixPhase && _srFixPhase < 3) { _srFixPhase++; }
     if (_srFixSentIdx >= total) {
       content.innerHTML =
-        '<h3 class="section-title">Drill Complete!</h3>' +
+        '<h2 class="section-title">Drill Complete!</h2>' +
         '<p class="sr-instr">You trained 3-stop, 2-stop, and 1-stop fixation patterns. Repeat regularly to build the habit.</p>' +
-        '<div style="display:flex;gap:.5rem;margin-top:1.5rem">' +
+        '<div class="sr-action-row">' +
           '<button class="btn btn-primary" id="sr-fix-again">Practice Again</button>' +
           '<button class="btn btn-secondary sr-back-btn">\u2190 Home</button>' +
         '</div>';
@@ -1429,7 +1431,7 @@ function srShowPeriphDrill() {
   srShowPanel('sr-periph');
   var content = document.getElementById('sr-periph-content');
   content.innerHTML =
-    '<h3 class="section-title">Soft Focus Drill</h3>' +
+    '<h2 class="section-title">Soft Focus Drill</h2>' +
     '<p class="sr-instr">Fix your gaze on the <span style="color:#ef5350;font-weight:700">red center word</span>. Relax your eyes — let peripheral vision absorb the edges. After words fade, answer the quiz from memory.</p>' +
     '<div style="text-align:center;margin-top:2rem">' +
       '<button class="btn btn-primary btn-lg" id="sr-periph-start">Begin (10 Rounds)</button>' +
@@ -1448,7 +1450,7 @@ function srPeriphRound() {
 
   var content = document.getElementById('sr-periph-content');
   content.innerHTML =
-    '<h3 class="section-title">Round ' + _srPeriphRound + ' / 10 <span class="sr-wpm-badge">' + _srPeriphScore + ' correct</span></h3>' +
+    '<h2 class="section-title">Round ' + _srPeriphRound + ' / 10 <span class="sr-wpm-badge">' + _srPeriphScore + ' correct</span></h2>' +
     '<p class="sr-instr">Gaze at the <span style="color:#ef5350;font-weight:700">red word</span>. Do not look away.</p>' +
     '<div class="sr-periph-stage" id="sr-periph-words">' +
       _srPeriphWords.map(function (w, i) {
@@ -1476,7 +1478,7 @@ function srPeriphQuiz() {
 
   var content = document.getElementById('sr-periph-content');
   content.innerHTML =
-    '<h3 class="section-title">Round ' + _srPeriphRound + ' / 10</h3>' +
+    '<h2 class="section-title">Round ' + _srPeriphRound + ' / 10</h2>' +
     '<p class="sr-quiz-question">What was the <strong>' + _srPeriphQuestion + '</strong> word?</p>' +
     '<div class="sr-quiz-options">' +
       options.map(function (opt) {
@@ -1507,12 +1509,12 @@ function srPeriphFinish() {
   var pct = Math.round((_srPeriphScore / 10) * 100);
   var content = document.getElementById('sr-periph-content');
   content.innerHTML =
-    '<h3 class="section-title">Drill Complete!</h3>' +
+    '<h2 class="section-title">Drill Complete!</h2>' +
     '<div class="sr-result-grid">' +
       '<div class="sr-result-card"><div class="sr-result-val">' + _srPeriphScore + '/10</div><div class="sr-result-lbl">Correct</div></div>' +
       '<div class="sr-result-card"><div class="sr-result-val">' + pct + '%</div><div class="sr-result-lbl">Accuracy</div></div>' +
     '</div>' +
-    '<div style="display:flex;gap:.5rem;margin-top:1.5rem">' +
+    '<div class="sr-action-row">' +
       '<button class="btn btn-primary" id="sr-periph-again">Practice Again</button>' +
       '<button class="btn btn-secondary sr-back-btn">\u2190 Home</button>' +
     '</div>';
