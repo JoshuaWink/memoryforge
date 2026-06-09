@@ -721,15 +721,6 @@ function srShowRsvp() {
       '<label class="toggle-row"><span class="toggle-row__label">Peripheral mode</span>' +
         '<input type="checkbox" id="sr-rsvp-peripheral" class="toggle-input"' + (savedPeripheral ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
     '</div>' +
-    '<details class="sr-guide-roadmap">' +
-      '<summary>Roadmap</summary>' +
-      '<ul class="sr-guide-roadmap-list">' +
-        '<li>Overlay this guide on pasted articles, saved passages, and imported documents without changing the page typography.</li>' +
-        '<li>Fade the guide out automatically over time so the user gradually reads without visible scaffolding.</li>' +
-        '<li>Unify Guided Reading, Free Reader, and comprehension drills around the same plain-text reading surface.</li>' +
-        '<li>Build a browser extension that places the guide on real news sites and study pages in place.</li>' +
-      '</ul>' +
-    '</details>' +
     '<div id="sr-rsvp-picker"></div>';
 
   document.getElementById('sr-rsvp-wpm-slider').addEventListener('input', function () {

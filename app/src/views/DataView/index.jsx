@@ -102,6 +102,18 @@ export default function DataView() {
         </div>
       </div>
 
+      <section className="data-roadmap card" aria-labelledby="data-roadmap-title">
+        <div className="data-roadmap__eyebrow">Roadmap</div>
+        <h3 id="data-roadmap-title" className="data-roadmap__title">Reading Guide Roadmap</h3>
+        <p className="data-roadmap__desc">The guide is moving toward a single, reusable reading surface that feels like a normal page and can travel with the user across the app and eventually the web.</p>
+        <ul className="data-roadmap__list">
+          <li>Overlay the guide on pasted articles, saved passages, and imported documents without changing the underlying typography.</li>
+          <li>Fade the guide out automatically during a session so the user gradually reads without visible scaffolding.</li>
+          <li>Unify Guided Reading, Free Reader, and comprehension drills around the same plain-text reading surface.</li>
+          <li>Build a browser extension that places the guide directly on real news sites and study pages.</li>
+        </ul>
+      </section>
+
       {msg && <div className="status-msg" aria-live="polite">{msg}</div>}
     </section>
   );

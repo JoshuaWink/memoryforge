@@ -3260,26 +3260,6 @@ body {
 .sr-guide-token--peripheral.sr-guide-token--done .sr-guide-word--focal {
   color: inherit;
 }
-.sr-guide-roadmap {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--cup-radius-md, 8px);
-  color: var(--cup-color-on-surface, #e0e0e0);
-  margin: 0 0 1rem;
-  padding: .75rem 1rem;
-}
-.sr-guide-roadmap summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.sr-guide-roadmap-list {
-  color: var(--cup-color-secondary, #b0bec5);
-  margin: .75rem 0 0 1.25rem;
-  padding: 0;
-}
-.sr-guide-roadmap-list li + li {
-  margin-top: .45rem;
-}
 .sr-orp-b { color: var(--cup-color-on-surface, #e0e0e0); font-size: 2rem; font-weight: 500; text-align: right; }
 .sr-orp-p { color: #ff6b6b; font-size: 2rem; font-weight: 700; text-align: center; padding: 0 .1em; }
 .sr-orp-a { color: var(--cup-color-on-surface, #e0e0e0); font-size: 2rem; font-weight: 500; }
