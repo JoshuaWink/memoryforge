@@ -699,12 +699,12 @@ function srShowRsvp() {
   var savedPhrase = srStore.getSetting('phrase_size') || 1;
 
   content.innerHTML =
-    '<h3 class="section-title">RSVP Reader</h3>' +
+    '<h3 class="section-title">Guided Reading</h3>' +
     '<div class="sr-rsvp-settings">' +
       '<label class="field-label">WPM: <span id="sr-rsvp-wpm-val">' + savedWpm + '</span>' +
         '<input type="range" id="sr-rsvp-wpm-slider" class="sr-slider" min="60" max="800" step="25" value="' + savedWpm + '">' +
       '</label>' +
-      '<div class="field-group"><label class="field-label" for="sr-rsvp-phrase">Phrase size</label>' +
+      '<div class="field-group"><label class="field-label" for="sr-rsvp-phrase">Highlight size</label>' +
         '<select id="sr-rsvp-phrase" class="field-input field-input-sm">' +
           '<option value="1"' + (savedPhrase === 1 ? ' selected' : '') + '>1 word</option>' +
           '<option value="2"' + (savedPhrase === 2 ? ' selected' : '') + '>2 words</option>' +
@@ -741,16 +741,19 @@ function srRsvpStart(passage) {
     onToken: function () {}, onComplete: function () {}, onProgress: function () {},
   });
   var total = _srRsvpEngine.totalTokens;
+  var tokens = _srRsvpEngine.tokens;
+
+  // Build full-text guided reading view — each token is an individually addressable span
+  var textHtml = tokens.map(function (token, i) {
+    return '<span class="sr-guide-token" data-idx="' + i + '">' + escapeHtml(token) + '</span>';
+  }).join(' ');
 
   var content = document.getElementById('sr-rsvp-content');
   content.innerHTML =
     '<h3 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge" id="sr-rsvp-wpm-badge">' + wpm + ' WPM</span></h3>' +
+    '<p class="sr-guide-instr">Follow the highlight with your eyes. Train your gaze to sweep across the page naturally.</p>' +
     '<div class="sr-progress-bar"><div class="sr-progress-fill" id="sr-rsvp-prog" style="width:0%"></div></div>' +
-    '<div class="sr-rsvp-stage" id="sr-rsvp-stage" aria-live="assertive" aria-atomic="true">' +
-      '<div class="sr-orp-b" id="sr-orp-b"></div>' +
-      '<div class="sr-orp-p" id="sr-orp-p">·</div>' +
-      '<div class="sr-orp-a" id="sr-orp-a"></div>' +
-    '</div>' +
+    '<div class="sr-guide-text" id="sr-guide-text" aria-live="polite" aria-atomic="false">' + textHtml + '</div>' +
     '<div class="sr-rsvp-token-count" id="sr-rsvp-count">0 / ' + total + '</div>' +
     '<div class="sr-rsvp-controls">' +
       '<button class="btn btn-secondary btn-sm" id="sr-rsvp-prev" title="← Prev sentence">←</button>' +
@@ -761,11 +764,26 @@ function srRsvpStart(passage) {
     '</div>' +
     '<p class="sr-kbd-hint">Space=play/pause &nbsp; , / . = ±25 WPM &nbsp; ← = prev sentence &nbsp; R = restart</p>';
 
-  function updateOrp(token) {
-    var pos = srOrpIndex(token);
-    document.getElementById('sr-orp-b').textContent = token.slice(0, pos);
-    document.getElementById('sr-orp-p').textContent = token.slice(pos, pos + 1) || ' ';
-    document.getElementById('sr-orp-a').textContent = token.slice(pos + 1);
+  var tokenEls = content.querySelectorAll('.sr-guide-token');
+  var lastActiveIdx = -1;
+
+  function highlight(idx) {
+    if (lastActiveIdx >= 0 && tokenEls[lastActiveIdx]) {
+      tokenEls[lastActiveIdx].classList.remove('sr-guide-token--active');
+      tokenEls[lastActiveIdx].classList.add('sr-guide-token--done');
+    }
+    if (tokenEls[idx]) {
+      tokenEls[idx].classList.add('sr-guide-token--active');
+      tokenEls[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    lastActiveIdx = idx;
+  }
+
+  function clearHighlightsFrom(fromIdx) {
+    for (var i = fromIdx; i <= lastActiveIdx; i++) {
+      if (tokenEls[i]) tokenEls[i].classList.remove('sr-guide-token--active', 'sr-guide-token--done');
+    }
+    lastActiveIdx = fromIdx - 1;
   }
 
   function updateCount(idx) {
@@ -776,9 +794,12 @@ function srRsvpStart(passage) {
     document.getElementById('sr-rsvp-prog').style.width = (pct * 100) + '%';
   }
 
-  _srRsvpEngine.onToken = function (token, idx) { updateOrp(token); updateCount(idx + 1); };
+  _srRsvpEngine.onToken = function (token, idx) { highlight(idx); updateCount(idx + 1); };
   _srRsvpEngine.onProgress = updateProgress;
   _srRsvpEngine.onComplete = function () {
+    if (lastActiveIdx >= 0 && tokenEls[lastActiveIdx]) {
+      tokenEls[lastActiveIdx].classList.remove('sr-guide-token--active');
+    }
     if (_srRsvpKeyHandler) document.removeEventListener('keydown', _srRsvpKeyHandler);
     srShowPanel('sr-quiz');
     srRenderQuiz(document.getElementById('sr-quiz-content'), passage.questions, function (score) {
@@ -807,12 +828,21 @@ function srRsvpStart(passage) {
   }
 
   btn.addEventListener('click', togglePlay);
-  document.getElementById('sr-rsvp-prev').addEventListener('click', function () { _srRsvpEngine.prevSentence(); });
   document.getElementById('sr-rsvp-slower').addEventListener('click', function () { adjustWpm(-25); });
   document.getElementById('sr-rsvp-faster').addEventListener('click', function () { adjustWpm(+25); });
+  document.getElementById('sr-rsvp-prev').addEventListener('click', function () {
+    _srRsvpEngine.prevSentence();
+    clearHighlightsFrom(_srRsvpEngine.index);
+  });
   document.getElementById('sr-rsvp-restart').addEventListener('click', function () {
+    clearHighlightsFrom(0);
+    document.getElementById('sr-rsvp-prog').style.width = '0%';
+    document.getElementById('sr-rsvp-count').textContent = '0 / ' + total;
     _srRsvpEngine.restart();
     btn.textContent = '⏸ Pause';
+    // Scroll guide text back to top
+    var guide = document.getElementById('sr-guide-text');
+    if (guide) guide.scrollTop = 0;
   });
 
   _srRsvpKeyHandler = function (e) {
@@ -821,8 +851,19 @@ function srRsvpStart(passage) {
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === ',') adjustWpm(-25);
     else if (e.key === '.') adjustWpm(+25);
-    else if (e.key === 'ArrowLeft') _srRsvpEngine.prevSentence();
-    else if (e.key.toLowerCase() === 'r') { _srRsvpEngine.restart(); btn.textContent = '⏸ Pause'; }
+    else if (e.key === 'ArrowLeft') {
+      _srRsvpEngine.prevSentence();
+      clearHighlightsFrom(_srRsvpEngine.index);
+    }
+    else if (e.key.toLowerCase() === 'r') {
+      clearHighlightsFrom(0);
+      document.getElementById('sr-rsvp-prog').style.width = '0%';
+      document.getElementById('sr-rsvp-count').textContent = '0 / ' + total;
+      var guide = document.getElementById('sr-guide-text');
+      if (guide) guide.scrollTop = 0;
+      _srRsvpEngine.restart();
+      btn.textContent = '⏸ Pause';
+    }
   };
   document.addEventListener('keydown', _srRsvpKeyHandler);
 }

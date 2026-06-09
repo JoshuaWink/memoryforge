@@ -3193,6 +3193,41 @@ body {
   min-height: 110px;
   padding: 1rem;
 }
+
+/* ── Guided reading text (replaces ORP stage) ────────────────── */
+.sr-guide-text {
+  background: var(--cup-color-surface-alt, #16213e);
+  border: 1px solid var(--cup-color-border, #2a2a45);
+  border-radius: var(--cup-radius-md, 8px);
+  color: var(--cup-color-on-surface, #e0e0e0);
+  font-size: 1.05rem;
+  line-height: 1.9;
+  margin: .75rem 0;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  scroll-behavior: smooth;
+}
+.sr-guide-instr {
+  color: var(--cup-color-secondary, #b0bec5);
+  font-size: .85rem;
+  margin: .25rem 0 .5rem;
+  text-align: center;
+}
+.sr-guide-token {
+  border-radius: 3px;
+  display: inline;
+  padding: 0 2px;
+  transition: background-color 60ms ease, color 60ms ease;
+}
+.sr-guide-token--active {
+  background: var(--cup-color-primary, #4fc3f7);
+  color: #1a1a2e;
+  font-weight: 600;
+}
+.sr-guide-token--done {
+  color: var(--cup-color-secondary, #b0bec5);
+}
 .sr-orp-b { color: var(--cup-color-on-surface, #e0e0e0); font-size: 2rem; font-weight: 500; text-align: right; }
 .sr-orp-p { color: #ff6b6b; font-size: 2rem; font-weight: 700; text-align: center; padding: 0 .1em; }
 .sr-orp-a { color: var(--cup-color-on-surface, #e0e0e0); font-size: 2rem; font-weight: 500; }
