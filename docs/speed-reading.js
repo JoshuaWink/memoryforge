@@ -580,6 +580,20 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+function srModeShell(titleHtml, instructionHtml, bodyHtml) {
+  return '<div class="sr-mode-shell">' +
+    '<div class="sr-mode-shell__header">' +
+      '<h2 class="section-title">' + titleHtml + '</h2>' +
+      (instructionHtml ? '<p class="sr-instr">' + instructionHtml + '</p>' : '') +
+    '</div>' +
+    bodyHtml +
+  '</div>';
+}
+
+function srModeSurface(innerHtml) {
+  return '<section class="sr-mode-surface">' + innerHtml + '</section>';
+}
+
 // Passage picker (shared by Assess, RSVP, Reader)
 function srPassagePicker(container, onSelect) {
   container.innerHTML =
@@ -627,7 +641,7 @@ function srRenderHome() {
 
   html +=
     '<div class="sr-mode-grid">' +
-      '<button class="sr-mode-card" id="sr-btn-rsvp"><div class="sr-mode-icon">⚡</div><div class="sr-mode-name">RSVP</div><div class="sr-mode-desc">Flash words at speed</div></button>' +
+      '<button class="sr-mode-card" id="sr-btn-rsvp"><div class="sr-mode-icon">⚡</div><div class="sr-mode-name">Guided Reading</div><div class="sr-mode-desc">Follow the guide at your pace</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-reader"><div class="sr-mode-icon">📖</div><div class="sr-mode-name">Reader</div><div class="sr-mode-desc">Pace with mask & cursor</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-schulte"><div class="sr-mode-icon">🎯</div><div class="sr-mode-name">Focus</div><div class="sr-mode-desc">Schulte peripheral vision</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-assess"><div class="sr-mode-icon">📊</div><div class="sr-mode-name">Assess</div><div class="sr-mode-desc">Measure your speed</div></button>' +
@@ -652,8 +666,12 @@ var _srAssessWpm = null;
 function srShowAssess() {
   srShowPanel('sr-assess');
   var content = document.getElementById('sr-assess-content');
-  content.innerHTML = '<h2 class="section-title">Baseline Assessment</h2><p class="sr-instr">Pick a passage, read it at your normal comfortable pace, then click <strong>Done</strong>. A comprehension quiz follows.</p>';
-  srPassagePicker(content.appendChild(document.createElement('div')), function (pid) {
+  content.innerHTML = srModeShell(
+    'Baseline Assessment',
+    'Pick a passage, read it at your normal comfortable pace, then click <strong>Done</strong>. A comprehension quiz follows.',
+    srModeSurface('<div id="sr-assess-picker"></div>')
+  );
+  srPassagePicker(document.getElementById('sr-assess-picker'), function (pid) {
     _srAssessPassage = srPassageById(pid);
     srAssessShowReady();
   });
@@ -662,18 +680,25 @@ function srShowAssess() {
 function srAssessShowReady() {
   var content = document.getElementById('sr-assess-content');
   var p = _srAssessPassage;
-  content.innerHTML =
-    '<h2 class="section-title">' + escapeHtml(p.title) + '</h2>' +
-    '<p class="sr-instr">Click <strong>Start</strong> when you are ready to begin reading. Click <strong>Done</strong> when you finish.</p>' +
-    '<button class="btn btn-primary" id="sr-assess-start-btn">Start Reading</button>' +
-    '<div id="sr-assess-reading" style="display:none">' +
-      '<div class="sr-reader-pane" id="sr-assess-text">' + escapeHtml(p.text) + '</div>' +
-      '<button class="btn btn-primary" id="sr-assess-done-btn" style="margin-top:1rem">Done Reading</button>' +
-    '</div>';
+  content.innerHTML = srModeShell(
+    escapeHtml(p.title),
+    'Click <strong>Start</strong> when you are ready to begin reading. Click <strong>Done</strong> when you finish.',
+    srModeSurface(
+      '<div class="sr-action-row" id="sr-assess-start-row">' +
+        '<button class="btn btn-primary" id="sr-assess-start-btn">Start Reading</button>' +
+      '</div>' +
+      '<div id="sr-assess-reading" style="display:none">' +
+        '<div class="sr-reader-pane" id="sr-assess-text">' + escapeHtml(p.text) + '</div>' +
+        '<div class="sr-action-row">' +
+          '<button class="btn btn-primary" id="sr-assess-done-btn">Done Reading</button>' +
+        '</div>' +
+      '</div>'
+    )
+  );
 
   document.getElementById('sr-assess-start-btn').addEventListener('click', function () {
     _srAssessStart = Date.now();
-    document.getElementById('sr-assess-start-btn').style.display = 'none';
+    document.getElementById('sr-assess-start-row').style.display = 'none';
     document.getElementById('sr-assess-reading').style.display = '';
   });
 
@@ -939,23 +964,27 @@ function srShowReader() {
   var chunkMode  = srStore.getSetting('chunk_mode');
   var wpm        = srStore.getSetting('rsvp_wpm') || 250;
 
-  content.innerHTML =
-    '<h2 class="section-title">Free Reader</h2>' +
-    '<div class="sr-reader-settings">' +
-      '<label class="toggle-row"><span class="toggle-row__label">Coverage Mask</span>' +
-        '<input type="checkbox" id="sr-mask-toggle" class="toggle-input"' + (maskOn ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
-      '<label class="toggle-row"><span class="toggle-row__label">Pacing Cursor</span>' +
-        '<input type="checkbox" id="sr-cursor-toggle" class="toggle-input"' + (cursorOn ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
-      '<label class="toggle-row"><span class="toggle-row__label">Bionic Reading</span>' +
-        '<input type="checkbox" id="sr-bionic-toggle" class="toggle-input"' + (bionic ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
-      '<label class="toggle-row"><span class="toggle-row__label">Margin Fade</span>' +
-        '<input type="checkbox" id="sr-indent-toggle" class="toggle-input"' + (indentMode ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
-      '<label class="toggle-row"><span class="toggle-row__label">Phrase Chunks</span>' +
-        '<input type="checkbox" id="sr-chunk-toggle" class="toggle-input"' + (chunkMode ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
-      '<label class="field-label">Pacing WPM: <span id="sr-reader-wpm-val">' + wpm + '</span>' +
-        '<input type="range" id="sr-reader-wpm" class="sr-slider" min="60" max="800" step="25" value="' + wpm + '"></label>' +
-    '</div>' +
-    '<div id="sr-reader-picker"></div>';
+  content.innerHTML = srModeShell(
+    'Free Reader',
+    'Choose a passage and turn on whichever pacing aids you want for this session.',
+    srModeSurface(
+      '<div class="sr-reader-settings">' +
+        '<label class="toggle-row"><span class="toggle-row__label">Coverage Mask</span>' +
+          '<input type="checkbox" id="sr-mask-toggle" class="toggle-input"' + (maskOn ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '<label class="toggle-row"><span class="toggle-row__label">Pacing Cursor</span>' +
+          '<input type="checkbox" id="sr-cursor-toggle" class="toggle-input"' + (cursorOn ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '<label class="toggle-row"><span class="toggle-row__label">Bionic Reading</span>' +
+          '<input type="checkbox" id="sr-bionic-toggle" class="toggle-input"' + (bionic ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '<label class="toggle-row"><span class="toggle-row__label">Margin Fade</span>' +
+          '<input type="checkbox" id="sr-indent-toggle" class="toggle-input"' + (indentMode ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '<label class="toggle-row"><span class="toggle-row__label">Phrase Chunks</span>' +
+          '<input type="checkbox" id="sr-chunk-toggle" class="toggle-input"' + (chunkMode ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '<label class="field-label">Pacing WPM: <span id="sr-reader-wpm-val">' + wpm + '</span>' +
+          '<input type="range" id="sr-reader-wpm" class="sr-slider" min="60" max="800" step="25" value="' + wpm + '"></label>' +
+      '</div>' +
+      '<div id="sr-reader-picker"></div>'
+    )
+  );
 
   document.getElementById('sr-mask-toggle').addEventListener('change', function () { srStore.setSetting({ mask_on: this.checked }); });
   document.getElementById('sr-cursor-toggle').addEventListener('change', function () { srStore.setSetting({ cursor_on: this.checked }); });
@@ -986,18 +1015,21 @@ function srReaderStart(passage) {
   var textHtml = bionic ? srBionic(passage.text) : (chunkMode ? srChunkText(passage.text) : escapeHtml(passage.text));
 
   var content = document.getElementById('sr-reader-content');
-  content.innerHTML =
-    '<h2 class="section-title">' + escapeHtml(passage.title) + ' <span class="sr-wpm-badge">' + wpm + ' WPM</span></h2>' +
-    '<p class="sr-instr">Read along with the pacing guide. Click <strong>Done</strong> when finished.</p>' +
-    '<div class="sr-reader-pane' + (indentMode ? ' indent-mode' : '') + '" id="sr-reader-pane">' +
-      '<div id="sr-reader-text">' + textHtml + '</div>' +
-      (maskOn   ? '<div class="sr-coverage-mask" id="sr-mask" style="height:0%"></div>' : '') +
-      (cursorOn ? '<div class="sr-pacing-cursor" id="sr-cursor" style="top:0%"></div>' : '') +
-    '</div>' +
-    '<div class="sr-action-row">' +
-      '<button class="btn btn-secondary" id="sr-reader-start-btn">&#9654; Start Pacing</button>' +
-      '<button class="btn btn-primary" id="sr-reader-done-btn" style="display:none">Done Reading</button>' +
-    '</div>';
+  content.innerHTML = srModeShell(
+    escapeHtml(passage.title) + ' <span class="sr-wpm-badge">' + wpm + ' WPM</span>',
+    'Read along with the pacing guide. Click <strong>Done</strong> when finished.',
+    srModeSurface(
+      '<div class="sr-reader-pane' + (indentMode ? ' indent-mode' : '') + '" id="sr-reader-pane">' +
+        '<div id="sr-reader-text">' + textHtml + '</div>' +
+        (maskOn   ? '<div class="sr-coverage-mask" id="sr-mask" style="height:0%"></div>' : '') +
+        (cursorOn ? '<div class="sr-pacing-cursor" id="sr-cursor" style="top:0%"></div>' : '') +
+      '</div>' +
+      '<div class="sr-action-row">' +
+        '<button class="btn btn-secondary" id="sr-reader-start-btn">&#9654; Start Pacing</button>' +
+        '<button class="btn btn-primary" id="sr-reader-done-btn" style="display:none">Done Reading</button>' +
+      '</div>'
+    )
+  );
 
   var started = false;
 
@@ -1060,14 +1092,17 @@ function srShowSchulte() {
   if (_srSchulteTimerInterval) { clearInterval(_srSchulteTimerInterval); _srSchulteTimerInterval = null; }
   srShowPanel('sr-schulte');
   var content = document.getElementById('sr-schulte-content');
-  content.innerHTML =
-    '<h2 class="section-title">Schulte Tables</h2>' +
-    '<p class="sr-instr">Fix your gaze on the <span style="color:var(--cup-color-error)">center cell</span>. Find numbers 1 to N using only peripheral vision.</p>' +
-    '<div class="sr-action-row">' +
-      '<button class="btn btn-primary" id="sr-sch-5">5 × 5</button>' +
-      '<button class="btn btn-secondary" id="sr-sch-7">7 × 7</button>' +
-    '</div>' +
-    '<div id="sr-schulte-game"></div>';
+  content.innerHTML = srModeShell(
+    'Schulte Tables',
+    'Fix your gaze on the <span style="color:var(--cup-color-error)">center cell</span>. Find numbers 1 to N using only peripheral vision.',
+    srModeSurface(
+      '<div class="sr-action-row">' +
+        '<button class="btn btn-primary" id="sr-sch-5">5 × 5</button>' +
+        '<button class="btn btn-secondary" id="sr-sch-7">7 × 7</button>' +
+      '</div>' +
+      '<div id="sr-schulte-game"></div>'
+    )
+  );
 
   document.getElementById('sr-sch-5').addEventListener('click', function () { srSchulteRun(5); });
   document.getElementById('sr-sch-7').addEventListener('click', function () { srSchulteRun(7); });
@@ -1120,7 +1155,9 @@ function srSchulteRun(size) {
       var val = _srSchulteGame.grid[idx++];
       var isCenter = r === center && c === center;
       html += '<button class="sr-schulte-cell' + (isCenter ? ' sr-schulte-center' : '') + '" data-val="' + val + '">' +
-        (isCenter ? '<span class="sr-schulte-center-dot">●</span>' : val) + '</button>';
+        (isCenter
+          ? '<span class="sr-schulte-center-value">' + val + '</span><span class="sr-schulte-center-dot" aria-hidden="true">●</span>'
+          : val) + '</button>';
     }
   }
   html += '</div><div id="sr-schulte-timer" class="sr-schulte-timer">0:00</div>';
