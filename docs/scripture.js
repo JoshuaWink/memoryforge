@@ -536,7 +536,8 @@ var VERSE_STORAGE_KEY = 'mf_scripture_library';
 function loadVerseLibrary() {
   try {
     var raw = localStorage.getItem(VERSE_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { verses: [], passages: [] };
+    var lib = raw ? JSON.parse(raw) : { verses: [], passages: [] };
+    return ensureLibraryCompatibility(lib);
   } catch (e) { return { verses: [], passages: [] }; }
 }
 
@@ -550,14 +551,80 @@ function normalizeRef(ref) {
   return ref.replace(/^\w+/, function(w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); });
 }
 
+function normalizeTranslation(translation) {
+  if (!translation || !String(translation).trim()) return 'KJV';
+  return String(translation).trim().toUpperCase();
+}
+
+function buildVerseKey(ref, translation) {
+  return normalizeRef(ref) + '|' + normalizeTranslation(translation);
+}
+
+function ensureVerseIdentity(verse) {
+  if (!verse) return null;
+  verse.reference = normalizeRef(verse.reference || '');
+  verse.translation = normalizeTranslation(verse.translation);
+  verse.key = buildVerseKey(verse.reference, verse.translation);
+  return verse;
+}
+
+function isVerseKey(identifier) {
+  return typeof identifier === 'string' && identifier.indexOf('|') >= 0;
+}
+
+function getVerseIdentifier(verse) {
+  if (!verse) return '';
+  return ensureVerseIdentity(verse).key;
+}
+
+function findVerseByIdentifier(lib, identifier) {
+  if (!lib || !Array.isArray(lib.verses) || !identifier) return null;
+  if (isVerseKey(identifier)) {
+    return lib.verses.find(function(v) { return getVerseIdentifier(v) === identifier; }) || null;
+  }
+  var ref = normalizeRef(identifier);
+  return lib.verses.find(function(v) { return normalizeRef(v.reference) === ref; }) || null;
+}
+
+function ensureLibraryCompatibility(lib) {
+  if (!lib || typeof lib !== 'object') return { verses: [], passages: [] };
+  if (!Array.isArray(lib.verses)) lib.verses = [];
+  if (!Array.isArray(lib.passages)) lib.passages = [];
+
+  lib.verses.forEach(function(v) { ensureVerseIdentity(v); });
+
+  lib.passages.forEach(function(passage) {
+    if (!Array.isArray(passage.verseKeys)) {
+      passage.verseKeys = [];
+      if (Array.isArray(passage.verseRefs)) {
+        passage.verseRefs.forEach(function(ref) {
+          var match = findVerseByIdentifier(lib, ref);
+          if (match) passage.verseKeys.push(getVerseIdentifier(match));
+        });
+      }
+    }
+    if (!Array.isArray(passage.verseRefs)) {
+      passage.verseRefs = (passage.verseKeys || []).map(function(key) {
+        var match = findVerseByIdentifier(lib, key);
+        return match ? match.reference : key;
+      });
+    }
+  });
+
+  return lib;
+}
+
 function addVerse(lib, ref, text, translation, notes) {
   ref = normalizeRef(ref);
+  translation = normalizeTranslation(translation);
   if (!ref || !text || !text.trim()) return null;
-  if (lib.verses.some(function(v) { return v.reference === ref; })) return null;
+  var key = buildVerseKey(ref, translation);
+  if (lib.verses.some(function(v) { return getVerseIdentifier(v) === key; })) return null;
   var verse = {
+    key: key,
     reference: ref,
     text: text.trim(),
-    translation: translation || 'KJV',
+    translation: translation,
     chunks: chunkVerse(text.trim()),
     card: srCreateCard(ref),
     storyNotes: notes || '',
@@ -567,9 +634,34 @@ function addVerse(lib, ref, text, translation, notes) {
   return verse;
 }
 
-function removeVerse(lib, ref) {
-  ref = normalizeRef(ref);
-  lib.verses = lib.verses.filter(function(v) { return v.reference !== ref; });
+function removeVerse(lib, identifier) {
+  if (!identifier) return;
+  if (isVerseKey(identifier)) {
+    lib.verses = lib.verses.filter(function(v) { return getVerseIdentifier(v) !== identifier; });
+  } else {
+    var ref = normalizeRef(identifier);
+    lib.verses = lib.verses.filter(function(v) { return normalizeRef(v.reference) !== ref; });
+  }
+
+  if (Array.isArray(lib.passages)) {
+    lib.passages.forEach(function(passage) {
+      if (Array.isArray(passage.verseKeys)) {
+        if (isVerseKey(identifier)) {
+          passage.verseKeys = passage.verseKeys.filter(function(k) { return k !== identifier; });
+        } else {
+          var ref = normalizeRef(identifier);
+          passage.verseKeys = passage.verseKeys.filter(function(k) {
+            var v = findVerseByIdentifier(lib, k);
+            return v ? normalizeRef(v.reference) !== ref : true;
+          });
+        }
+      }
+      passage.verseRefs = (passage.verseKeys || []).map(function(k) {
+        var v = findVerseByIdentifier(lib, k);
+        return v ? v.reference : k;
+      });
+    });
+  }
 }
 
 function getDueVerses(lib, now) {
@@ -608,29 +700,31 @@ function renderVerseList() {
   }
   var layerNames = ['New', 'Learning', 'Familiar', 'Confident', 'Mastered', 'Deep'];
   container.innerHTML = filtered.map(function(v) {
+    var verseKey = getVerseIdentifier(v);
+    var verseLabel = v.reference + ' (' + v.translation + ')';
     var layerName = layerNames[v.card.layer] || 'New';
     var dueText = v.card.nextReview <= Date.now() ? 'Due now' : 'Next: ' + new Date(v.card.nextReview).toLocaleDateString();
-    return '<div class="verse-card" data-ref="' + v.reference + '">' +
+    return '<div class="verse-card" data-key="' + escapeHtmlScripture(verseKey) + '">' +
       '<p class="verse-card__ref">' + v.reference + ' <small>(' + v.translation + ')</small></p>' +
       '<p class="verse-card__text">' + v.text + '</p>' +
       '<div class="verse-card__chunks">' + (v.customChunks || v.chunks).map(function(ch) { return '<span class="chunk-preview-pill">' + ch + '</span>'; }).join('') + '</div>' +
       '<div class="verse-card__meta"><span>Layer: ' + layerName + '</span><span>' + dueText + '</span><span>Streak: ' + v.card.streak + '</span>' + (v.customChunks ? '<span class="custom-tag">Custom</span>' : '') + '</div>' +
       '<div class="verse-card__actions">' +
-      '<button class="btn btn-sm btn-secondary" data-action="edit-chunks" data-ref="' + v.reference + '">Edit Chunks</button>' +
-      '<button class="btn btn-sm btn-secondary" data-action="drill-verse" data-ref="' + v.reference + '">Drill</button>' +
-      '<button class="btn btn-sm btn-danger" data-action="remove-verse" data-ref="' + v.reference + '">Remove</button>' +
+      '<button class="btn btn-sm btn-secondary" data-action="edit-chunks" data-key="' + escapeHtmlScripture(verseKey) + '">Edit Chunks</button>' +
+      '<button class="btn btn-sm btn-secondary" data-action="drill-verse" data-key="' + escapeHtmlScripture(verseKey) + '">Drill</button>' +
+      '<button class="btn btn-sm btn-danger" data-action="remove-verse" data-key="' + escapeHtmlScripture(verseKey) + '" data-label="' + escapeHtmlScripture(verseLabel) + '">Remove</button>' +
       '</div></div>';
   }).join('');
 
   container.querySelectorAll('[data-action="edit-chunks"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      openChunkEditorForVerse(btn.dataset.ref);
+      openChunkEditorForVerse(btn.dataset.key);
     });
   });
   container.querySelectorAll('[data-action="remove-verse"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      if (confirm('Remove ' + btn.dataset.ref + '?')) {
-        removeVerse(scriptureLib, btn.dataset.ref);
+      if (confirm('Remove ' + (btn.dataset.label || 'this verse') + '?')) {
+        removeVerse(scriptureLib, btn.dataset.key);
         saveVerseLibrary(scriptureLib);
         renderVerseList();
       }
@@ -640,8 +734,8 @@ function renderVerseList() {
     btn.addEventListener('click', function() {
       switchScriptureTab('drill');
       var picker = $('#drill-verse-picker');
-      if (picker) picker.value = btn.dataset.ref;
-      startScriptureDrill(btn.dataset.ref);
+      if (picker) picker.value = btn.dataset.key;
+      startScriptureDrill(btn.dataset.key);
     });
   });
 }
@@ -651,7 +745,8 @@ function populateDrillPicker() {
   if (!picker) return;
   var opts = '<option value="">Select a verse...</option>';
   scriptureLib.verses.forEach(function(v) {
-    opts += '<option value="' + v.reference + '">' + v.reference + '</option>';
+    var verseKey = getVerseIdentifier(v);
+    opts += '<option value="' + escapeHtmlScripture(verseKey) + '">' + escapeHtmlScripture(v.reference) + ' (' + escapeHtmlScripture(v.translation || 'KJV') + ')</option>';
   });
   picker.innerHTML = opts;
 }
@@ -679,18 +774,19 @@ function handleAddVerse() {
     if (parsed.length > 0) {
       // Bulk-add all parsed verses
       var added = 0;
+      var addedKeys = [];
       var addedRefs = [];
       for (var p = 0; p < parsed.length; p++) {
         var r = addVerse(scriptureLib, parsed[p].reference, parsed[p].text, parsed[p].translation || translation, notes);
-        if (r) { added++; addedRefs.push(r.reference); }
+        if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
       }
       if (added > 0) {
         // Auto-create passage if 2+ consecutive verses
-        if (addedRefs.length >= 2) {
+        if (addedKeys.length >= 2) {
           var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedRefs);
+            var passage = createPassageFromVerses(passageName, addedKeys);
             if (passage) savePassage(passage);
           }
         }
@@ -752,7 +848,7 @@ function showReviewCard() {
   var verse = currentReviewQueue[currentReviewIdx];
   $('#review-status').style.display = 'none';
   $('#review-card').style.display = '';
-  $('#review-ref').textContent = verse.reference;
+  $('#review-ref').textContent = verse.reference + ' (' + (verse.translation || 'KJV') + ')';
   var layerNames = ['New', 'Learning', 'Familiar', 'Confident', 'Mastered', 'Deep'];
   $('#review-layer').textContent = 'Layer: ' + (layerNames[verse.card.layer] || 'New') + ' | Streak: ' + verse.card.streak;
   $('#review-input').value = '';
@@ -773,7 +869,7 @@ function checkReview() {
 
 function rateReview(quality) {
   var verse = currentReviewQueue[currentReviewIdx];
-  var libVerse = scriptureLib.verses.find(function(v) { return v.reference === verse.reference; });
+  var libVerse = findVerseByIdentifier(scriptureLib, getVerseIdentifier(verse));
   if (libVerse) {
     libVerse.card = srReview(libVerse.card, quality);
     saveVerseLibrary(scriptureLib);
@@ -1102,7 +1198,7 @@ function hideAllDrillSubs() {
 }
 
 function drillUpdateSR(ref, quality) {
-  var v = scriptureLib.verses.find(function(x) { return x.reference === ref; });
+  var v = findVerseByIdentifier(scriptureLib, ref);
   if (v) { v.card = srReview(v.card, quality); saveVerseLibrary(scriptureLib); return; }
   // Passage-level SR: ref might be a passage reference
   var p = (scriptureLib.passages || []).find(function(x) { return x.reference === ref; });
@@ -1110,13 +1206,13 @@ function drillUpdateSR(ref, quality) {
 }
 
 function startScriptureDrill(ref) {
-  var verse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  var verse = findVerseByIdentifier(scriptureLib, ref);
   if (!verse) { $('#scripture-drill-area').style.display = 'none'; return; }
   drillCurrentVerse = verse;
   $('#scripture-drill-area').style.display = '';
   var ds = document.getElementById('drill-settings');
   if (ds) ds.removeAttribute('open');
-  $('#sdrill-ref').textContent = verse.reference;
+  $('#sdrill-ref').textContent = verse.reference + ' (' + (verse.translation || 'KJV') + ')';
   $('#drill-nav').style.display = 'none';
   var drillEditBtn = document.getElementById('btn-drill-edit-chunks');
   if (drillEditBtn) drillEditBtn.style.display = '';
@@ -1163,8 +1259,7 @@ function startScriptureDrill(ref) {
 }
 
 function checkScriptureDrill() {
-  var ref = ($('#sdrill-ref') || {}).textContent || '';
-  var verse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  var verse = drillCurrentVerse;
   if (!verse) return;
   var input = ($('#sdrill-input') || {}).value || '';
   var diff = diffWords(verse.text, input);
@@ -1174,7 +1269,7 @@ function checkScriptureDrill() {
   $('#drill-nav').style.display = '';
   var score = scoreDiff(diff);
   var quality = score >= 1.0 ? 5 : score >= 0.8 ? 4 : score >= 0.5 ? 3 : 2;
-  drillUpdateSR(ref, quality);
+  drillUpdateSR(getVerseIdentifier(verse), quality);
 }
 
 // == Mode 1: Self-Check (flashcard) ==
@@ -1249,7 +1344,7 @@ function tapChunkPill(pill) {
     var resultEl = document.getElementById('chunk-order-result');
     resultEl.innerHTML = '<div class="drill-result drill-result--retry">Wrong — expected: <strong>' + escapeHtmlScripture(chunkOrderCorrect[idx]) + '</strong>. Tap the red chip to undo, or reset.</div>';
     document.getElementById('btn-chunk-order-reset').style.display = '';
-    drillUpdateSR(drillCurrentVerse.reference, 2);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 2);
     // Let user tap the wrong chip in selected area to undo it
     selPill.style.cursor = 'pointer';
     selPill.addEventListener('click', function undoWrong() {
@@ -1271,7 +1366,7 @@ function tapChunkPill(pill) {
   if (chunkOrderSelected.length === chunkOrderCorrect.length) {
     var resultEl = document.getElementById('chunk-order-result');
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! All chunks in order.</div>';
-    drillUpdateSR(drillCurrentVerse.reference, 5);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     $('#drill-nav').style.display = '';
   }
 }
@@ -1402,13 +1497,13 @@ function tapFillBlankWord(btn) {
     var scorePct = Math.round((correctCount / totalBlanks) * 100);
     if (scorePct === 100) {
       resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! ' + correctCount + '/' + totalBlanks + ' correct.</div>';
-      drillUpdateSR(drillCurrentVerse.reference, 5);
+      drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     } else if (scorePct >= 70) {
       resultEl.innerHTML = '<div class="drill-result drill-result--good">Good! ' + correctCount + '/' + totalBlanks + ' correct (' + scorePct + '%)</div>';
-      drillUpdateSR(drillCurrentVerse.reference, 4);
+      drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 4);
     } else {
       resultEl.innerHTML = '<div class="drill-result drill-result--retry">' + correctCount + '/' + totalBlanks + ' correct (' + scorePct + '%). Keep practicing!</div>';
-      drillUpdateSR(drillCurrentVerse.reference, 2);
+      drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 2);
     }
     $('#drill-nav').style.display = '';
   }
@@ -1455,7 +1550,7 @@ function renderFlTap() {
   if (flTapCurrentIdx >= flTapWords.length) {
     bankEl.innerHTML = '';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">Perfect! Every word recalled.</div>';
-    drillUpdateSR(drillCurrentVerse.reference, 5);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     $('#drill-nav').style.display = '';
     return;
   }
@@ -1489,7 +1584,7 @@ function tapFlWord(btn) {
     setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
     var resultEl = document.getElementById('fl-tap-result');
     resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
-    drillUpdateSR(drillCurrentVerse.reference, 2);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 2);
   }
 }
 
@@ -1497,9 +1592,9 @@ function tapFlWord(btn) {
 var chunkEditingRef = null; // reference of verse being chunk-edited
 
 function openChunkEditorForVerse(ref) {
-  var verse = scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  var verse = findVerseByIdentifier(scriptureLib, ref);
   if (!verse) return;
-  chunkEditingRef = ref;
+  chunkEditingRef = getVerseIdentifier(verse);
 
   // Show editor as modal overlay so user keeps their scroll position
   var editor = document.getElementById('chunk-editor');
@@ -1545,7 +1640,7 @@ function openChunkEditorForVerse(ref) {
   header.appendChild(cancelBtn);
 
   // Update label
-  editor.querySelector('.chunk-editor__label').textContent = 'Editing chunks for ' + ref;
+  editor.querySelector('.chunk-editor__label').textContent = 'Editing chunks for ' + verse.reference + ' (' + (verse.translation || 'KJV') + ')';
 
 }
 
@@ -1563,7 +1658,7 @@ function chunksToSplitPositions(text, chunks) {
 function saveChunkEditorForVerse() {
   if (!chunkEditingRef) return;
   var savedRef = chunkEditingRef;
-  var verse = scriptureLib.verses.find(function(v) { return v.reference === savedRef; });
+  var verse = findVerseByIdentifier(scriptureLib, savedRef);
   if (!verse) return;
   var result = getChunkEditorResult();
   if (result && result.chunks.length > 0) {
@@ -1576,7 +1671,7 @@ function saveChunkEditorForVerse() {
   hideChunkEditor();
   renderVerseList();
   // Restart the active drill so new chunks take effect immediately
-  if (drillCurrentVerse && drillCurrentVerse.reference === savedRef) {
+  if (drillCurrentVerse && getVerseIdentifier(drillCurrentVerse) === savedRef) {
     startScriptureDrill(savedRef);
   } else if (drillCurrentPassage && scriptureDrillScale !== 'verse') {
     startPassageDrill(drillCurrentPassage.reference);
@@ -1608,7 +1703,8 @@ function handleImportJSON(e) {
         var addedVerses = 0;
         for (var i = 0; i < data.verses.length; i++) {
           var v = data.verses[i];
-          if (!scriptureLib.verses.some(function(x) { return x.reference === v.reference; })) {
+          ensureVerseIdentity(v);
+          if (!scriptureLib.verses.some(function(x) { return getVerseIdentifier(x) === v.key; })) {
             scriptureLib.verses.push(v);
             addedVerses++;
           }
@@ -1651,17 +1747,18 @@ function handleBulkPaste() {
   var parsed = parseBiblePaste(text);
   if (parsed.length === 0) { alert('Could not parse any verses from the pasted text.'); return; }
   var added = 0;
+  var addedKeys = [];
   var addedRefs = [];
   for (var i = 0; i < parsed.length; i++) {
     var r = addVerse(scriptureLib, parsed[i].reference, parsed[i].text, parsed[i].translation || 'KJV', '');
-    if (r) { added++; addedRefs.push(r.reference); }
+    if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
   }
   // Auto-create passage if 2+ consecutive verses imported
-  if (addedRefs.length >= 2) {
+  if (addedKeys.length >= 2) {
     var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
     var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
     if (!existing) {
-      var passage = createPassageFromVerses(passageName, addedRefs);
+      var passage = createPassageFromVerses(passageName, addedKeys);
       if (passage) savePassage(passage);
     }
   }
@@ -1684,9 +1781,10 @@ function handleBulkPaste() {
 
 function createPassageFromVerses(name, refs) {
   var verses = refs.map(function(ref) {
-    return scriptureLib.verses.find(function(v) { return v.reference === ref; });
+    return findVerseByIdentifier(scriptureLib, ref);
   }).filter(Boolean);
   if (verses.length === 0) return null;
+  var verseKeys = verses.map(function(v) { return getVerseIdentifier(v); });
   var verseRefs = verses.map(function(v) { return v.reference; });
   var seams = {};
   for (var i = 0; i < verses.length - 1; i++) {
@@ -1703,6 +1801,7 @@ function createPassageFromVerses(name, refs) {
   }
   return {
     reference: name,
+    verseKeys: verseKeys,
     verseRefs: verseRefs,
     sections: sections,
     seams: seams,
@@ -1726,8 +1825,11 @@ function removePassage(ref) {
 }
 
 function getPassageVerses(passage) {
-  return passage.verseRefs.map(function(ref) {
-    return scriptureLib.verses.find(function(v) { return v.reference === ref; });
+  var ids = Array.isArray(passage.verseKeys) && passage.verseKeys.length > 0
+    ? passage.verseKeys
+    : (passage.verseRefs || []);
+  return ids.map(function(ref) {
+    return findVerseByIdentifier(scriptureLib, ref);
   }).filter(Boolean);
 }
 
@@ -1749,7 +1851,8 @@ function populatePassageCheckboxes() {
     return;
   }
   container.innerHTML = scriptureLib.verses.map(function(v) {
-    return '<label><input type="checkbox" value="' + escapeHtmlScripture(v.reference) + '"> ' + escapeHtmlScripture(v.reference) + '</label>';
+    var verseKey = getVerseIdentifier(v);
+    return '<label><input type="checkbox" value="' + escapeHtmlScripture(verseKey) + '"> ' + escapeHtmlScripture(v.reference) + ' <small>(' + escapeHtmlScripture(v.translation || 'KJV') + ')</small></label>';
   }).join('');
 }
 
@@ -2362,7 +2465,7 @@ function renderSequential(slideDir) {
     promptEl.textContent = '';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks complete! Well done.</div>';
     clearSeqState(seqRef);
-    drillUpdateSR(drillCurrentVerse.reference, 5);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     document.getElementById('drill-nav').style.display = '';
     seqIsActive = false;
     return;
@@ -2412,7 +2515,7 @@ function tapSeqOption(btn) {
       emptySlot.className = 'cbc-slot cbc-slot--filled cbc-slot--correct';
     }
 
-    drillUpdateSR(drillCurrentVerse.reference, 5);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     seqCurrentIdx++;
     saveSeqState();
 
@@ -2426,7 +2529,7 @@ function tapSeqOption(btn) {
     btn.classList.add('chunk-pill--wrong');
     setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
     resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
-    drillUpdateSR(drillCurrentVerse.reference, 2);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 2);
   }
 }
 
@@ -2686,7 +2789,7 @@ function renderCbc(slideDir) {
     promptEl.textContent = '';
     resultEl.innerHTML = '<div class="drill-result drill-result--perfect">All chunks connected! The flow is yours.</div>';
     clearCbcState(cbcRef);
-    drillUpdateSR(drillCurrentVerse.reference, 5);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 5);
     $('#drill-nav').style.display = '';
     return;
   }
@@ -2738,7 +2841,7 @@ function tapCbcOption(btn) {
     btn.classList.add('chunk-pill--wrong');
     setTimeout(function() { btn.classList.remove('chunk-pill--wrong'); }, 400);
     resultEl.innerHTML = '<div class="drill-result drill-result--retry">Not quite \u2014 try again!</div>';
-    drillUpdateSR(drillCurrentVerse.reference, 2);
+    drillUpdateSR(getVerseIdentifier(drillCurrentVerse), 2);
   }
 }
 
@@ -2926,7 +3029,7 @@ function filterPickerOptions(pickerId, query) {
   var drillEditChunksBtn = document.getElementById('btn-drill-edit-chunks');
   if (drillEditChunksBtn) drillEditChunksBtn.addEventListener('click', function() {
     if (drillCurrentVerse && scriptureDrillScale === 'verse') {
-      openChunkEditorForVerse(drillCurrentVerse.reference);
+      openChunkEditorForVerse(getVerseIdentifier(drillCurrentVerse));
     }
   });
 
@@ -2934,7 +3037,7 @@ function filterPickerOptions(pickerId, query) {
   var repeatBtn = $('#btn-sdrill-repeat');
   if (repeatBtn) repeatBtn.addEventListener('click', function() {
     if (scriptureDrillScale === 'verse' && drillCurrentVerse) {
-      startScriptureDrill(drillCurrentVerse.reference);
+      startScriptureDrill(getVerseIdentifier(drillCurrentVerse));
     } else if (scriptureDrillScale !== 'verse' && drillCurrentPassage) {
       startPassageDrill(drillCurrentPassage.reference);
     }
@@ -3000,16 +3103,17 @@ function filterPickerOptions(pickerId, query) {
           return;
         }
         var added = 0;
+        var addedKeys = [];
         var addedRefs = [];
         for (var i = 0; i < verseData.length; i++) {
           var r = addVerse(scriptureLib, verseData[i].reference, verseData[i].text, verseData[i].translation || parsed.translation, '');
-          if (r) { added++; addedRefs.push(r.reference); }
+          if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
         }
-        if (addedRefs.length >= 2) {
+        if (addedKeys.length >= 2) {
           var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedRefs);
+            var passage = createPassageFromVerses(passageName, addedKeys);
             if (passage) savePassage(passage);
           }
         }
@@ -3099,19 +3203,20 @@ function filterPickerOptions(pickerId, query) {
           return;
         }
         var added = 0;
+        var addedKeys = [];
         var addedRefs = [];
         for (var i = 0; i < data.verses.length; i++) {
           var v = data.verses[i];
           var ref = humanBook + ' ' + chapter + ':' + v.verse;
           var r = addVerse(scriptureLib, ref, v.text, translation, '');
-          if (r) { added++; addedRefs.push(r.reference); }
+          if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
         }
         // Auto-create passage for the chapter
-        if (addedRefs.length >= 2) {
+        if (addedKeys.length >= 2) {
           var passageName = humanBook + ' ' + chapter;
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedRefs);
+            var passage = createPassageFromVerses(passageName, addedKeys);
             if (passage) savePassage(passage);
           }
         }
@@ -3194,17 +3299,18 @@ function filterPickerOptions(pickerId, query) {
         .then(function(data) {
           if (data.verses && data.verses.length > 0) {
             var addedRefs = [];
+            var addedKeys = [];
             for (var i = 0; i < data.verses.length; i++) {
               var v = data.verses[i];
               var ref = humanBook + ' ' + ch + ':' + v.verse;
               var r = addVerse(scriptureLib, ref, v.text, translation, '');
-              if (r) { totalAdded++; addedRefs.push(r.reference); }
+              if (r) { totalAdded++; addedKeys.push(r.key); addedRefs.push(r.reference); }
             }
-            if (addedRefs.length >= 2) {
+            if (addedKeys.length >= 2) {
               var passageName = humanBook + ' ' + ch;
               var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
               if (!existing) {
-                var passage = createPassageFromVerses(passageName, addedRefs);
+                var passage = createPassageFromVerses(passageName, addedKeys);
                 if (passage) savePassage(passage);
               }
             }

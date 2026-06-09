@@ -571,6 +571,13 @@ function srOnActivate() {
 }
 window.srOnActivate = srOnActivate;
 
+// Shared HTML escaping utility
+function escapeHtml(s) {
+  var div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
 // Passage picker (shared by Assess, RSVP, Reader)
 function srPassagePicker(container, onSelect) {
   container.innerHTML =
