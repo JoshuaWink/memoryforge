@@ -917,157 +917,82 @@
             <select id="verse-translation" class="field-input">
               <option value="KJV">KJV</option>
               <option value="ESV">ESV</option>
-                <div class="drill-config__header">
-                  <div>
-                    <h2 class="section-title">Start a Training Session</h2>
-                    <p class="section-desc">Guided mode chooses the drill structure for you. Advanced mode exposes every setting and shows which cognitive systems your choices emphasize.</p>
-                  </div>
+              <option value="NASB">NASB</option>
+              <option value="NIV">NIV</option>
+              <option value="NLT">NLT</option>
+              <option value="NKJV">NKJV</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="verse-text">Text</label>
+            <textarea id="verse-text" class="field-input scripture-textarea" rows="3" placeholder="Type or paste the verse text..."></textarea>
+
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="verse-notes">Story Notes (optional)</label>
+            <textarea id="verse-notes" class="field-input" rows="2" placeholder="Your imagery, scenes, memory aids..."></textarea>
+          </div>
+          <button id="btn-add-verse" class="btn btn-primary">Add Verse</button>
+        </div>
+
+        <!-- Import/Export Tools -->
+        <div class="scripture-tools">
+          <details class="import-section">
+            <summary class="btn btn-sm btn-secondary">Import / Export</summary>
+            <div class="import-section__body">
+              <div class="field-group">
+                <label class="field-label" for="bulk-paste-area">Bulk Paste (Bible app format)</label>
+                <textarea id="bulk-paste-area" class="field-input scripture-textarea" rows="4" placeholder="Paste from Bible app — e.g. Romans 1:1 NLT&#10;[1] This letter is from Paul...&#10;&#10;https://bible.com/..."></textarea>
+                <button id="btn-bulk-import" class="btn btn-sm btn-primary">Import Pasted Verses</button>
+              </div>
+              <div class="field-group" style="margin-top:var(--cup-space-sm)">
+                <label class="field-label" for="bible-url-input">Bible.com URL</label>
+                <div style="display:flex;gap:var(--cup-space-xs)">
+                  <input type="url" id="bible-url-input" class="field-input" placeholder="https://bible.com/bible/116/rom.1.1-5.NLT" style="flex:1">
+                  <button id="btn-fetch-bible-url" class="btn btn-sm btn-primary">Fetch</button>
                 </div>
+                <p id="bible-url-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
+              </div>
+              <div class="import-export-row">
+                <button id="btn-export-json" class="btn btn-sm btn-secondary">Export JSON</button>
+                <label class="btn btn-sm btn-secondary import-file-label">
+                  Import JSON
+                  <input type="file" id="import-json-file" accept=".json" hidden>
+                </label>
+              </div>
+            </div>
+          </details>
 
-                <div class="drill-setup-toggle" id="drill-setup-toggle" role="tablist" aria-label="Drill setup mode">
-                  <button type="button" class="drill-setup-toggle__btn active" data-setup-mode="guided" aria-selected="true">Guided</button>
-                  <button type="button" class="drill-setup-toggle__btn" data-setup-mode="advanced" aria-selected="false">Advanced</button>
+          <details class="import-section" style="margin-top:var(--cup-space-sm)">
+            <summary class="btn btn-sm btn-secondary">Import Chapter</summary>
+            <div class="import-section__body">
+              <div class="field-group">
+                <label class="field-label" for="ch-import-book">Book</label>
+                <input type="text" id="ch-import-book" class="field-input" placeholder="e.g. Romans, Genesis, Psalm" autocomplete="off">
+              </div>
+              <div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-xs)">
+                <div class="field-group" style="flex:1">
+                  <label class="field-label" for="ch-import-chapter">Chapter</label>
+                  <input type="number" id="ch-import-chapter" class="field-input" min="1" value="1">
                 </div>
-
-                <div class="guided-drill" id="guided-drill">
-                  <div class="guided-drill__section">
-                    <h3 class="card-title">1. Choose a practice goal</h3>
-                    <p class="section-desc">Pick the outcome you want. MemoryForge will preconfigure the drill steps for you.</p>
-                    <div class="guided-plan-grid" id="guided-plan-grid">
-                      <button type="button" class="guided-plan active" data-guided-plan="number-recall">
-                        <span class="guided-plan__title">Remember Numbers</span>
-                        <span class="guided-plan__desc">See digits, hide them, then type them back from memory.</span>
-                      </button>
-                      <button type="button" class="guided-plan" data-guided-plan="letter-recall">
-                        <span class="guided-plan__title">Remember Letters</span>
-                        <span class="guided-plan__desc">Build short-term recall without number mnemonics.</span>
-                      </button>
-                      <button type="button" class="guided-plan" data-guided-plan="word-recall">
-                        <span class="guided-plan__title">Remember Words</span>
-                        <span class="guided-plan__desc">Practice word-list retention with a simple story chain.</span>
-                      </button>
-                      <button type="button" class="guided-plan" data-guided-plan="passage-recall">
-                        <span class="guided-plan__title">Memorize a Passage</span>
-                        <span class="guided-plan__desc">Paste a verse or paragraph, study it briefly, then reproduce it.</span>
-                      </button>
-                      <button type="button" class="guided-plan" data-guided-plan="number-encode">
-                        <span class="guided-plan__title">Turn Numbers into Words</span>
-                        <span class="guided-plan__desc">Use the Major System to encode digits into a memorable word.</span>
-                      </button>
-                      <button type="button" class="guided-plan" data-guided-plan="number-decode">
-                        <span class="guided-plan__title">Turn Words into Numbers</span>
-                        <span class="guided-plan__desc">Reverse a Major System word back into its original digits.</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="guided-drill__section">
-                    <h3 class="card-title">2. Choose intensity</h3>
-                    <div class="guided-levels" id="guided-levels" role="group" aria-label="Drill intensity">
-                      <button type="button" class="guided-level" data-guided-level="easy">Easy</button>
-                      <button type="button" class="guided-level active" data-guided-level="steady">Steady</button>
-                      <button type="button" class="guided-level" data-guided-level="challenge">Challenge</button>
-                    </div>
-                  </div>
-
-                  <div class="field-group guided-custom-text" id="guided-custom-text-group" style="display:none">
-                    <label class="field-label" for="guided-custom-text">Paste the exact passage you want to memorize</label>
-                    <textarea id="guided-custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text you want this guided drill to use..."></textarea>
-                  </div>
-
-                  <div class="guided-summary card" id="guided-summary">
-                    <div class="guided-summary__eyebrow">This session will</div>
-                    <h3 class="card-title" id="guided-summary-title">Remember Numbers · Steady</h3>
-                    <p class="guided-summary__flow" id="guided-summary-flow"></p>
-                    <div class="guided-chip-row" id="guided-summary-chips"></div>
-                  </div>
-
-                  <button id="btn-start-guided" class="btn btn-primary btn-lg">Start Guided Session</button>
+                <div class="field-group" style="flex:1">
+                  <label class="field-label" for="ch-import-translation">Translation</label>
+                  <select id="ch-import-translation" class="field-input">
+                    <option value="nlt" data-vid="116">NLT</option>
+                    <option value="kjv" data-vid="1">KJV</option>
+                    <option value="esv" data-vid="59">ESV</option>
+                    <option value="niv" data-vid="111">NIV</option>
+                    <option value="nkjv" data-vid="114">NKJV</option>
+                    <option value="nasb" data-vid="100">NASB</option>
+                    <option value="web" data-vid="206">WEB</option>
+                    <option value="amp" data-vid="8">AMP</option>
+                    <option value="msg" data-vid="97">MSG</option>
+                  </select>
                 </div>
-
-                <div class="advanced-drill" id="advanced-drill" style="display:none">
-                  <!-- Saved Configs -->
-                  <div class="config-presets" id="config-presets">
-                    <div class="config-presets__row">
-                      <select id="config-preset-select" class="field-input config-presets__select">
-                        <option value="">Saved Configs...</option>
-                      </select>
-                      <button id="btn-save-config" class="btn btn-secondary config-presets__save" title="Save current config">Save</button>
-                      <button id="btn-delete-config" class="btn config-presets__delete" title="Delete selected config">&times;</button>
-                    </div>
-                  </div>
-
-                  <div class="field-group">
-                    <label class="field-label" for="drill-mode">Drill Mode</label>
-                    <select id="drill-mode" class="field-input">
-                      <option value="recall">Recall (see → remember → type)</option>
-                      <option value="encode">Encode (digits → type the word)</option>
-                      <option value="decode">Decode (word → type the digits)</option>
-                    </select>
-                  </div>
-
-                  <div class="field-group" id="type-group">
-                    <label class="field-label" for="drill-type">Type</label>
-                    <select id="drill-type" class="field-input">
-                      <option value="digits">Digits (0-9)</option>
-                      <option value="letters">Letters (A-Z)</option>
-                      <option value="words">Words</option>
-                      <option value="text">Custom Text</option>
-                    </select>
-                  </div>
-
-                  <div class="field-group" id="length-group">
-                    <label class="field-label" for="drill-length">Length</label>
-                    <input id="drill-length" type="number" class="field-input" value="6" min="1" max="200">
-                  </div>
-
-                  <div class="field-group" id="custom-text-group" style="display: none;">
-                    <label class="field-label" for="custom-text">Paste Text</label>
-                    <textarea id="custom-text" class="field-input field-textarea" rows="4" placeholder="Paste a verse, paragraph, or any text to memorize..."></textarea>
-                  </div>
-
-                  <div class="field-group" id="technique-group">
-                    <label class="field-label" for="drill-technique">Technique</label>
-                    <select id="drill-technique" class="field-input">
-                      <option value="none">None (raw recall)</option>
-                      <option value="chunking">Chunking</option>
-                      <option value="number-shape">Number-Shape</option>
-                      <option value="number-rhyme">Number-Rhyme</option>
-                      <option value="major">Major System</option>
-                      <option value="linking">Linking / Story</option>
-                    </select>
-                  </div>
-
-                  <div class="field-group" id="chunk-group" style="display: none;">
-                    <label class="field-label" for="chunk-size">Chunk Size</label>
-                    <select id="chunk-size" class="field-input">
-                      <option value="2">Pairs (2)</option>
-                      <option value="3" selected>Triples (3)</option>
-                      <option value="4">Quads (4)</option>
-                    </select>
-                  </div>
-
-                  <div class="field-group" id="exposure-group">
-                    <label class="field-label" for="exposure-time">Exposure (seconds)</label>
-                    <input id="exposure-time" type="number" class="field-input" value="5" min="0" max="120">
-                    <div class="field-hint">Set to 0 for unlimited (tap "I've got it")</div>
-                  </div>
-
-                  <div class="field-group">
-                    <label class="field-label" for="recall-delay">Recall Delay (seconds)</label>
-                    <input id="recall-delay" type="number" class="field-input" value="0" min="0" max="60">
-                    <div class="field-hint">Forces you to hold info in memory before typing. Use as encoding time.</div>
-                  </div>
-
-                  <div class="drill-training card" id="drill-training-summary">
-                    <div class="guided-summary__eyebrow">Training signal</div>
-                    <h3 class="card-title" id="drill-training-title">Working Memory first</h3>
-                    <p class="guided-summary__flow" id="drill-training-copy"></p>
-                    <div class="guided-chip-row" id="drill-training-chips"></div>
-                  </div>
-
-                  <button id="btn-start" class="btn btn-primary btn-lg">Start Custom Drill</button>
-                </div>
+              </div>
+              <div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-sm)">
+                <button id="btn-ch-import" class="btn btn-sm btn-primary" style="flex:1">Import Chapter</button>
                 <button id="btn-book-import" class="btn btn-sm btn-secondary" style="flex:1">Import Book</button>
               </div>
               <p id="ch-import-status" style="font-size:var(--cup-font-size-sm);color:var(--cup-color-text-muted);margin-top:var(--cup-space-xs)"></p>
