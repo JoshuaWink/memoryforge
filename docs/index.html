@@ -16,6 +16,7 @@
       <button class="nav-btn active" data-view="drill">Drill</button>
       <button class="nav-btn" data-view="home">Home</button>
       <button class="nav-btn" data-view="speed-reading">Speed</button>
+      <button class="nav-btn" data-view="music">Music</button>
       <button class="nav-btn" data-view="learn">Learn</button>
       <button class="nav-btn" data-view="stats">Stats</button>
       <button class="nav-btn" data-view="assessment">Assess</button>
@@ -289,7 +290,6 @@
       <div id="sr-assess"        class="sr-panel" style="display:none"><div id="sr-assess-content"></div></div>
       <div id="sr-rsvp"          class="sr-panel" style="display:none"><div id="sr-rsvp-content"></div></div>
       <div id="sr-reader"        class="sr-panel" style="display:none"><div id="sr-reader-content"></div></div>
-      <div id="sr-music"         class="sr-panel" style="display:none"><div id="sr-music-content"></div></div>
       <div id="sr-schulte"       class="sr-panel" style="display:none"><div id="sr-schulte-content"></div></div>
       <div id="sr-progress"      class="sr-panel" style="display:none"><div id="sr-progress-content"></div></div>
       <div id="sr-lesson-list"   class="sr-panel" style="display:none"><div id="sr-lesson-list-content"></div></div>
@@ -298,6 +298,11 @@
       <div id="sr-result"        class="sr-panel" style="display:none"><div id="sr-result-content"></div></div>
       <div id="sr-fixation"      class="sr-panel" style="display:none"><div id="sr-fixation-content"></div></div>
       <div id="sr-periph"        class="sr-panel" style="display:none"><div id="sr-periph-content"></div></div>
+    </section>
+
+    <!-- ═══ MUSIC TRAINING VIEW ═══ -->
+    <section id="view-music" class="view">
+      <div id="music-root"></div>
     </section>
 
     <!-- ═══ TOOLS VIEW ═══ -->
@@ -1397,6 +1402,7 @@
   <script src="app.js"></script>
   <script src="scripture.js"></script>
   <script src="speed-reading.js"></script>
+  <script src="music-training.js"></script>
   <!-- Chunk Editor modal — lives at body level so position:fixed works regardless of parent visibility -->
   <div id="chunk-editor" class="chunk-editor" style="display:none;">
     <div class="chunk-editor__header">

@@ -781,6 +781,9 @@ function navigateTo(view, { pushState = true } = {}) {
   if (view === 'speed-reading' && typeof window.srOnActivate === 'function') {
     window.srOnActivate();
   }
+  if (view === 'music' && typeof window.mfMusicActivate === 'function') {
+    window.mfMusicActivate();
+  }
   if (view === 'home' && typeof window.mfHomeActivate === 'function') {
     window.mfHomeActivate();
   }

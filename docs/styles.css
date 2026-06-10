@@ -3899,40 +3899,80 @@ body {
   margin: var(--cup-space-md) 0 var(--cup-space-xs);
 }
 
-/* ═══ Speed Reading — Music Notes Drill ═══ */
-.sr-note-channel-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--cup-space-md);
+/* ═══ Music Training (standalone tab) ═══ */
+.music-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--cup-space-lg);
 }
 
-.sr-note-channel-card {
+.music-shell {
+  display: grid;
+  gap: var(--cup-space-lg);
+}
+
+.music-shell--narrow {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.music-header {
+  display: grid;
+  gap: var(--cup-space-sm);
+}
+
+.music-card {
   background: var(--cup-color-surface-alt);
+  border: 1px solid var(--cup-color-border);
+  border-radius: var(--cup-radius-lg);
+  padding: var(--cup-space-lg);
+}
+
+.music-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--cup-space-sm);
+}
+
+.music-stat {
+  background: var(--cup-color-surface);
   border: 1px solid var(--cup-color-border);
   border-radius: var(--cup-radius-md);
   padding: var(--cup-space-md);
-}
-
-.sr-note-channel-card h3 {
-  margin: 0 0 var(--cup-space-xs);
-  font-size: var(--cup-font-size-md);
-}
-
-.sr-note-channel-meta {
-  font-size: var(--cup-font-size-sm);
-  color: var(--cup-color-text-muted);
-  margin-bottom: 2px;
-}
-
-.sr-note-staff-wrap,
-.sr-note-audio-wrap {
   text-align: center;
 }
 
-.sr-note-staff {
+.music-stat__val {
+  display: block;
+  font-size: var(--cup-font-size-lg);
+  font-weight: var(--cup-font-weight-bold);
+  color: var(--cup-color-primary);
+}
+
+.music-stat__lbl {
+  display: block;
+  margin-top: var(--cup-space-xs);
+  color: var(--cup-color-text-muted);
+  font-size: var(--cup-font-size-sm);
+}
+
+.music-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--cup-space-sm);
+}
+
+.music-session-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cup-space-sm);
+}
+
+.music-staff {
   position: relative;
-  width: 100%;
   max-width: 360px;
+  width: 100%;
   height: 180px;
   margin: 0 auto;
   background: var(--cup-color-surface);
@@ -3940,7 +3980,7 @@ body {
   border-radius: var(--cup-radius-md);
 }
 
-.sr-note-line {
+.music-line {
   position: absolute;
   left: var(--cup-space-md);
   right: var(--cup-space-md);
@@ -3949,39 +3989,48 @@ body {
   opacity: 0.6;
 }
 
-.sr-note-line:nth-child(1) { top: 30%; }
-.sr-note-line:nth-child(2) { top: 40%; }
-.sr-note-line:nth-child(3) { top: 50%; }
-.sr-note-line:nth-child(4) { top: 60%; }
-.sr-note-line:nth-child(5) { top: 70%; }
+.music-line:nth-child(1) { top: 30%; }
+.music-line:nth-child(2) { top: 40%; }
+.music-line:nth-child(3) { top: 50%; }
+.music-line:nth-child(4) { top: 60%; }
+.music-line:nth-child(5) { top: 70%; }
 
-.sr-note-dot {
+.music-dot {
   position: absolute;
   left: 50%;
-  width: 20px;
+  width: 22px;
   height: 14px;
   border-radius: var(--cup-radius-full);
   background: var(--cup-color-primary);
   transform: translate(-50%, -50%);
-  box-shadow: var(--cup-shadow-md);
 }
 
-.sr-note-answer-grid {
+.music-answer-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--cup-space-sm);
 }
 
-.sr-note-answer {
+.music-answer {
   min-height: var(--cup-touch-min);
   font-weight: var(--cup-font-weight-bold);
 }
 
-.sr-note-feedback {
+.music-feedback {
   min-height: 1.5rem;
-  margin-top: var(--cup-space-md);
-  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
 }
 
-.sr-note-feedback--ok { color: var(--cup-color-success); }
-.sr-note-feedback--bad { color: var(--cup-color-error); }
+.music-feedback--ok {
+  color: var(--cup-color-success);
+}
+
+.music-feedback--bad {
+  color: var(--cup-color-error);
+}
+
+@media (max-width: 40rem) {
+  .music-answer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
