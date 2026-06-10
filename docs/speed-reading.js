@@ -13,6 +13,7 @@ var srStore = (function () {
       baseline_comp: null,
       sessions: [],           // {date, wpm, comp, effective_wpm, mode, technique, passage_id}
       schulte_history: [],    // {date, elapsed, errors, size}
+      note_attempts: [],      // {date, mode, note, guess, correct, latency_ms}
       mastery: {},            // {T1: 0–1, ...}
       settings: {
         rsvp_wpm: 250,
@@ -67,6 +68,19 @@ var srStore = (function () {
         schulte_history: _s.schulte_history.concat([{ date: Date.now(), elapsed: o.elapsed, errors: o.errors, size: o.size }]),
       });
       persist(_s);
+    },
+    recordNoteAttempt: function (o) {
+      var item = {
+        date: Date.now(),
+        mode: o.mode,
+        note: o.note,
+        guess: o.guess,
+        correct: !!o.correct,
+        latency_ms: Math.max(0, Math.round(o.latency_ms || 0)),
+      };
+      _s = Object.assign({}, _s, { note_attempts: _s.note_attempts.concat([item]).slice(-1000) });
+      persist(_s);
+      return item;
     },
     updateMastery: function (id, o) {
       var cur = _s.mastery[id] || 0;
@@ -643,6 +657,7 @@ function srRenderHome() {
     '<div class="sr-mode-grid">' +
       '<button class="sr-mode-card" id="sr-btn-rsvp"><div class="sr-mode-icon">⚡</div><div class="sr-mode-name">Guided Reading</div><div class="sr-mode-desc">Follow the guide at your pace</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-reader"><div class="sr-mode-icon">📖</div><div class="sr-mode-name">Reader</div><div class="sr-mode-desc">Pace with mask & cursor</div></button>' +
+      '<button class="sr-mode-card" id="sr-btn-music"><div class="sr-mode-icon">🎵</div><div class="sr-mode-name">Music Notes</div><div class="sr-mode-desc">Hear or see notes, then name them</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-schulte"><div class="sr-mode-icon">🎯</div><div class="sr-mode-name">Focus</div><div class="sr-mode-desc">Schulte peripheral vision</div></button>' +
       '<button class="sr-mode-card" id="sr-btn-assess"><div class="sr-mode-icon">📊</div><div class="sr-mode-name">Assess</div><div class="sr-mode-desc">Measure your speed</div></button>' +
     '</div>';
@@ -654,6 +669,7 @@ function srRenderHome() {
 
   document.getElementById('sr-btn-rsvp').addEventListener('click', function () { srShowRsvp(); });
   document.getElementById('sr-btn-reader').addEventListener('click', function () { srShowReader(); });
+  document.getElementById('sr-btn-music').addEventListener('click', function () { srShowMusic(); });
   document.getElementById('sr-btn-schulte').addEventListener('click', function () { srShowSchulte(); });
   document.getElementById('sr-btn-assess').addEventListener('click', function () { srShowAssess(); });
 }
@@ -1181,6 +1197,197 @@ function srSchulteBest(size) {
   var hist = srStore.get().schulte_history.filter(function (h) { return h.size === size; });
   if (!hist.length) return null;
   return Math.min.apply(null, hist.map(function (h) { return h.elapsed; }));
+}
+
+// ── Music Notes Flow ─────────────────────────────────────────────────────────
+var _srMusicAudioCtx = null;
+var SR_MUSIC_NOTES = [
+  { name: 'C', full: 'C4', freq: 261.63, staffTop: 66 },
+  { name: 'D', full: 'D4', freq: 293.66, staffTop: 58 },
+  { name: 'E', full: 'E4', freq: 329.63, staffTop: 50 },
+  { name: 'F', full: 'F4', freq: 349.23, staffTop: 42 },
+  { name: 'G', full: 'G4', freq: 392.0,  staffTop: 34 },
+];
+
+function srMusicEnsureAudioCtx() {
+  if (_srMusicAudioCtx) return _srMusicAudioCtx;
+  var Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  _srMusicAudioCtx = new Ctx();
+  return _srMusicAudioCtx;
+}
+
+function srMusicPlayTone(freq, durationMs) {
+  var ctx = srMusicEnsureAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  var len = durationMs || 420;
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + len / 1000);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + len / 1000 + 0.02);
+}
+
+function srMusicStats() {
+  var attempts = srStore.get().note_attempts || [];
+  function byMode(mode) {
+    var rows = attempts.filter(function (a) { return a.mode === mode; });
+    if (!rows.length) return { total: 0, acc: 0, ms: 0 };
+    var correct = rows.filter(function (a) { return a.correct; }).length;
+    var mean = Math.round(rows.reduce(function (s, r) { return s + r.latency_ms; }, 0) / rows.length);
+    return { total: rows.length, acc: Math.round((correct / rows.length) * 100), ms: mean };
+  }
+  var all = byMode('visual');
+  var aud = byMode('audio');
+  var total = all.total + aud.total;
+  var correct = Math.round(((all.total * all.acc) + (aud.total * aud.acc)) / Math.max(1, total));
+  var mean = total ? Math.round(((all.total * all.ms) + (aud.total * aud.ms)) / total) : 0;
+  return {
+    total: total,
+    acc: correct,
+    ms: mean,
+    visual: all,
+    audio: aud,
+  };
+}
+
+function srShowMusic() {
+  srShowPanel('sr-music');
+  var stats = srMusicStats();
+  var content = document.getElementById('sr-music-content');
+  content.innerHTML = srModeShell(
+    'Music Notes',
+    'Train note recognition as memory primitives. Run <strong>Visual</strong> (see note → name it) and <strong>Ear</strong> (hear note → name it) drills.',
+    srModeSurface(
+      '<div class="sr-stats-grid" style="margin-bottom:var(--cup-space-md)">' +
+        '<div class="sr-stat-card"><div class="sr-stat-val">' + stats.total + '</div><div class="sr-stat-lbl">Attempts</div></div>' +
+        '<div class="sr-stat-card"><div class="sr-stat-val">' + stats.acc + '%</div><div class="sr-stat-lbl">Accuracy</div></div>' +
+        '<div class="sr-stat-card"><div class="sr-stat-val">' + (stats.ms ? stats.ms + 'ms' : '–') + '</div><div class="sr-stat-lbl">Mean Latency</div></div>' +
+      '</div>' +
+      '<div class="sr-action-row" style="margin-bottom:var(--cup-space-md)">' +
+        '<button class="btn btn-primary" id="sr-music-visual">Start Visual Drill</button>' +
+        '<button class="btn btn-secondary" id="sr-music-audio">Start Ear Drill</button>' +
+      '</div>' +
+      '<div class="sr-note-channel-grid">' +
+        '<div class="sr-note-channel-card"><h3>Visual</h3><div class="sr-note-channel-meta">Accuracy: <strong>' + stats.visual.acc + '%</strong></div><div class="sr-note-channel-meta">Mean latency: <strong>' + (stats.visual.ms ? stats.visual.ms + 'ms' : '–') + '</strong></div></div>' +
+        '<div class="sr-note-channel-card"><h3>Ear</h3><div class="sr-note-channel-meta">Accuracy: <strong>' + stats.audio.acc + '%</strong></div><div class="sr-note-channel-meta">Mean latency: <strong>' + (stats.audio.ms ? stats.audio.ms + 'ms' : '–') + '</strong></div></div>' +
+      '</div>'
+    )
+  );
+
+  document.getElementById('sr-music-visual').addEventListener('click', function () { srMusicRunSession('visual'); });
+  document.getElementById('sr-music-audio').addEventListener('click', function () { srMusicRunSession('audio'); });
+}
+
+function srMusicRunSession(mode) {
+  var state = { mode: mode, idx: 0, total: 10, correct: 0, prompt: null, shownAt: 0, locked: false };
+  srMusicRenderPrompt(state);
+}
+
+function srMusicPick() {
+  return SR_MUSIC_NOTES[Math.floor(Math.random() * SR_MUSIC_NOTES.length)];
+}
+
+function srMusicRenderPrompt(state) {
+  if (state.idx >= state.total) return srMusicRenderComplete(state);
+  state.prompt = srMusicPick();
+  state.locked = false;
+
+  var content = document.getElementById('sr-music-content');
+  var answers = SR_MUSIC_NOTES.map(function (n) {
+    return '<button class="btn btn-ghost sr-note-answer" data-note="' + n.name + '">' + n.name + '</button>';
+  }).join('');
+
+  var promptHtml = state.mode === 'visual'
+    ? '<div class="sr-note-staff-wrap">' +
+        '<div class="sr-note-staff" role="img" aria-label="Guess this note on staff">' +
+          '<div class="sr-note-line"></div><div class="sr-note-line"></div><div class="sr-note-line"></div><div class="sr-note-line"></div><div class="sr-note-line"></div>' +
+          '<div class="sr-note-dot" style="top:' + state.prompt.staffTop + '%"></div>' +
+        '</div>' +
+        '<p class="sr-instr" style="margin-top:var(--cup-space-sm)">Name this note (C D E F or G)</p>' +
+      '</div>'
+    : '<div class="sr-note-audio-wrap">' +
+        '<p class="sr-instr">Listen, then choose the note name.</p>' +
+        '<button class="btn btn-secondary" id="sr-note-replay">🔊 Replay Note</button>' +
+      '</div>';
+
+  content.innerHTML = srModeShell(
+    state.mode === 'visual' ? 'Visual Note Drill' : 'Ear Note Drill',
+    'Prompt ' + (state.idx + 1) + ' of ' + state.total + '.',
+    srModeSurface(
+      promptHtml +
+      '<div class="sr-note-answer-grid" style="margin-top:var(--cup-space-md)">' + answers + '</div>' +
+      '<div id="sr-note-feedback" class="sr-note-feedback" aria-live="polite"></div>' +
+      '<div class="sr-action-row"><button class="btn btn-ghost sr-back-btn">← Back</button></div>'
+    )
+  );
+
+  if (state.mode === 'audio') srMusicPlayTone(state.prompt.freq);
+  state.shownAt = performance.now();
+
+  var replayBtn = document.getElementById('sr-note-replay');
+  if (replayBtn) replayBtn.addEventListener('click', function () { srMusicPlayTone(state.prompt.freq); });
+
+  document.querySelectorAll('.sr-note-answer').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (state.locked) return;
+      state.locked = true;
+      var guess = btn.dataset.note;
+      var ms = performance.now() - state.shownAt;
+      var ok = guess === state.prompt.name;
+      if (ok) state.correct += 1;
+      srStore.recordNoteAttempt({ mode: state.mode, note: state.prompt.name, guess: guess, correct: ok, latency_ms: ms });
+
+      var fb = document.getElementById('sr-note-feedback');
+      if (ok) {
+        fb.className = 'sr-note-feedback sr-note-feedback--ok';
+        fb.textContent = 'Correct — ' + state.prompt.full + ' (' + Math.round(ms) + 'ms)';
+        srMusicPlayTone(state.prompt.freq, 300);
+      } else {
+        fb.className = 'sr-note-feedback sr-note-feedback--bad';
+        fb.textContent = 'Not quite. You picked ' + guess + '; correct was ' + state.prompt.name + ' (' + state.prompt.full + ').';
+        if (state.mode === 'audio') {
+          var guessed = SR_MUSIC_NOTES.find(function (n) { return n.name === guess; });
+          if (guessed) {
+            srMusicPlayTone(guessed.freq, 240);
+            setTimeout(function () { srMusicPlayTone(state.prompt.freq, 320); }, 320);
+          }
+        }
+      }
+
+      state.idx += 1;
+      setTimeout(function () { srMusicRenderPrompt(state); }, 900);
+    });
+  });
+}
+
+function srMusicRenderComplete(state) {
+  var content = document.getElementById('sr-music-content');
+  var pct = Math.round((state.correct / state.total) * 100);
+  content.innerHTML = srModeShell(
+    'Session Complete',
+    (state.mode === 'visual' ? 'Visual' : 'Ear') + ' drill complete.',
+    srModeSurface(
+      '<div class="sr-stats-grid" style="margin-bottom:var(--cup-space-md)">' +
+        '<div class="sr-stat-card"><div class="sr-stat-val">' + state.correct + '/' + state.total + '</div><div class="sr-stat-lbl">Correct</div></div>' +
+        '<div class="sr-stat-card"><div class="sr-stat-val">' + pct + '%</div><div class="sr-stat-lbl">Accuracy</div></div>' +
+      '</div>' +
+      '<div class="sr-action-row">' +
+        '<button class="btn btn-primary" id="sr-note-again">Run Again</button>' +
+        '<button class="btn btn-secondary" id="sr-note-home">Back to Music</button>' +
+      '</div>'
+    )
+  );
+
+  document.getElementById('sr-note-again').addEventListener('click', function () { srMusicRunSession(state.mode); });
+  document.getElementById('sr-note-home').addEventListener('click', function () { srShowMusic(); });
 }
 
 // ── Progress Panel ────────────────────────────────────────────────────────────
