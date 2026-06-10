@@ -17,6 +17,45 @@
   var SESSION_TOTAL = 10;
   var _audioCtx = null;
 
+  // Rich per-note data for the Explorer view
+  var EXPLORE_DATA = [
+    {
+      name: 'C', full: 'C4', freq: 261.63, staffTop: 66,
+      gem: 'Wonder & Power', gemColor: '#4A90E2',
+      desc: 'Middle C — the center of the piano keyboard and the universal starting point of music education. When a piece ends on C there is a strong sense of arrival and rest.',
+      science: 'Wavelength \u2248 1.31\u202fm. C\u2192E is a 5:4 frequency ratio (major third) \u2014 one of the most consonant intervals in Western music. Simple integer ratios sound smooth together.',
+      realWorld: 'Middle C sits at the exact center of a standard 88-key piano. It is the first note most students learn and the anchor of the C major scale.',
+    },
+    {
+      name: 'D', full: 'D4', freq: 293.66, staffTop: 58,
+      gem: 'Tenderness', gemColor: '#F5A623',
+      desc: 'A whole step above C. D has a gentle, forward-moving quality \u2014 present but unhurried. It neither fully resolves nor demands movement, it simply flows.',
+      science: 'Wavelength \u2248 1.17\u202fm. C\u2192D is a 9:8 ratio (major second). More complex ratios produce a sense of motion without tension.',
+      realWorld: 'D major is the most natural key for stringed instruments. Violin, cello, and guitar open strings all resonate with D-based harmonics.',
+    },
+    {
+      name: 'E', full: 'E4', freq: 329.63, staffTop: 50,
+      gem: 'Joy', gemColor: '#7ED321',
+      desc: 'The third scale degree. E is what gives C major its bright, optimistic character. Without E a C chord is neither major nor minor \u2014 it is ambiguous.',
+      science: 'Wavelength \u2248 1.04\u202fm. C\u2192E is a 5:4 ratio \u2014 pure and consonant. The major third is the building block of every major chord. When you hear "happy music" you are hearing thirds.',
+      realWorld: 'The highest open string on a guitar is E4 (329.63\u202fHz). Twinkle Twinkle uses the bright C\u2192E jump as its emotional peak.',
+    },
+    {
+      name: 'F', full: 'F4', freq: 349.23, staffTop: 42,
+      gem: 'Tension', gemColor: '#D0021B',
+      desc: 'The subdominant. F creates pull and unresolved tension in C major \u2014 a gravitational lean that demands movement. Film composers use F-region chords to build unease.',
+      science: 'Wavelength \u2248 0.98\u202fm. F\u2192B is the tritone: it divides the 12-tone octave exactly in half. Medieval theorists called it "diabolus in musica" (the devil in music) for its sheer instability.',
+      realWorld: 'The opening two notes of The Simpsons theme are a tritone (B\u2009\u2192\u2009F). Wagner and horror film composers use the tritone constantly because it sounds threatening and unresolved.',
+    },
+    {
+      name: 'G', full: 'G4', freq: 392.0, staffTop: 34,
+      gem: 'Nostalgia', gemColor: '#9013FE',
+      desc: 'The dominant \u2014 the second most harmonically important note after C. Virtually every melody visits G before returning home to C. It is the sound of anticipation.',
+      science: 'Wavelength \u2248 0.88\u202fm. C\u2192G is a 3:2 ratio (perfect fifth) \u2014 the simplest relationship after the octave. Pythagoras discovered this by halving a vibrating string. The circle of fifths is built entirely from stacking 3:2 ratios.',
+      realWorld: 'G4 matches the open G string on violin and guitar. Twinkle Twinkle starts C-C-G-G: the leap to G is the dominant jump every ear instinctively recognizes as the moment before return.',
+    },
+  ];
+
   function load() {
     try {
       var raw = localStorage.getItem(MUSIC_KEY);
@@ -135,6 +174,12 @@
             '<p class="field-hint">Ear mode plays a tone; you choose C D E F or G.</p>' +
           '</div>' +
 
+          '<div class="music-card music-explore-entry">' +
+            '<h3 class="card-title">&#127926; Note Explorer</h3>' +
+            '<p class="section-desc">Browse each note freely \u2014 tap the wheel to hear it, see its frequency, wavelength, emotional color, and the science behind it. No drills, no pressure.</p>' +
+            '<div class="btn-row"><button class="btn btn-ghost" id="music-start-explore">Open Explorer</button></div>' +
+          '</div>' +
+
           '<div class="music-channel-grid">' +
             '<div class="music-card">' +
               '<h3 class="card-title">Visual Channel</h3>' +
@@ -157,6 +202,9 @@
     });
     document.getElementById('music-start-audio').addEventListener('click', function () {
       runSession('audio');
+    });
+    document.getElementById('music-start-explore').addEventListener('click', function () {
+      renderExplore();
     });
   }
 
@@ -322,6 +370,124 @@
     });
     document.getElementById('music-done').addEventListener('click', function () {
       renderHome();
+    });
+  }
+
+  // ── Note Explorer ────────────────────────────────────────────────────────
+
+  function renderExplore() {
+    var root = document.getElementById('music-root');
+    if (!root) return;
+
+    // Prime AudioContext while still inside the gesture that triggered this call
+    var ctx = ensureAudioCtx();
+    if (ctx && ctx.state !== 'running') ctx.resume();
+
+    var W = 280, R = 98, btnW = 56;
+    var cx = W / 2, cy = W / 2;
+
+    var wheelBtns = EXPLORE_DATA.map(function (n, i) {
+      var angle = -Math.PI / 2 + (i * 2 * Math.PI / EXPLORE_DATA.length);
+      var left  = Math.round(cx + R * Math.cos(angle) - btnW / 2);
+      var top   = Math.round(cy + R * Math.sin(angle) - btnW / 2);
+      var sel   = (i === 0) ? ' selected' : '';
+      return '<button class="music-wheel-note' + sel + '" data-note="' + n.name +
+        '" style="left:' + left + 'px;top:' + top + 'px;" aria-label="' + n.full + '">' +
+        n.name + '</button>';
+    }).join('');
+
+    root.innerHTML =
+      '<div class="music-wrap">' +
+        '<div class="music-shell music-shell--narrow">' +
+          '<div class="music-session-head">' +
+            '<h2 class="section-title">Note Explorer</h2>' +
+            '<button class="btn btn-ghost" id="music-explore-back">&larr; Back</button>' +
+          '</div>' +
+          '<p class="section-desc" style="text-align:center">Tap a note on the wheel to hear it and see the science behind it.</p>' +
+          '<div class="music-wheel-outer">' +
+            '<div class="music-wheel" style="width:' + W + 'px;height:' + W + 'px;">' +
+              wheelBtns +
+              '<div class="music-wheel-center">' +
+                '<button class="music-wheel-play-btn" id="music-explore-play" aria-label="Play selected note">&#9654;</button>' +
+                '<div class="music-wheel-freq" id="music-explore-freq">&#8212; Hz</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="music-screen" id="music-explore-screen"></div>' +
+        '</div>' +
+      '</div>';
+
+    var _sel = EXPLORE_DATA[0];
+
+    function selectNote(name) {
+      _sel = EXPLORE_DATA.find(function (n) { return n.name === name; }) || _sel;
+      root.querySelectorAll('.music-wheel-note').forEach(function (b) {
+        b.classList.toggle('selected', b.getAttribute('data-note') === name);
+      });
+      updateExploreScreen(_sel);
+    }
+
+    root.querySelectorAll('.music-wheel-note').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectNote(btn.getAttribute('data-note'));
+        playTone(_sel.freq, 700);
+      });
+    });
+
+    document.getElementById('music-explore-play').addEventListener('click', function () {
+      playTone(_sel.freq, 700);
+    });
+
+    document.getElementById('music-explore-back').addEventListener('click', function () {
+      renderHome();
+    });
+
+    // Show first note detail without auto-playing (let the user initiate first sound)
+    updateExploreScreen(_sel);
+  }
+
+  function updateExploreScreen(note) {
+    var panel = document.getElementById('music-explore-screen');
+    var freqEl = document.getElementById('music-explore-freq');
+    if (!panel) return;
+    if (freqEl) freqEl.textContent = note.freq + ' Hz';
+
+    var wl = (344 / note.freq).toFixed(2);
+
+    var staffHtml =
+      '<div class="music-staff music-staff--sm" role="img" aria-label="' + note.full + ' on treble clef">' +
+        '<div class="music-line"></div><div class="music-line"></div>' +
+        '<div class="music-line"></div><div class="music-line"></div>' +
+        '<div class="music-line"></div>' +
+        '<div class="music-dot" style="top:' + note.staffTop + '%"></div>' +
+      '</div>';
+
+    panel.innerHTML =
+      '<div class="music-screen__header">' +
+        '<div class="music-screen__note-name">' + note.name + '</div>' +
+        '<div class="music-screen__meta">' +
+          '<div class="music-screen__full">' + note.full + ' &middot; Treble Clef &middot; Octave 4</div>' +
+          '<div class="music-screen__freq-big">' + note.freq + ' Hz</div>' +
+          '<div class="music-screen__wl">&lambda; &asymp; ' + wl + ' m</div>' +
+        '</div>' +
+        '<div class="music-screen__staff-wrap">' + staffHtml + '</div>' +
+      '</div>' +
+      '<div class="music-screen__body">' +
+        '<div class="music-screen__gem-row">' +
+          '<span class="music-screen__gem-dot" style="background:' + note.gemColor + '"></span>' +
+          '<span class="music-screen__gem-label">GEMS: <strong>' + note.gem + '</strong></span>' +
+        '</div>' +
+        '<p class="music-screen__desc">' + note.desc + '</p>' +
+        '<div class="music-screen__divider"></div>' +
+        '<p class="music-screen__science"><span class="music-screen__tag">\u2297 Science</span> ' + note.science + '</p>' +
+        '<p class="music-screen__real"><span class="music-screen__tag">\u263c Real World</span> ' + note.realWorld + '</p>' +
+        '<div class="btn-row" style="margin-top:var(--cup-space-sm)">' +
+          '<button class="btn btn-primary btn-sm music-explore-replay">&#128266; Hear ' + note.full + ' again</button>' +
+        '</div>' +
+      '</div>';
+
+    panel.querySelector('.music-explore-replay').addEventListener('click', function () {
+      playTone(note.freq, 700);
     });
   }
 

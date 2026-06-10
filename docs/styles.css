@@ -4042,3 +4042,202 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ── Note Explorer wheel + screen ───────────────────────────────────── */
+.music-explore-entry {
+  border-style: dashed;
+}
+
+.music-wheel-outer {
+  display: flex;
+  justify-content: center;
+}
+
+.music-wheel {
+  position: relative;
+}
+
+.music-wheel-note {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cup-color-surface-alt);
+  border: 2px solid var(--cup-color-border);
+  color: var(--cup-color-on-surface);
+  font-weight: var(--cup-font-weight-bold);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--cup-transition-fast), border-color var(--cup-transition-fast), transform var(--cup-transition-fast);
+}
+
+.music-wheel-note:hover {
+  border-color: var(--cup-color-primary);
+  transform: scale(1.1);
+}
+
+.music-wheel-note.selected {
+  background: var(--cup-color-primary);
+  border-color: var(--cup-color-primary);
+  color: #fff;
+  transform: scale(1.12);
+}
+
+.music-wheel-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cup-space-xs);
+}
+
+.music-wheel-play-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--cup-color-primary);
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--cup-transition-fast), opacity var(--cup-transition-fast);
+}
+
+.music-wheel-play-btn:hover {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+.music-wheel-freq {
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 6ch;
+}
+
+/* TV-style info screen */
+.music-screen {
+  border: 2px solid var(--cup-color-primary);
+  border-radius: var(--cup-radius-lg);
+  overflow: hidden;
+  background: var(--cup-color-surface);
+}
+
+.music-screen__header {
+  background: var(--cup-color-surface-alt);
+  border-bottom: 1px solid var(--cup-color-border);
+  padding: var(--cup-space-md) var(--cup-space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--cup-space-lg);
+}
+
+.music-screen__note-name {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--cup-color-primary);
+  line-height: 1;
+  flex-shrink: 0;
+  min-width: 1.2ch;
+}
+
+.music-screen__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.music-screen__full {
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.music-screen__freq-big {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cup-color-on-surface);
+  line-height: 1.1;
+}
+
+.music-screen__wl {
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+}
+
+.music-screen__staff-wrap {
+  flex-shrink: 0;
+}
+
+.music-staff--sm {
+  height: 80px;
+  width: 120px;
+}
+
+.music-screen__body {
+  padding: var(--cup-space-lg);
+  display: grid;
+  gap: var(--cup-space-sm);
+}
+
+.music-screen__gem-row {
+  display: flex;
+  align-items: center;
+  gap: var(--cup-space-sm);
+}
+
+.music-screen__gem-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.music-screen__gem-label {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-text-muted);
+}
+
+.music-screen__desc {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-on-surface);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.music-screen__divider {
+  height: 1px;
+  background: var(--cup-color-border);
+}
+
+.music-screen__science,
+.music-screen__real {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-on-surface);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.music-screen__tag {
+  font-weight: var(--cup-font-weight-semibold);
+  margin-right: var(--cup-space-xs);
+}
+
+@media (max-width: 40rem) {
+  .music-screen__header { flex-wrap: wrap; }
+  .music-screen__staff-wrap { display: none; }
+  .music-screen__note-name { font-size: 3rem; }
+}
