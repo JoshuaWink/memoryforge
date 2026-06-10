@@ -4029,6 +4029,14 @@ body {
   color: var(--cup-color-error);
 }
 
+.music-octave-label {
+  text-align: center;
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: var(--cup-space-xs);
+}
+
 @media (max-width: 40rem) {
   .music-answer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

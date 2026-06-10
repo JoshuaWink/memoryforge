@@ -47,23 +47,29 @@
   function playTone(freq, durationMs) {
     var ctx = ensureAudioCtx();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-
     var len = durationMs || 430;
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
 
-    osc.type = 'sine';
-    osc.frequency.value = freq;
+    function schedule() {
+      var t = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + len / 1000);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + len / 1000 + 0.02);
+    }
 
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + len / 1000);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + len / 1000 + 0.02);
+    // resume() is async — schedule only after the context is actually running
+    if (ctx.state !== 'running') {
+      ctx.resume().then(schedule).catch(function () {});
+    } else {
+      schedule();
+    }
   }
 
   function pickNote() {
@@ -155,6 +161,11 @@
   }
 
   function runSession(mode) {
+    // Prime AudioContext eagerly while we're still inside a user-gesture callback.
+    // This ensures the context is running before the first tone fires from a timer.
+    var ctx = ensureAudioCtx();
+    if (ctx && ctx.state !== 'running') ctx.resume();
+
     var state = {
       mode: mode,
       idx: 0,
@@ -183,6 +194,7 @@
     if (state.mode === 'visual') {
       promptHtml =
         '<div class="music-staff-wrap">' +
+          '<p class="music-octave-label">Treble clef &middot; 4th octave (C4–G4)</p>' +
           '<div class="music-staff" role="img" aria-label="Guess this note on treble staff">' +
             '<div class="music-line"></div>' +
             '<div class="music-line"></div>' +
@@ -191,7 +203,7 @@
             '<div class="music-line"></div>' +
             '<div class="music-dot" style="top:' + state.prompt.staffTop + '%"></div>' +
           '</div>' +
-          '<p class="section-desc" style="text-align:center;margin-top:var(--cup-space-sm)">Name this note (C D E F or G)</p>' +
+          '<p class="section-desc" style="text-align:center;margin-top:var(--cup-space-sm)">Name this note &middot; hear it after you answer</p>' +
         '</div>';
     } else {
       promptHtml =
@@ -255,13 +267,19 @@
           playTone(state.prompt.freq, 300);
         } else {
           feedback.className = 'music-feedback music-feedback--bad';
-          feedback.textContent = 'Not quite. You chose ' + guess + ', correct was ' + state.prompt.name + ' (' + state.prompt.full + ').';
+          feedback.textContent = 'Not quite — ' + guess + ' → correct is ' + state.prompt.name + ' (' + state.prompt.full + '). Listen:';
           if (state.mode === 'audio') {
+            // Contrast: play wrong guess then correct so the difference is heard
             var guessed = MUSIC_NOTES.find(function (n) { return n.name === guess; });
             if (guessed) {
               playTone(guessed.freq, 240);
-              setTimeout(function () { playTone(state.prompt.freq, 300); }, 320);
+              setTimeout(function () { playTone(state.prompt.freq, 400); }, 340);
+            } else {
+              playTone(state.prompt.freq, 400);
             }
+          } else {
+            // Visual mode: play the correct note so the sound-symbol bond still forms
+            playTone(state.prompt.freq, 400);
           }
         }
 
@@ -312,4 +330,11 @@
   }
 
   window.mfMusicActivate = activate;
+
+  // If the page landed directly on #music, app.js navigation may run before this
+  // script is loaded. Render immediately when the music view is already active.
+  var musicView = document.getElementById('view-music');
+  if ((location.hash || '').replace('#', '') === 'music' || (musicView && musicView.classList.contains('active'))) {
+    activate();
+  }
 })();
