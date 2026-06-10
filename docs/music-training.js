@@ -242,18 +242,157 @@
   NOTE_LIBRARY.forEach(function (note) { NOTE_INDEX[note.id] = note; });
   NOTE_SETS.forEach(function (set) { NOTE_SET_INDEX[set.id] = set; });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CHORD DATA
+  // ─────────────────────────────────────────────────────────────────────────
+  var CHORD_LIBRARY = [
+    // === C ===
+    {
+      id: 'C-maj', root: 'C', quality: 'major', label: 'C Major', shortLabel: 'C',
+      notes: ['C4', 'E4', 'G4'], freqs: [261.63, 329.63, 392.00], notesLabel: 'C · E · G',
+      gem: 'Settled Brightness', gemColor: '#4A90E2',
+      desc: 'C major is the home chord of Western music — open, complete, and unmistakably resolved.',
+      science: 'Its three notes sit in a 4:5:6 frequency ratio, one of the simplest harmonic relationships possible.',
+      realWorld: 'Every beginner\'s first chord. Countless anthems and nursery rhymes land here.'
+    },
+    {
+      id: 'C-min', root: 'C', quality: 'minor', label: 'C Minor', shortLabel: 'Cm',
+      notes: ['C4', 'Eb4', 'G4'], freqs: [261.63, 311.13, 392.00], notesLabel: 'C · E♭ · G',
+      gem: 'Dark Weight', gemColor: '#5C6BC0',
+      desc: 'One semitone drops E to E-flat and the whole emotional gravity shifts inward.',
+      science: 'Minor third ratio 6:5 is slightly more complex than major 5:4, creating a denser beat pattern.',
+      realWorld: 'Beethoven\'s Fifth Symphony opens in C minor. So does Bach\'s Toccata and Fugue.'
+    },
+    // === D ===
+    {
+      id: 'D-maj', root: 'D', quality: 'major', label: 'D Major', shortLabel: 'D',
+      notes: ['D4', 'F#4', 'A4'], freqs: [293.66, 369.99, 440.00], notesLabel: 'D · F♯ · A',
+      gem: 'Warm Lift', gemColor: '#F5A623',
+      desc: 'D major has a forward brightness — optimistic but not naive, moving but grounded.',
+      science: 'D to F# is 4 semitones (major third); D to A is 7 semitones (perfect fifth).',
+      realWorld: 'Violin and guitar resonate most naturally in D. Folk and country music lean on it heavily.'
+    },
+    {
+      id: 'D-min', root: 'D', quality: 'minor', label: 'D Minor', shortLabel: 'Dm',
+      notes: ['D4', 'F4', 'A4'], freqs: [293.66, 349.23, 440.00], notesLabel: 'D · F · A',
+      gem: 'Tender Sorrow', gemColor: '#E67E22',
+      desc: 'D minor carries a gentle sadness — mournful but not heavy. It flows rather than broods.',
+      science: 'F natural creates a minor third above D, 3 semitones instead of 4.',
+      realWorld: 'Mozart described D minor as "the saddest key." Requiems and elegies often live here.'
+    },
+    // === E ===
+    {
+      id: 'E-maj', root: 'E', quality: 'major', label: 'E Major', shortLabel: 'E',
+      notes: ['E4', 'G#4', 'B4'], freqs: [329.63, 415.30, 493.88], notesLabel: 'E · G♯ · B',
+      gem: 'Electric Joy', gemColor: '#7ED321',
+      desc: 'E major cuts through — bright, forward, and energetic. Guitar amplifies this naturally.',
+      science: 'The open-E string resonance on guitar makes this chord ring especially full.',
+      realWorld: 'Rock anthems live in E major. Power ballads and driving riffs return here constantly.'
+    },
+    {
+      id: 'E-min', root: 'E', quality: 'minor', label: 'E Minor', shortLabel: 'Em',
+      notes: ['E4', 'G4', 'B4'], freqs: [329.63, 392.00, 493.88], notesLabel: 'E · G · B',
+      gem: 'Pensive Still', gemColor: '#6B8E23',
+      desc: 'E minor is the introvert of the guitar world — brooding but clear. A quiet strength.',
+      science: 'E minor is the easiest two-finger chord on guitar, making it one of the most played worldwide.',
+      realWorld: 'From classical to metal to singer-songwriter, Em appears more than almost any other chord.'
+    },
+    // === F ===
+    {
+      id: 'F-maj', root: 'F', quality: 'major', label: 'F Major', shortLabel: 'F',
+      notes: ['F4', 'A4', 'C5'], freqs: [349.23, 440.00, 523.25], notesLabel: 'F · A · C',
+      gem: 'Soft Power', gemColor: '#D0021B',
+      desc: 'F major is warm authority — it gives permission and holds its ground.',
+      science: 'As the IV chord in C major, F creates the pre-dominant pull that drives harmony forward.',
+      realWorld: 'The barre F chord is the first wall guitar beginners hit — clearing it feels like a milestone.'
+    },
+    {
+      id: 'F-min', root: 'F', quality: 'minor', label: 'F Minor', shortLabel: 'Fm',
+      notes: ['F4', 'Ab4', 'C5'], freqs: [349.23, 415.30, 523.25], notesLabel: 'F · A♭ · C',
+      gem: 'Deep Tension', gemColor: '#8B0000',
+      desc: 'F minor pulls hard — tightly wound, like a breath held before something breaks.',
+      science: 'A-flat sits 3 semitones above F, compressing the chord into the minor third\'s dense feel.',
+      realWorld: 'Film scores use F minor for dread and inevitability. Chopin\'s funeral music visits it often.'
+    },
+    // === G ===
+    {
+      id: 'G-maj', root: 'G', quality: 'major', label: 'G Major', shortLabel: 'G',
+      notes: ['G4', 'B4', 'D5'], freqs: [392.00, 493.88, 587.33], notesLabel: 'G · B · D',
+      gem: 'Noble Resolve', gemColor: '#9013FE',
+      desc: 'G major is expectation fulfilled — the dominant chord coming home, confident and complete.',
+      science: 'G is the fifth of C, so G major is the dominant chord in C major. V→I is the strongest cadence.',
+      realWorld: 'Country, folk, and pop are saturated with G major. It is the natural resting chord on guitar.'
+    },
+    {
+      id: 'G-min', root: 'G', quality: 'minor', label: 'G Minor', shortLabel: 'Gm',
+      notes: ['G4', 'Bb4', 'D5'], freqs: [392.00, 466.16, 587.33], notesLabel: 'G · B♭ · D',
+      gem: 'Aching Yearning', gemColor: '#7B2FBE',
+      desc: 'G minor yearns. It wants to resolve but keeps being pulled sideways — restless and expressive.',
+      science: 'B-flat is 3 semitones above G, flattening the brightness of G major into longing.',
+      realWorld: 'Purcell\'s "Dido\'s Lament" is in G minor. Baroque mourning is saturated with it.'
+    },
+    // === A ===
+    {
+      id: 'A-maj', root: 'A', quality: 'major', label: 'A Major', shortLabel: 'A',
+      notes: ['A4', 'C#5', 'E5'], freqs: [440.00, 554.37, 659.25], notesLabel: 'A · C♯ · E',
+      gem: 'Bright Yearning', gemColor: '#D4A800',
+      desc: 'A major shines with a sweet, slightly piercing brightness — hopeful and reaching upward.',
+      science: 'A440 is the international tuning standard. This chord rings true around that anchor.',
+      realWorld: 'Country guitar loves A major. It is also the key of many pop anthems — open and singable.'
+    },
+    {
+      id: 'A-min', root: 'A', quality: 'minor', label: 'A Minor', shortLabel: 'Am',
+      notes: ['A4', 'C5', 'E5'], freqs: [440.00, 523.25, 659.25], notesLabel: 'A · C · E',
+      gem: 'Wistful Clarity', gemColor: '#B8860B',
+      desc: 'A minor is precise sadness — not collapsed or heavy, but clearly melancholy. Clean and open.',
+      science: 'A minor is the relative minor of C major — same key signature, different emotional center.',
+      realWorld: 'A minor is the easiest minor chord on guitar. It appears in everything from flamenco to pop.'
+    }
+  ];
+
+  var CHORD_SETS = [
+    {
+      id: 'basic',
+      label: 'Basic',
+      subtitle: '3 roots · major vs minor',
+      copy: 'C, G, and A — three pivotal roots each in major and minor. Train your ear on quality contrast.',
+      chordIds: ['C-maj', 'C-min', 'G-maj', 'G-min', 'A-maj', 'A-min']
+    },
+    {
+      id: 'extended',
+      label: 'Extended',
+      subtitle: '6 roots · major vs minor',
+      copy: 'All six natural roots across the C major scale — twelve chords total. Full major/minor landscape.',
+      chordIds: ['C-maj', 'C-min', 'D-maj', 'D-min', 'E-maj', 'E-min', 'F-maj', 'F-min', 'G-maj', 'G-min', 'A-maj', 'A-min']
+    }
+  ];
+
+  var CHORD_INDEX = {};
+  var CHORD_SET_INDEX = {};
+  CHORD_LIBRARY.forEach(function (chord) { CHORD_INDEX[chord.id] = chord; });
+  CHORD_SETS.forEach(function (set) { CHORD_SET_INDEX[set.id] = set; });
+
+  function getChordSet(setId) {
+    return CHORD_SET_INDEX[setId] || CHORD_SET_INDEX.basic;
+  }
+
+  function getChordsForSet(setId) {
+    return getChordSet(setId).chordIds.map(function (id) { return CHORD_INDEX[id]; });
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(MUSIC_KEY);
-      if (!raw) return { attempts: [], lastStudySet: 'starter', lastQuizSet: 'naturals' };
+      if (!raw) return { attempts: [], lastStudySet: 'starter', lastQuizSet: 'naturals', lastChordSet: 'basic' };
       var parsed = JSON.parse(raw);
       return {
         attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
         lastStudySet: NOTE_SET_INDEX[parsed.lastStudySet] ? parsed.lastStudySet : 'starter',
-        lastQuizSet: NOTE_SET_INDEX[parsed.lastQuizSet] ? parsed.lastQuizSet : 'naturals'
+        lastQuizSet: NOTE_SET_INDEX[parsed.lastQuizSet] ? parsed.lastQuizSet : 'naturals',
+        lastChordSet: CHORD_SET_INDEX[parsed.lastChordSet] ? parsed.lastChordSet : 'basic'
       };
     } catch (e) {
-      return { attempts: [], lastStudySet: 'starter', lastQuizSet: 'naturals' };
+      return { attempts: [], lastStudySet: 'starter', lastQuizSet: 'naturals', lastChordSet: 'basic' };
     }
   }
 
@@ -330,6 +469,29 @@
 
   function playExplorerTone(note) {
     playTone(note.freq, 1200, { envelope: 'flat', amplitude: 0.14, waveform: 'sine' });
+  }
+
+  function playChord(chord) {
+    var ctx = ensureAudioCtx();
+    if (!ctx) return;
+    if (ctx.state !== 'running') {
+      ctx.resume().then(function () { playChord(chord); }).catch(function () {});
+      return;
+    }
+    chord.freqs.forEach(function (freq) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.09, ctx.currentTime + 0.025);
+      gain.gain.setValueAtTime(0.09, ctx.currentTime + 0.9);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 1.4);
+    });
   }
 
   function waveCycleCount(freq) {
@@ -432,7 +594,8 @@
     var acc = total ? Math.round(((visual.total * visual.acc) + (audio.total * audio.acc)) / total) : 0;
     var ms = total ? Math.round(((visual.total * visual.ms) + (audio.total * audio.ms)) / total) : 0;
 
-    return { total: total, acc: acc, ms: ms, visual: visual, audio: audio };
+    var chord = byMode('chord-ear');
+    return { total: total, acc: acc, ms: ms, visual: visual, audio: audio, chord: chord };
   }
 
   function renderSetPills(activeSetId, groupName) {
@@ -455,19 +618,28 @@
     });
   }
 
+  function renderChordSetPills(activeSetId, groupName) {
+    return CHORD_SETS.map(function (set) {
+      var active = set.id === activeSetId ? ' active' : '';
+      return '<button class="music-set-pill' + active + '" data-group="' + groupName + '" data-set-id="' + set.id + '">' + set.label + '</button>';
+    }).join('');
+  }
+
   function renderHome() {
     var root = document.getElementById('music-root');
     if (!root) return;
     var s = stats();
     var studySetId = _state.lastStudySet || 'starter';
     var quizSetId = _state.lastQuizSet || 'naturals';
+    var chordSetId = _state.lastChordSet || 'basic';
+    var chordSet = getChordSet(chordSetId);
 
     root.innerHTML = '' +
       '<div class="music-wrap">' +
         '<div class="music-shell">' +
           '<header class="music-header">' +
             '<h2 class="section-title">Music Study Lab</h2>' +
-            '<p class="section-desc">Build pitch familiarity in <strong>Study Studio</strong>, then pressure-test it in <strong>Quiz Challenge</strong>.</p>' +
+            '<p class="section-desc">Build pitch familiarity in <strong>Study Studio</strong>, then pressure-test it in <strong>Quiz Challenge</strong> or <strong>Chord Ear</strong>.</p>' +
           '</header>' +
           '<div class="music-stat-grid">' +
             '<div class="music-stat"><span class="music-stat__val">' + s.total + '</span><span class="music-stat__lbl">Attempts</span></div>' +
@@ -493,6 +665,14 @@
             '</div>' +
             '<p class="field-hint">Current challenge set: ' + currentSetLine(quizSetId) + '</p>' +
           '</div>' +
+          '<div class="music-card">' +
+            '<div class="music-kicker">Chord Ear</div>' +
+            '<h3 class="card-title">Hear a chord — name its quality</h3>' +
+            '<p class="section-desc">Listen to a chord and decide: is it <strong>Major</strong> or <strong>Minor</strong>? After each answer the gem profile of that chord reveals what makes it feel the way it does.</p>' +
+            '<div class="music-set-pills">' + renderChordSetPills(chordSetId, 'chord-home') + '</div>' +
+            '<div class="btn-row"><button class="btn btn-primary" id="music-start-chord">Start Chord Ear</button></div>' +
+            '<p class="field-hint">' + chordSet.label + ' · ' + chordSet.subtitle + ' · ' + chordSet.chordIds.length + ' chords</p>' +
+          '</div>' +
           '<div class="music-channel-grid">' +
             '<div class="music-card">' +
               '<h3 class="card-title">Visual Channel</h3>' +
@@ -506,6 +686,12 @@
               '<p class="mono-text">Mean latency: ' + (s.audio.ms ? (s.audio.ms + 'ms') : '–') + '</p>' +
               '<p class="mono-text">Attempts: ' + s.audio.total + '</p>' +
             '</div>' +
+            '<div class="music-card">' +
+              '<h3 class="card-title">Chord Channel</h3>' +
+              '<p class="mono-text">Accuracy: ' + s.chord.acc + '%</p>' +
+              '<p class="mono-text">Mean latency: ' + (s.chord.ms ? (s.chord.ms + 'ms') : '–') + '</p>' +
+              '<p class="mono-text">Attempts: ' + s.chord.total + '</p>' +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -518,6 +704,12 @@
       setPreference('lastQuizSet', getNoteSet(setId).id);
       renderHome();
     });
+    root.querySelectorAll('.music-set-pill[data-group="chord-home"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setPreference('lastChordSet', btn.getAttribute('data-set-id'));
+        renderHome();
+      });
+    });
     document.getElementById('music-open-study').addEventListener('click', function () {
       renderStudyStudio(studySetId);
     });
@@ -526,6 +718,9 @@
     });
     document.getElementById('music-start-audio').addEventListener('click', function () {
       runSession('audio', quizSetId);
+    });
+    document.getElementById('music-start-chord').addEventListener('click', function () {
+      runChordSession(chordSetId);
     });
   }
 
@@ -823,6 +1018,163 @@
       runSession(state.mode, state.setId);
     });
     document.getElementById('music-done').addEventListener('click', function () {
+      renderHome();
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CHORD EAR QUIZ
+  // ─────────────────────────────────────────────────────────────────────────
+
+  function runChordSession(setId) {
+    var root = document.getElementById('music-root');
+    if (!root) return;
+    var ctx = ensureAudioCtx();
+    if (ctx && ctx.state !== 'running') ctx.resume();
+
+    var chords = getChordsForSet(setId);
+    // Shuffle
+    var pool = chords.slice().sort(function () { return Math.random() - 0.5; });
+
+    var state = {
+      mode: 'chord-ear',
+      setId: setId,
+      queue: pool,
+      index: 0,
+      attempts: []
+    };
+
+    setPreference('lastChordSet', setId);
+    renderChordPrompt(state);
+  }
+
+  function renderChordPrompt(state) {
+    var root = document.getElementById('music-root');
+    if (!root) return;
+
+    if (state.index >= state.queue.length) {
+      renderChordComplete(state);
+      return;
+    }
+
+    var chord = state.queue[state.index];
+    var promptedAt = Date.now();
+
+    // Auto-play
+    playChord(chord);
+
+    var progress = (state.index + 1) + ' / ' + state.queue.length;
+
+    root.innerHTML = '' +
+      '<div class="music-wrap">' +
+        '<div class="music-shell">' +
+          '<header class="music-header">' +
+            '<p class="field-hint" style="text-align:right">' + progress + '</p>' +
+            '<h2 class="section-title">Chord Ear</h2>' +
+            '<p class="section-desc">Listen and choose the quality.</p>' +
+          '</header>' +
+          '<div class="music-chord-replay-row">' +
+            '<button class="btn btn-ghost" id="chord-replay">▶ Replay chord</button>' +
+          '</div>' +
+          '<div class="music-chord-answer-grid">' +
+            '<button class="btn btn-primary music-chord-answer" data-quality="major">Major</button>' +
+            '<button class="btn btn-secondary music-chord-answer" data-quality="minor">Minor</button>' +
+          '</div>' +
+          '<div id="chord-gem-reveal" class="music-chord-gem" style="display:none"></div>' +
+          '<div class="btn-row" style="margin-top:1rem">' +
+            '<button class="btn btn-ghost" id="chord-back-home" style="font-size:0.8rem">← Back to Music</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('chord-replay').addEventListener('click', function () {
+      playChord(chord);
+    });
+
+    document.getElementById('chord-back-home').addEventListener('click', function () {
+      renderHome();
+    });
+
+    root.querySelectorAll('.music-chord-answer').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var chosen = btn.getAttribute('data-quality');
+        var correct = chord.quality === chosen;
+        var latency = Date.now() - promptedAt;
+
+        // Disable buttons
+        root.querySelectorAll('.music-chord-answer').forEach(function (b) {
+          b.disabled = true;
+          if (b.getAttribute('data-quality') === chord.quality) {
+            b.style.outline = '3px solid var(--color-success, #7ED321)';
+          }
+        });
+        if (!correct) {
+          btn.style.outline = '3px solid var(--color-error, #D0021B)';
+        }
+
+        // Record
+        _state.attempts.push({
+          mode: 'chord-ear',
+          id: chord.id,
+          correct: correct,
+          ms: latency
+        });
+        save();
+
+        // Gem reveal
+        var gemEl = document.getElementById('chord-gem-reveal');
+        gemEl.style.display = 'block';
+        gemEl.style.borderLeftColor = chord.gemColor;
+        gemEl.innerHTML = '' +
+          '<div class="music-chord-gem__header">' +
+            '<span class="music-chord-gem__dot" style="background:' + chord.gemColor + '"></span>' +
+            '<span class="music-chord-gem__name">' + chord.gem + '</span>' +
+            '<span class="music-chord-gem__label">' + chord.label + '</span>' +
+          '</div>' +
+          '<div class="music-chord-gem__notes">' + chord.notesLabel + '</div>' +
+          '<p class="music-chord-gem__desc">' + chord.desc + '</p>' +
+          '<p class="music-chord-gem__science">' + chord.science + '</p>' +
+          '<p class="music-chord-gem__realworld">' + chord.realWorld + '</p>';
+
+        // Auto-advance
+        setTimeout(function () {
+          state.index++;
+          renderChordPrompt(state);
+        }, 2000);
+      });
+    });
+  }
+
+  function renderChordComplete(state) {
+    var root = document.getElementById('music-root');
+    if (!root) return;
+
+    var correct = state.attempts.filter(function (a) { return a.correct; }).length;
+    var total = state.attempts.length;
+    var acc = total ? Math.round((correct / total) * 100) : 0;
+
+    root.innerHTML = '' +
+      '<div class="music-wrap">' +
+        '<div class="music-shell">' +
+          '<header class="music-header">' +
+            '<h2 class="section-title">Chord Ear — Done!</h2>' +
+          '</header>' +
+          '<div class="music-stat-grid">' +
+            '<div class="music-stat"><span class="music-stat__val">' + total + '</span><span class="music-stat__lbl">Chords</span></div>' +
+            '<div class="music-stat"><span class="music-stat__val">' + acc + '%</span><span class="music-stat__lbl">Accuracy</span></div>' +
+            '<div class="music-stat"><span class="music-stat__val">' + correct + '/' + total + '</span><span class="music-stat__lbl">Correct</span></div>' +
+          '</div>' +
+          '<div class="btn-row">' +
+            '<button class="btn btn-primary" id="chord-again">Play Again</button>' +
+            '<button class="btn btn-ghost" id="chord-home">Back to Music</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('chord-again').addEventListener('click', function () {
+      runChordSession(state.setId);
+    });
+    document.getElementById('chord-home').addEventListener('click', function () {
       renderHome();
     });
   }

@@ -4430,3 +4430,93 @@ body {
   .music-screen__note-name { font-size: 3rem; }
   .music-wave-card__head { align-items: flex-start; flex-direction: column; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CHORD EAR QUIZ
+   ───────────────────────────────────────────────────────────────────────── */
+
+.music-chord-replay-row {
+  display: flex;
+  justify-content: center;
+  margin: var(--cup-space-md) 0;
+}
+
+.music-chord-answer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--cup-space-md);
+  margin: var(--cup-space-md) 0;
+}
+
+.music-chord-answer-grid .btn {
+  padding: var(--cup-space-lg) var(--cup-space-md);
+  font-size: var(--cup-font-size-lg);
+  font-weight: var(--cup-font-weight-semibold);
+}
+
+/* Gem reveal panel */
+.music-chord-gem {
+  border-left: 4px solid #888;
+  padding: var(--cup-space-md) var(--cup-space-lg);
+  background: var(--cup-color-surface-variant, rgba(255,255,255,0.04));
+  border-radius: var(--cup-radius-md);
+  margin-top: var(--cup-space-md);
+  animation: music-fade-in 0.25s ease;
+}
+
+@keyframes music-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.music-chord-gem__header {
+  display: flex;
+  align-items: center;
+  gap: var(--cup-space-sm);
+  margin-bottom: var(--cup-space-xs);
+}
+
+.music-chord-gem__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.music-chord-gem__name {
+  font-size: var(--cup-font-size-sm);
+  font-style: italic;
+  color: var(--cup-color-on-surface-muted, #aaa);
+}
+
+.music-chord-gem__label {
+  font-weight: var(--cup-font-weight-semibold);
+  font-size: var(--cup-font-size-base);
+  margin-left: auto;
+}
+
+.music-chord-gem__notes {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-on-surface-muted, #aaa);
+  font-family: var(--cup-font-mono, monospace);
+  margin-bottom: var(--cup-space-sm);
+  letter-spacing: 0.05em;
+}
+
+.music-chord-gem__desc,
+.music-chord-gem__science,
+.music-chord-gem__realworld {
+  font-size: var(--cup-font-size-sm);
+  color: var(--cup-color-on-surface);
+  line-height: 1.6;
+  margin: 0 0 var(--cup-space-xs);
+}
+
+.music-chord-gem__realworld {
+  color: var(--cup-color-on-surface-muted, #aaa);
+  font-style: italic;
+}
+
+@media (max-width: 40rem) {
+  .music-chord-answer-grid { grid-template-columns: 1fr; }
+}
