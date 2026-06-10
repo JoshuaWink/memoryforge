@@ -4081,6 +4081,28 @@ body {
 .music-answer {
   min-height: var(--cup-touch-min);
   font-weight: var(--cup-font-weight-bold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.music-answer__label {
+  font-size: var(--cup-font-size-sm);
+  font-weight: var(--cup-font-weight-bold);
+}
+
+.music-answer__hz {
+  font-size: var(--cup-font-size-xs);
+  color: var(--cup-color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--cup-font-weight-normal);
+}
+
+.music-answer:is(:hover, :focus-visible) .music-answer__hz {
+  color: inherit;
 }
 
 .music-feedback {

@@ -719,7 +719,10 @@
           '<p class="field-hint" style="text-align:center">' + set.copy + '</p>' +
           '<div class="music-card">' + promptHtml + '</div>' +
           '<div class="music-answer-grid">' + answers.map(function (note) {
-            return '<button class="btn btn-ghost music-answer" data-note-id="' + note.id + '">' + note.answerLabel + '</button>';
+            return '<button class="btn btn-ghost music-answer" data-note-id="' + note.id + '">' +
+              '<span class="music-answer__label">' + note.answerLabel + '</span>' +
+              '<span class="music-answer__hz">' + note.freq.toFixed(1) + ' Hz</span>' +
+            '</button>';
           }).join('') + '</div>' +
           '<div id="music-feedback" class="music-feedback" aria-live="polite"></div>' +
           '<div class="btn-row"><button class="btn btn-ghost" id="music-back">&larr; Back</button></div>' +
@@ -727,14 +730,14 @@
       '</div>';
 
     if (state.mode === 'audio') {
-      playTone(state.prompt.freq);
+      playExplorerTone(state.prompt);
     }
     state.shownAt = performance.now();
 
     var replayBtn = document.getElementById('music-replay');
     if (replayBtn) {
       replayBtn.addEventListener('click', function () {
-        playTone(state.prompt.freq);
+        playExplorerTone(state.prompt);
       });
     }
 
