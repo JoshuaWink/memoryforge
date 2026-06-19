@@ -1951,9 +1951,19 @@ function startPassageDrill(ref) {
     drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
     startChunkOrder(drillCurrentVerse);
   } else if (scriptureDrillMode === 'fill-blank') {
-    startBridgeDrill(passage, verses);
+    var fillVerse = {
+      reference: passage.reference,
+      text: verses.map(function(v) { return v.text; }).join(' ')
+    };
+    drillCurrentVerse = fillVerse;
+    startFillBlank(fillVerse);
   } else if (scriptureDrillMode === 'fl-tap') {
-    startPassageFlTap(passage, verses);
+    var tapVerse = {
+      reference: passage.reference,
+      text: verses.map(function(v) { return v.text; }).join(' ')
+    };
+    drillCurrentVerse = tapVerse;
+    startFlTap(tapVerse);
   } else if (scriptureDrillMode === 'chunk-by-chunk') {
     startPassageChunkByChunk(passage, verses);
   } else if (scriptureDrillMode === 'sequential') {
@@ -2853,12 +2863,12 @@ function tapCbcOption(btn) {
 }
 
 function startPassageFlTap(passage, verses) {
-  var allText = verses.map(function(v) { return v.text; }).join(' ');
-  var words = allText.split(/\s+/).filter(Boolean);
-  flTapWords = words;
-  flTapCurrentIdx = 0;
-  document.getElementById('drill-fl-tap').style.display = '';
-  renderFlTapStep();
+  var tapVerse = {
+    reference: passage.reference,
+    text: verses.map(function(v) { return v.text; }).join(' ')
+  };
+  drillCurrentVerse = tapVerse;
+  startFlTap(tapVerse);
 }
 
 function filterPickerOptions(pickerId, query) {
