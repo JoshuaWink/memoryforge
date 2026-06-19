@@ -1843,16 +1843,23 @@ function populatePassagePicker() {
   picker.innerHTML = opts;
 }
 
-function populatePassageCheckboxes() {
+function populatePassageCheckboxes(filter) {
   var container = document.getElementById('passage-verse-checkboxes');
   if (!container) return;
-  if (scriptureLib.verses.length === 0) {
-    container.innerHTML = '<p class="empty-state" style="padding:var(--cup-space-sm)">Add verses first</p>';
+  var q = (filter || '').toLowerCase().trim();
+  var visible = scriptureLib.verses.filter(function(v) {
+    if (!q) return true;
+    return (v.reference + ' ' + (v.translation || '') + ' ' + v.text).toLowerCase().indexOf(q) >= 0;
+  });
+  if (visible.length === 0) {
+    container.innerHTML = '<p class="empty-state" style="padding:var(--cup-space-sm)">' +
+      (scriptureLib.verses.length === 0 ? 'Add verses first' : 'No verses match your search') + '</p>';
     return;
   }
-  container.innerHTML = scriptureLib.verses.map(function(v) {
+  container.innerHTML = visible.map(function(v) {
     var verseKey = getVerseIdentifier(v);
-    return '<label><input type="checkbox" value="' + escapeHtmlScripture(verseKey) + '"> ' + escapeHtmlScripture(v.reference) + ' <small>(' + escapeHtmlScripture(v.translation || 'KJV') + ')</small></label>';
+    return '<label><input type="checkbox" value="' + escapeHtmlScripture(verseKey) + '"> ' +
+      escapeHtmlScripture(v.reference) + ' <small>(' + escapeHtmlScripture(v.translation || 'KJV') + ')</small></label>';
   }).join('');
 }
 
@@ -3344,12 +3351,20 @@ function filterPickerOptions(pickerId, query) {
     else document.getElementById('scripture-drill-area').style.display = 'none';
   });
 
-  // -- Create passage --
+  // -- Study plan verse search --
+  var studyPlanSearch = document.getElementById('study-plan-verse-search');
+  if (studyPlanSearch) {
+    studyPlanSearch.addEventListener('input', function() {
+      populatePassageCheckboxes(studyPlanSearch.value);
+    });
+  }
+
+  // -- Create study plan --
   var createPassageBtn = document.getElementById('btn-create-passage');
   if (createPassageBtn) createPassageBtn.addEventListener('click', function() {
     var nameEl = document.getElementById('passage-ref');
     var name = (nameEl ? nameEl.value : '').trim();
-    if (!name) { alert('Enter a passage name'); return; }
+    if (!name) { alert('Enter a study plan name'); return; }
     var checkboxes = document.querySelectorAll('#passage-verse-checkboxes input[type="checkbox"]:checked');
     var refs = [];
     checkboxes.forEach(function(cb) { refs.push(cb.value); });

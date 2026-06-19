@@ -107,15 +107,19 @@ const SCRIPTURE_HTML = `
         <!-- Passage Creation -->
         <div class="passage-create" id="passage-create-section">
           <details class="import-section">
-            <summary class="btn btn-sm btn-secondary">Create Passage (Chapter)</summary>
+            <summary class="btn btn-sm btn-secondary">Create Study Plan</summary>
             <div class="import-section__body">
               <div class="field-group">
-                <label class="field-label" for="passage-ref">Passage Name</label>
-                <input type="text" id="passage-ref" class="field-input" placeholder="e.g. Romans 8 or Psalm 23">
+                <label class="field-label" for="passage-ref">Study Plan Name</label>
+                <input type="text" id="passage-ref" class="field-input" placeholder="e.g. Season of Grace &bull; Romans 8">
+              </div>
+              <div class="field-group" style="margin-top:var(--cup-space-xs)">
+                <label class="field-label" for="study-plan-verse-search">Search verses</label>
+                <input type="search" id="study-plan-verse-search" class="field-input field-input--sm" placeholder="Filter by reference or text&hellip;" autocomplete="off" autocorrect="off" spellcheck="false">
               </div>
               <p class="field-label">Select verses (in order):</p>
               <div id="passage-verse-checkboxes" class="passage-verse-list"></div>
-              <button id="btn-create-passage" class="btn btn-sm btn-primary">Create Passage</button>
+              <button id="btn-create-passage" class="btn btn-sm btn-primary">Create Study Plan</button>
             </div>
           </details>
         </div>
@@ -134,10 +138,10 @@ const SCRIPTURE_HTML = `
           </div>
         </details>
 
-        <!-- Passages Section: collapsible -->
+        <!-- Study Plans Section: collapsible -->
         <details class="library-section" id="library-passages-section" open>
           <summary class="library-section__header">
-            <span class="library-section__title">Passages <span class="library-section__count" id="passage-count-badge"></span></span>
+            <span class="library-section__title">Study Plans <span class="library-section__count" id="passage-count-badge"></span></span>
             <span class="library-section__arrow">▸</span>
           </summary>
           <div class="library-section__body">
