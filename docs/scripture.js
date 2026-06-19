@@ -592,6 +592,7 @@ function renderManageModes() {
 }
 
 
+function loadVerseLibrary() {
   try {
     var raw = localStorage.getItem(VERSE_STORAGE_KEY);
     var lib = raw ? JSON.parse(raw) : { verses: [], passages: [] };
