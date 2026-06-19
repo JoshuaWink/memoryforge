@@ -1188,6 +1188,52 @@ var scriptureDrillScale = 'verse';
 var drillCurrentPassage = null;
 var bridgeCurrentIdx = 0;
 
+// -- Verse chain: used when drilling a plan verse-by-verse --
+var drillChainQueue = [];   // [{verse, label}, ...]
+var drillChainIdx = -1;    // -1 means no active chain
+
+function isChainActive() { return drillChainIdx >= 0 && drillChainQueue.length > 0; }
+
+function startChainDrill(passage, verses, mode) {
+  drillChainQueue = verses.map(function(v, i) {
+    return { verse: v, label: (i + 1) + ' of ' + verses.length + ' — ' + v.reference + ' (' + (v.translation || 'KJV') + ')' };
+  });
+  drillChainIdx = 0;
+  advanceChain();
+}
+
+function advanceChain() {
+  if (drillChainIdx >= drillChainQueue.length) {
+    // Chain complete
+    drillChainIdx = -1;
+    drillChainQueue = [];
+    document.getElementById('sdrill-ref').textContent = 'Plan complete! ✔';
+    hideAllDrillSubs();
+    var doneDiv = document.createElement('div');
+    doneDiv.className = 'drill-result drill-result--perfect';
+    doneDiv.style.margin = 'var(--cup-space-md) 0';
+    doneDiv.textContent = 'All verses drilled. Plan complete!';
+    var area = document.getElementById('scripture-drill-area');
+    if (area) area.appendChild(doneDiv);
+    document.getElementById('drill-nav').style.display = '';
+    return;
+  }
+  var entry = drillChainQueue[drillChainIdx];
+  drillCurrentVerse = entry.verse;
+  document.getElementById('sdrill-ref').textContent = entry.label;
+  // Remove any previous plan-complete banners
+  var area = document.getElementById('scripture-drill-area');
+  if (area) Array.from(area.querySelectorAll('.drill-result--perfect')).forEach(function(el) {
+    if (el.parentNode === area) el.parentNode.removeChild(el);
+  });
+  hideAllDrillSubs();
+  if (scriptureDrillMode === 'fill-blank') {
+    startFillBlank(entry.verse);
+  } else if (scriptureDrillMode === 'fl-tap') {
+    startFlTap(entry.verse);
+  }
+}
+
 
 function hideAllDrillSubs() {
   var ids = ['drill-self-check', 'drill-chunk-order', 'drill-fill-blank', 'drill-fl-tap', 'drill-cbc', 'drill-typing-area', 'drill-bridge', 'drill-verse-order', 'drill-recite'];
@@ -1927,6 +1973,9 @@ function setDrillScale(scale) {
 }
 
 function startPassageDrill(ref) {
+  // Reset any active verse chain
+  drillChainQueue = [];
+  drillChainIdx = -1;
   var passage = (scriptureLib.passages || []).find(function(p) { return p.reference === ref; });
   if (!passage) { document.getElementById('scripture-drill-area').style.display = 'none'; return; }
   drillCurrentPassage = passage;
@@ -1951,19 +2000,9 @@ function startPassageDrill(ref) {
     drillCurrentVerse = { reference: passage.reference, chunks: allChunks, text: verses.map(function(v) { return v.text; }).join(' ') };
     startChunkOrder(drillCurrentVerse);
   } else if (scriptureDrillMode === 'fill-blank') {
-    var fillVerse = {
-      reference: passage.reference,
-      text: verses.map(function(v) { return v.text; }).join(' ')
-    };
-    drillCurrentVerse = fillVerse;
-    startFillBlank(fillVerse);
+    startChainDrill(passage, verses, 'fill-blank');
   } else if (scriptureDrillMode === 'fl-tap') {
-    var tapVerse = {
-      reference: passage.reference,
-      text: verses.map(function(v) { return v.text; }).join(' ')
-    };
-    drillCurrentVerse = tapVerse;
-    startFlTap(tapVerse);
+    startChainDrill(passage, verses, 'fl-tap');
   } else if (scriptureDrillMode === 'chunk-by-chunk') {
     startPassageChunkByChunk(passage, verses);
   } else if (scriptureDrillMode === 'sequential') {
@@ -3075,6 +3114,12 @@ function filterPickerOptions(pickerId, query) {
 
   var nextBtn = $('#btn-sdrill-next');
   if (nextBtn) nextBtn.addEventListener('click', function() {
+    // If a verse chain is active, advance to next verse in the plan
+    if (isChainActive()) {
+      drillChainIdx++;
+      advanceChain();
+      return;
+    }
     var pickerId = scriptureDrillScale === 'verse' ? 'drill-verse-picker' : 'drill-passage-picker';
     var p = document.getElementById(pickerId);
     if (!p) return;

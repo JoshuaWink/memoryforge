@@ -187,7 +187,7 @@ const SCRIPTURE_HTML = `
               <label class="field-label">Scale</label>
               <div class="drill-scale-btns">
                 <button class="btn btn-sm drill-scale active" data-scale="verse">Verse</button>
-                <button class="btn btn-sm drill-scale" data-scale="section">Section</button>
+                <button class="btn btn-sm drill-scale" data-scale="section">Plan</button>
                 <button class="btn btn-sm drill-scale" data-scale="chapter">Chapter</button>
               </div>
             </div>
