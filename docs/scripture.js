@@ -817,7 +817,7 @@ function switchScriptureTab(tab) {
   if (panel) panel.style.display = '';
   if (tab === 'review') updateReviewStatus();
   if (tab === 'drill') { populateDrillPicker(); populatePassagePicker(); }
-  if (tab === 'library') { renderVerseList(); renderPassageList(); populatePassageCheckboxes(); }
+  if (tab === 'library') { renderVerseList(); renderPassageList(); populatePassagePicker(); populatePassageCheckboxes(); }
 }
 
 // -- Add Verse --
@@ -3291,9 +3291,9 @@ function filterPickerOptions(pickerId, query) {
   var quickMode = document.getElementById('quick-drill-mode');
   if (quickMode) quickMode.value = scriptureDrillMode;
 
-  // Render initial pinned modes
+  // Render initial pinned modes and populate passage pickers
   renderPinnedModes();
-
+  populatePassagePicker();
 
   var picker = $('#drill-verse-picker');
   if (picker) picker.addEventListener('change', function() {
