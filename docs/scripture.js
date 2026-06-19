@@ -532,8 +532,66 @@ function parseBibleUrl(url) {
 
 // -- Verse Library (localStorage) --
 var VERSE_STORAGE_KEY = 'mf_scripture_library';
+var PINNED_MODES_KEY = 'mf_pinned_modes';
+var DEFAULT_PINNED_MODES = ['self-check', 'fill-blank', 'fl-tap', 'recite'];
 
-function loadVerseLibrary() {
+var MODE_LABELS = {
+  'self-check': 'Self-Check', 'chunk-order': 'Chunk Order',
+  'fill-blank': 'Fill Blank', 'fl-tap': 'First-Letter Tap',
+  'chunk-by-chunk': 'Chunk by Chunk', 'sequential': 'Sequential',
+  'verse-order': 'Verse Order', 'recite': 'Recite',
+  'first-letter': 'First Letter', 'chunk-recall': 'Chunk Recall',
+  'full-recall': 'Full Recall'
+};
+
+function loadPinnedModes() {
+  try {
+    var raw = localStorage.getItem(PINNED_MODES_KEY);
+    return raw ? JSON.parse(raw) : DEFAULT_PINNED_MODES.slice();
+  } catch (e) { return DEFAULT_PINNED_MODES.slice(); }
+}
+function savePinnedModes(modes) {
+  try { localStorage.setItem(PINNED_MODES_KEY, JSON.stringify(modes)); } catch (e) {}
+}
+
+function renderPinnedModes() {
+  var pinned = loadPinnedModes();
+  var container = document.getElementById('pinned-mode-btns');
+  if (!container) return;
+  container.innerHTML = pinned.map(function(mode) {
+    var active = scriptureDrillMode === mode ? ' active' : '';
+    return '<button class="btn btn-sm scripture-mode' + active + '" data-mode="' +
+      mode + '">' + (MODE_LABELS[mode] || mode) + '</button>';
+  }).join('');
+  // Wire click events
+  container.querySelectorAll('.scripture-mode').forEach(function(btn) {
+    btn.addEventListener('click', function() { setDrillMode(btn.dataset.mode); });
+  });
+}
+
+function renderManageModes() {
+  var pinned = loadPinnedModes();
+  var container = document.getElementById('all-mode-btns');
+  if (!container) return;
+  Object.keys(MODE_LABELS).forEach(function(mode) {
+    var btn = container.querySelector('[data-mode="' + mode + '"]');
+    if (!btn) return;
+    var isPinned = pinned.indexOf(mode) >= 0;
+    var star = btn.querySelector('.mode-pin-star');
+    if (!star) {
+      star = document.createElement('span');
+      star.className = 'mode-pin-star';
+      star.style.cssText = 'margin-left:4px;cursor:pointer;opacity:0.5;font-size:0.85em';
+      btn.appendChild(star);
+    }
+    star.textContent = isPinned ? '\u2605' : '\u2606';
+    star.title = isPinned ? 'Remove from pinned' : 'Pin to quick access';
+    var active = scriptureDrillMode === mode ? ' active' : '';
+    btn.className = 'btn btn-sm scripture-mode' + active;
+  });
+}
+
+
   try {
     var raw = localStorage.getItem(VERSE_STORAGE_KEY);
     var lib = raw ? JSON.parse(raw) : { verses: [], passages: [] };
@@ -1987,15 +2045,36 @@ function getPassageVerses(passage) {
   }).filter(Boolean);
 }
 
+function getSortedPassages() {
+  var passages = (scriptureLib.passages || []).slice();
+  passages.sort(function(a, b) {
+    return (b.lastDrilledAt || 0) - (a.lastDrilledAt || 0);
+  });
+  return passages;
+}
+
 function populatePassagePicker() {
   var picker = document.getElementById('drill-passage-picker');
-  if (!picker) return;
+  var quickPicker = document.getElementById('quick-drill-plan');
+  var sorted = getSortedPassages();
   var opts = '<option value="">Select a passage...</option>';
-  (scriptureLib.passages || []).forEach(function(p) {
-    opts += '<option value="' + escapeHtmlScripture(p.reference) + '">' + escapeHtmlScripture(p.reference) + ' (' + p.verseRefs.length + ' verses)</option>';
+  sorted.forEach(function(p) {
+    var recentTag = p.lastDrilledAt ? ' \u2022 recent' : '';
+    opts += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
+      escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recentTag + ')</option>';
   });
-  picker.innerHTML = opts;
+  if (picker) picker.innerHTML = opts;
+  if (quickPicker) {
+    var qOpts = '<option value="">Pick a study plan\u2026</option>';
+    sorted.forEach(function(p) {
+      var recentTag = p.lastDrilledAt ? ' \u2022 recent' : '';
+      qOpts += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
+        escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recentTag + ')</option>';
+    });
+    quickPicker.innerHTML = qOpts;
+  }
 }
+
 
 function populatePassageCheckboxes(filter) {
   var container = document.getElementById('passage-verse-checkboxes');
@@ -2071,6 +2150,19 @@ function renderPassageList() {
   });
 }
 
+function setDrillMode(mode) {
+  scriptureDrillMode = mode;
+  // Update active state in all mode button containers
+  $$('.scripture-mode').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  // Refresh pinned row active state
+  renderPinnedModes();
+  // Sync quick-drill-mode picker
+  var qm = document.getElementById('quick-drill-mode');
+  if (qm) qm.value = mode;
+}
+
 function setDrillScale(scale) {
   scriptureDrillScale = scale;
   $$('.drill-scale').forEach(function(b) { b.classList.toggle('active', b.dataset.scale === scale); });
@@ -2093,6 +2185,10 @@ function startPassageDrill(ref) {
   drillChainIdx = -1;
   var passage = (scriptureLib.passages || []).find(function(p) { return p.reference === ref; });
   if (!passage) { document.getElementById('scripture-drill-area').style.display = 'none'; return; }
+  // Stamp last drilled time and re-sort picker
+  passage.lastDrilledAt = Date.now();
+  saveVerseLibrary(scriptureLib);
+  populatePassagePicker();
   drillCurrentPassage = passage;
   var verses = getPassageVerses(passage);
   if (verses.length === 0) return;
@@ -3134,11 +3230,12 @@ function filterPickerOptions(pickerId, query) {
     btn.addEventListener('click', function() { rateReview(parseInt(btn.dataset.q)); });
   });
 
+  // -- Drill modes: wire all .scripture-mode buttons (pinned + all-modes panel) --
   $$('.scripture-mode').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      $$('.scripture-mode').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      scriptureDrillMode = btn.dataset.mode;
+    btn.addEventListener('click', function(e) {
+      // Ignore clicks on the star pin icon inside the button
+      if (e.target.classList.contains('mode-pin-star')) return;
+      setDrillMode(btn.dataset.mode);
       // Auto-restart drill for current scale
       if (scriptureDrillScale === 'verse') {
         var p = $('#drill-verse-picker');
@@ -3149,6 +3246,53 @@ function filterPickerOptions(pickerId, query) {
       }
     });
   });
+
+  // -- Mode pin stars (in all-modes panel) --
+  document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('mode-pin-star')) return;
+    var btn = e.target.closest('.scripture-mode');
+    if (!btn) return;
+    var mode = btn.dataset.mode;
+    var pinned = loadPinnedModes();
+    var idx = pinned.indexOf(mode);
+    if (idx >= 0) pinned.splice(idx, 1); else pinned.push(mode);
+    savePinnedModes(pinned);
+    renderPinnedModes();
+    renderManageModes();
+  });
+
+  // -- Manage modes button --
+  var manageModeBtn = document.getElementById('btn-manage-modes');
+  if (manageModeBtn) {
+    manageModeBtn.addEventListener('click', function() {
+      var details = document.getElementById('more-modes-details');
+      if (details) details.open = !details.open;
+      if (details && details.open) renderManageModes();
+    });
+  }
+
+  // -- Quick Drill --
+  var quickDrillBtn = document.getElementById('btn-quick-drill');
+  if (quickDrillBtn) {
+    quickDrillBtn.addEventListener('click', function() {
+      var plan = document.getElementById('quick-drill-plan');
+      var mode = document.getElementById('quick-drill-mode');
+      if (!plan || !plan.value) { alert('Pick a study plan first'); return; }
+      var selectedMode = (mode && mode.value) || scriptureDrillMode;
+      setDrillMode(selectedMode);
+      setDrillScale('section');
+      switchScriptureTab('drill');
+      startPassageDrill(plan.value);
+    });
+  }
+
+  // Sync quick-drill-mode picker to current mode on tab load
+  var quickMode = document.getElementById('quick-drill-mode');
+  if (quickMode) quickMode.value = scriptureDrillMode;
+
+  // Render initial pinned modes
+  renderPinnedModes();
+
 
   var picker = $('#drill-verse-picker');
   if (picker) picker.addEventListener('change', function() {

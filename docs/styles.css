@@ -4520,3 +4520,48 @@ body {
 @media (max-width: 40rem) {
   .music-chord-answer-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Quick Drill Bar ─────────────────────────────── */
+.quick-drill-bar {
+  display: flex;
+  gap: var(--cup-space-xs, 0.5rem);
+  align-items: center;
+  padding: var(--cup-space-xs, 0.5rem);
+  background: var(--cup-color-surface-2, rgba(255,255,255,0.05));
+  border-radius: var(--cup-radius-md, 0.5rem);
+  margin-bottom: var(--cup-space-sm, 0.75rem);
+  flex-wrap: wrap;
+}
+.quick-drill-bar select {
+  flex: 1;
+  min-width: 8rem;
+}
+.quick-drill-bar #btn-quick-drill {
+  white-space: nowrap;
+}
+
+/* ── Pinned Mode Buttons ─────────────────────────── */
+#pinned-mode-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: var(--cup-space-xs, 0.5rem);
+}
+#pinned-mode-btns .scripture-mode {
+  font-size: var(--cup-font-size-sm, 0.85rem);
+}
+#more-modes-details summary {
+  cursor: pointer;
+  font-size: var(--cup-font-size-sm, 0.85rem);
+  color: var(--cup-color-on-surface-muted, #aaa);
+  list-style: none;
+  padding: 0.2rem 0;
+}
+#more-modes-details summary::-webkit-details-marker { display: none; }
+#all-mode-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
+}
+.mode-pin-star { user-select: none; }
