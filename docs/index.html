@@ -1046,6 +1046,31 @@
           </details>
         </div>
 
+        <!-- Study Plans Section: above verses, searchable -->
+        <details class="library-section" id="library-passages-section" open>
+          <summary class="library-section__header">
+            <span class="library-section__title">Study Plans <span class="library-section__count" id="passage-count-badge"></span></span>
+            <span class="library-section__arrow">▸</span>
+          </summary>
+          <div class="library-section__body">
+            <div class="library-search-bar">
+              <input type="search" id="plan-search" class="field-input field-input--sm" placeholder="Search study plans…" autocomplete="off" autocorrect="off" spellcheck="false">
+            </div>
+            <div class="passage-list" id="passage-list"></div>
+          </div>
+        </details>
+
+        <!-- Books Section: imported chapters/books -->
+        <details class="library-section" id="library-books-section" open>
+          <summary class="library-section__header">
+            <span class="library-section__title">Books (Imported) <span class="library-section__count" id="book-count-badge"></span></span>
+            <span class="library-section__arrow">▸</span>
+          </summary>
+          <div class="library-section__body">
+            <div class="passage-list" id="book-list"></div>
+          </div>
+        </details>
+
         <!-- Verses Section: collapsible + searchable -->
         <details class="library-section" id="library-verses-section" open>
           <summary class="library-section__header">
@@ -1057,17 +1082,6 @@
               <input type="search" id="verse-search" class="field-input field-input--sm" placeholder="Search verses…" autocomplete="off" autocorrect="off" spellcheck="false">
             </div>
             <div class="scripture-list" id="scripture-list"></div>
-          </div>
-        </details>
-
-        <!-- Study Plans Section: collapsible -->
-        <details class="library-section" id="library-passages-section" open>
-          <summary class="library-section__header">
-            <span class="library-section__title">Study Plans <span class="library-section__count" id="passage-count-badge"></span></span>
-            <span class="library-section__arrow">▸</span>
-          </summary>
-          <div class="library-section__body">
-            <div class="passage-list" id="passage-list"></div>
           </div>
         </details>
       </div>

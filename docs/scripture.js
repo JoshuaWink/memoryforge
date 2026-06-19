@@ -840,12 +840,12 @@ function handleAddVerse() {
         if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
       }
       if (added > 0) {
-        // Auto-create passage if 2+ consecutive verses
+        // Auto-create book entry if 2+ consecutive verses
         if (addedKeys.length >= 2) {
           var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedKeys);
+            var passage = createPassageFromVerses(passageName, addedKeys, 'book');
             if (passage) savePassage(passage);
           }
         }
@@ -1858,12 +1858,12 @@ function handleBulkPaste() {
     var r = addVerse(scriptureLib, parsed[i].reference, parsed[i].text, parsed[i].translation || 'KJV', '');
     if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
   }
-  // Auto-create passage if 2+ consecutive verses imported
+  // Auto-create book entry if 2+ consecutive verses imported
   if (addedKeys.length >= 2) {
     var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
     var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
     if (!existing) {
-      var passage = createPassageFromVerses(passageName, addedKeys);
+      var passage = createPassageFromVerses(passageName, addedKeys, 'book');
       if (passage) savePassage(passage);
     }
   }
@@ -1884,7 +1884,7 @@ function handleBulkPaste() {
 //  PASSAGE / CHAPTER SCALE LOGIC
 // ======================================================================
 
-function createPassageFromVerses(name, refs) {
+function createPassageFromVerses(name, refs, type) {
   var verses = refs.map(function(ref) {
     return findVerseByIdentifier(scriptureLib, ref);
   }).filter(Boolean);
@@ -1906,6 +1906,7 @@ function createPassageFromVerses(name, refs) {
   }
   return {
     reference: name,
+    type: type || 'book',
     verseKeys: verseKeys,
     verseRefs: verseRefs,
     sections: sections,
@@ -2054,26 +2055,38 @@ function getSortedPassages() {
   return passages;
 }
 
+function buildPickerOptions(passages) {
+  var plans = passages.filter(function(p) { return p.type === 'plan'; });
+  var books = passages.filter(function(p) { return p.type !== 'plan'; });
+  var html = '<option value="">Select a plan or book\u2026</option>';
+  if (plans.length) {
+    html += '<optgroup label="Study Plans">';
+    plans.forEach(function(p) {
+      var recent = p.lastDrilledAt ? ' \u2022 recent' : '';
+      html += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
+        escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recent + ')</option>';
+    });
+    html += '</optgroup>';
+  }
+  if (books.length) {
+    html += '<optgroup label="Books (Imported)">';
+    books.forEach(function(p) {
+      var recent = p.lastDrilledAt ? ' \u2022 recent' : '';
+      html += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
+        escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recent + ')</option>';
+    });
+    html += '</optgroup>';
+  }
+  return html;
+}
+
 function populatePassagePicker() {
+  var sorted = getSortedPassages();
+  var html = buildPickerOptions(sorted);
   var picker = document.getElementById('drill-passage-picker');
   var quickPicker = document.getElementById('quick-drill-plan');
-  var sorted = getSortedPassages();
-  var opts = '<option value="">Select a passage...</option>';
-  sorted.forEach(function(p) {
-    var recentTag = p.lastDrilledAt ? ' \u2022 recent' : '';
-    opts += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
-      escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recentTag + ')</option>';
-  });
-  if (picker) picker.innerHTML = opts;
-  if (quickPicker) {
-    var qOpts = '<option value="">Pick a study plan\u2026</option>';
-    sorted.forEach(function(p) {
-      var recentTag = p.lastDrilledAt ? ' \u2022 recent' : '';
-      qOpts += '<option value="' + escapeHtmlScripture(p.reference) + '">' +
-        escapeHtmlScripture(p.reference) + ' (' + (p.verseRefs || []).length + ' verses' + recentTag + ')</option>';
-    });
-    quickPicker.innerHTML = qOpts;
-  }
+  if (picker) picker.innerHTML = html;
+  if (quickPicker) quickPicker.innerHTML = html;
 }
 
 
@@ -2097,41 +2110,34 @@ function populatePassageCheckboxes(filter) {
   }).join('');
 }
 
-function renderPassageList() {
-  var container = document.getElementById('passage-list');
-  if (!container) return;
-  var passages = scriptureLib.passages || [];
-  // Update count badge
-  var pbadge = document.getElementById('passage-count-badge');
-  if (pbadge) pbadge.textContent = passages.length ? '(' + passages.length + ')' : '';
-  // Hide section if empty
-  var psec = document.getElementById('library-passages-section');
-  if (psec) psec.style.display = passages.length ? '' : 'none';
-  if (passages.length === 0) { container.innerHTML = ''; return; }
-  container.innerHTML = passages.map(function(p) {
-      var seamKeys = Object.keys(p.seams);
-      var seamBars = seamKeys.map(function(k) {
-        var s = p.seams[k].strength;
-        var cls = s < 0.4 ? 'seam-bar--weak' : s < 0.7 ? 'seam-bar--medium' : 'seam-bar--strong';
-        return '<div class="seam-bar ' + cls + '" title="' + escapeHtmlScripture(k) + ': ' + Math.round(s * 100) + '%"></div>';
-      }).join('');
-      return '<div class="passage-card" data-plan-ref="' + escapeHtmlScripture(p.reference) + '">' +
-        '<p class="passage-card__ref">' + escapeHtmlScripture(p.reference) + '</p>' +
-        '<p class="passage-card__meta">' + p.verseRefs.length + ' verses</p>' +
-        (seamBars ? '<div class="passage-card__seams">' + seamBars + '</div>' : '') +
-        '<div class="passage-card__actions">' +
-        '<button class="btn btn-sm btn-secondary" data-action="drill-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Drill</button>' +
-        '<button class="btn btn-sm btn-secondary" data-action="edit-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Edit</button>' +
-        '<button class="btn btn-sm btn-danger" data-action="remove-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Remove</button>' +
-        '</div>' +
-        '<div class="passage-edit-panel" id="edit-panel-' + escapeHtmlScripture(p.reference).replace(/[^a-zA-Z0-9]/g, '-') + '" style="display:none"></div>' +
-        '</div>';
-    }).join('');
+function buildPassageCard(p) {
+  var seamKeys = Object.keys(p.seams || {});
+  var seamBars = seamKeys.map(function(k) {
+    var s = p.seams[k].strength;
+    var cls = s < 0.4 ? 'seam-bar--weak' : s < 0.7 ? 'seam-bar--medium' : 'seam-bar--strong';
+    return '<div class="seam-bar ' + cls + '" title="' + escapeHtmlScripture(k) + ': ' + Math.round(s * 100) + '%"></div>';
+  }).join('');
+  var editBtn = p.type !== 'book'
+    ? '<button class="btn btn-sm btn-secondary" data-action="edit-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Edit</button>'
+    : '';
+  return '<div class="passage-card" data-plan-ref="' + escapeHtmlScripture(p.reference) + '">' +
+    '<p class="passage-card__ref">' + escapeHtmlScripture(p.reference) + '</p>' +
+    '<p class="passage-card__meta">' + (p.verseRefs || []).length + ' verses</p>' +
+    (seamBars ? '<div class="passage-card__seams">' + seamBars + '</div>' : '') +
+    '<div class="passage-card__actions">' +
+    '<button class="btn btn-sm btn-secondary" data-action="drill-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Drill</button>' +
+    editBtn +
+    '<button class="btn btn-sm btn-danger" data-action="remove-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Remove</button>' +
+    '</div>' +
+    '<div class="passage-edit-panel" id="edit-panel-' + escapeHtmlScripture(p.reference).replace(/[^a-zA-Z0-9]/g, '-') + '" style="display:none"></div>' +
+    '</div>';
+}
 
+function wirePassageCards(container) {
+  if (!container) return;
   container.querySelectorAll('[data-action="edit-passage"]').forEach(function(btn) {
     btn.addEventListener('click', function() { openPlanEditor(btn.dataset.ref, btn); });
   });
-
   container.querySelectorAll('[data-action="drill-passage"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       switchScriptureTab('drill');
@@ -2143,13 +2149,58 @@ function renderPassageList() {
   });
   container.querySelectorAll('[data-action="remove-passage"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      if (confirm('Remove passage ' + btn.dataset.ref + '?')) {
+      if (confirm('Remove "' + btn.dataset.ref + '"?')) {
         removePassage(btn.dataset.ref);
         renderPassageList();
       }
     });
   });
 }
+
+function renderPassageList() {
+  var passages = scriptureLib.passages || [];
+
+  // Split by type — untyped defaults to 'book' (backward compat: existing imports)
+  var planSearch = (document.getElementById('plan-search') || {}).value || '';
+  var q = planSearch.toLowerCase().trim();
+
+  var plans = passages.filter(function(p) { return p.type === 'plan'; });
+  var books = passages.filter(function(p) { return p.type !== 'plan'; });
+
+  // Apply search filter to plans
+  var filteredPlans = q ? plans.filter(function(p) {
+    return p.reference.toLowerCase().indexOf(q) >= 0;
+  }) : plans;
+
+  // -- Study Plans section --
+  var planContainer = document.getElementById('passage-list');
+  var planSec = document.getElementById('library-passages-section');
+  var planBadge = document.getElementById('passage-count-badge');
+  if (planBadge) planBadge.textContent = plans.length ? '(' + plans.length + ')' : '';
+  if (planSec) planSec.style.display = '';  // always show (user can create)
+  if (planContainer) {
+    if (filteredPlans.length === 0) {
+      planContainer.innerHTML = '<p class="passage-list__empty">' +
+        (q ? 'No study plans match your search.' : 'No study plans yet. Create one above!') + '</p>';
+    } else {
+      planContainer.innerHTML = filteredPlans.map(buildPassageCard).join('');
+      wirePassageCards(planContainer);
+    }
+  }
+
+  // -- Books section --
+  var bookContainer = document.getElementById('book-list');
+  var bookSec = document.getElementById('library-books-section');
+  var bookBadge = document.getElementById('book-count-badge');
+  if (bookBadge) bookBadge.textContent = books.length ? '(' + books.length + ')' : '';
+  if (bookSec) bookSec.style.display = books.length ? '' : 'none';
+  if (bookContainer) {
+    bookContainer.innerHTML = books.map(buildPassageCard).join('');
+    wirePassageCards(bookContainer);
+  }
+}
+
+
 
 function setDrillMode(mode) {
   scriptureDrillMode = mode;
@@ -3342,6 +3393,13 @@ function filterPickerOptions(pickerId, query) {
     });
   }
 
+  var planSearchInput = document.getElementById('plan-search');
+  if (planSearchInput) {
+    planSearchInput.addEventListener('input', function() {
+      renderPassageList();
+    });
+  }
+
   var drillEditChunksBtn = document.getElementById('btn-drill-edit-chunks');
   if (drillEditChunksBtn) drillEditChunksBtn.addEventListener('click', function() {
     if (drillCurrentVerse && scriptureDrillScale === 'verse') {
@@ -3435,7 +3493,7 @@ function filterPickerOptions(pickerId, query) {
           var passageName = addedRefs[0] + ' \u2013 ' + addedRefs[addedRefs.length - 1];
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedKeys);
+            var passage = createPassageFromVerses(passageName, addedKeys, 'book');
             if (passage) savePassage(passage);
           }
         }
@@ -3533,12 +3591,12 @@ function filterPickerOptions(pickerId, query) {
           var r = addVerse(scriptureLib, ref, v.text, translation, '');
           if (r) { added++; addedKeys.push(r.key); addedRefs.push(r.reference); }
         }
-        // Auto-create passage for the chapter
+        // Auto-create book entry for the chapter
         if (addedKeys.length >= 2) {
           var passageName = humanBook + ' ' + chapter;
           var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
           if (!existing) {
-            var passage = createPassageFromVerses(passageName, addedKeys);
+            var passage = createPassageFromVerses(passageName, addedKeys, 'book');
             if (passage) savePassage(passage);
           }
         }
@@ -3632,7 +3690,7 @@ function filterPickerOptions(pickerId, query) {
               var passageName = humanBook + ' ' + ch;
               var existing = (scriptureLib.passages || []).find(function(p) { return p.reference === passageName; });
               if (!existing) {
-                var passage = createPassageFromVerses(passageName, addedKeys);
+                var passage = createPassageFromVerses(passageName, addedKeys, 'book');
                 if (passage) savePassage(passage);
               }
             }
@@ -3684,8 +3742,8 @@ function filterPickerOptions(pickerId, query) {
     var refs = [];
     checkboxes.forEach(function(cb) { refs.push(cb.value); });
     if (refs.length < 2) { alert('Select at least 2 verses'); return; }
-    var passage = createPassageFromVerses(name, refs);
-    if (!passage) { alert('Could not create passage'); return; }
+    var passage = createPassageFromVerses(name, refs, 'plan');
+    if (!passage) { alert('Could not create study plan'); return; }
     savePassage(passage);
     if (nameEl) nameEl.value = '';
     checkboxes.forEach(function(cb) { cb.checked = false; });
