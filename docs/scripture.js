@@ -2198,6 +2198,8 @@ function renderPassageList() {
     bookContainer.innerHTML = books.map(buildPassageCard).join('');
     wirePassageCards(bookContainer);
   }
+  // Always keep pickers in sync
+  populatePassagePicker();
 }
 
 
