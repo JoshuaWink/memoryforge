@@ -1864,6 +1864,114 @@ function savePassage(passage) {
   saveVerseLibrary(scriptureLib);
 }
 
+function openPlanEditor(ref, triggerBtn) {
+  var panelId = 'edit-panel-' + ref.replace(/[^a-zA-Z0-9]/g, '-');
+  var panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  // Toggle — close if already open
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    triggerBtn.textContent = 'Edit';
+    return;
+  }
+
+  var passage = (scriptureLib.passages || []).find(function(p) { return p.reference === ref; });
+  if (!passage) return;
+
+  var currentKeys = Array.isArray(passage.verseKeys) && passage.verseKeys.length > 0
+    ? passage.verseKeys
+    : (passage.verseRefs || []);
+
+  var q = '';
+
+  function buildCheckboxes(filter) {
+    var fq = (filter || '').toLowerCase().trim();
+    var visible = scriptureLib.verses.filter(function(v) {
+      if (!fq) return true;
+      return (v.reference + ' ' + (v.translation || '') + ' ' + v.text).toLowerCase().indexOf(fq) >= 0;
+    });
+    if (visible.length === 0) return '<p class="empty-state" style="padding:var(--cup-space-xs)">No verses match</p>';
+    return visible.map(function(v) {
+      var key = getVerseIdentifier(v);
+      var checked = currentKeys.indexOf(key) >= 0 ? ' checked' : '';
+      return '<label style="display:block;padding:2px 0"><input type="checkbox" value="' + escapeHtmlScripture(key) + '"' + checked + '> ' +
+        escapeHtmlScripture(v.reference) + ' <small>(' + escapeHtmlScripture(v.translation || 'KJV') + ')</small></label>';
+    }).join('');
+  }
+
+  panel.innerHTML =
+    '<div style="border-top:1px solid var(--cup-color-border,#333);margin-top:var(--cup-space-sm);padding-top:var(--cup-space-sm)">' +
+    '<div class="field-group">' +
+    '<label class="field-label">Rename</label>' +
+    '<input type="text" class="field-input plan-edit-name" value="' + escapeHtmlScripture(passage.reference) + '">' +
+    '</div>' +
+    '<div class="field-group" style="margin-top:var(--cup-space-xs)">' +
+    '<label class="field-label">Search verses</label>' +
+    '<input type="search" class="field-input field-input--sm plan-edit-search" placeholder="Filter\u2026" autocomplete="off">' +
+    '</div>' +
+    '<div class="plan-edit-checkboxes" style="max-height:200px;overflow-y:auto;margin-top:var(--cup-space-xs)">' +
+    buildCheckboxes('') +
+    '</div>' +
+    '<div style="display:flex;gap:var(--cup-space-xs);margin-top:var(--cup-space-sm)">' +
+    '<button class="btn btn-sm btn-primary plan-edit-save">Save</button>' +
+    '<button class="btn btn-sm btn-secondary plan-edit-cancel">Cancel</button>' +
+    '</div></div>';
+
+  panel.style.display = '';
+  triggerBtn.textContent = 'Close';
+
+  // Search live filter
+  var searchEl = panel.querySelector('.plan-edit-search');
+  var boxesEl = panel.querySelector('.plan-edit-checkboxes');
+  searchEl.addEventListener('input', function() {
+    q = searchEl.value;
+    // Snapshot checked state before re-render
+    panel.querySelectorAll('.plan-edit-checkboxes input[type="checkbox"]:checked').forEach(function(cb) {
+      if (currentKeys.indexOf(cb.value) < 0) currentKeys.push(cb.value);
+    });
+    panel.querySelectorAll('.plan-edit-checkboxes input[type="checkbox"]:not(:checked)').forEach(function(cb) {
+      var i = currentKeys.indexOf(cb.value);
+      if (i >= 0) currentKeys.splice(i, 1);
+    });
+    boxesEl.innerHTML = buildCheckboxes(q);
+  });
+
+  panel.querySelector('.plan-edit-cancel').addEventListener('click', function() {
+    panel.style.display = 'none';
+    triggerBtn.textContent = 'Edit';
+  });
+
+  panel.querySelector('.plan-edit-save').addEventListener('click', function() {
+    // Collect checked keys
+    var selected = [];
+    panel.querySelectorAll('.plan-edit-checkboxes input[type="checkbox"]:checked').forEach(function(cb) {
+      selected.push(cb.value);
+    });
+    if (selected.length === 0) { alert('Select at least one verse'); return; }
+    var newName = panel.querySelector('.plan-edit-name').value.trim();
+    if (!newName) { alert('Plan needs a name'); return; }
+
+    // Build updated verseRefs from keys
+    var verseRefs = selected.map(function(key) {
+      var v = findVerseByIdentifier(scriptureLib, key);
+      return v ? v.reference : key;
+    });
+
+    // If renamed, remove old entry first
+    if (newName !== passage.reference) {
+      removePassage(passage.reference);
+    }
+
+    passage.reference = newName;
+    passage.verseKeys = selected;
+    passage.verseRefs = verseRefs;
+    savePassage(passage);
+    renderPassageList();
+    populatePassagePicker();
+  });
+}
+
 function removePassage(ref) {
   if (!scriptureLib.passages) return;
   scriptureLib.passages = scriptureLib.passages.filter(function(p) { return p.reference !== ref; });
@@ -1927,15 +2035,22 @@ function renderPassageList() {
         var cls = s < 0.4 ? 'seam-bar--weak' : s < 0.7 ? 'seam-bar--medium' : 'seam-bar--strong';
         return '<div class="seam-bar ' + cls + '" title="' + escapeHtmlScripture(k) + ': ' + Math.round(s * 100) + '%"></div>';
       }).join('');
-      return '<div class="passage-card">' +
+      return '<div class="passage-card" data-plan-ref="' + escapeHtmlScripture(p.reference) + '">' +
         '<p class="passage-card__ref">' + escapeHtmlScripture(p.reference) + '</p>' +
-        '<p class="passage-card__meta">' + p.verseRefs.length + ' verses \u00b7 ' + p.sections.length + ' section' + (p.sections.length !== 1 ? 's' : '') + '</p>' +
+        '<p class="passage-card__meta">' + p.verseRefs.length + ' verses</p>' +
         (seamBars ? '<div class="passage-card__seams">' + seamBars + '</div>' : '') +
         '<div class="passage-card__actions">' +
         '<button class="btn btn-sm btn-secondary" data-action="drill-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Drill</button>' +
+        '<button class="btn btn-sm btn-secondary" data-action="edit-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Edit</button>' +
         '<button class="btn btn-sm btn-danger" data-action="remove-passage" data-ref="' + escapeHtmlScripture(p.reference) + '">Remove</button>' +
-        '</div></div>';
+        '</div>' +
+        '<div class="passage-edit-panel" id="edit-panel-' + escapeHtmlScripture(p.reference).replace(/[^a-zA-Z0-9]/g, '-') + '" style="display:none"></div>' +
+        '</div>';
     }).join('');
+
+  container.querySelectorAll('[data-action="edit-passage"]').forEach(function(btn) {
+    btn.addEventListener('click', function() { openPlanEditor(btn.dataset.ref, btn); });
+  });
 
   container.querySelectorAll('[data-action="drill-passage"]').forEach(function(btn) {
     btn.addEventListener('click', function() {
