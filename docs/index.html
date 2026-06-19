@@ -907,7 +907,32 @@
 
       <!-- LIBRARY panel -->
       <div class="scripture-panel" id="sp-library">
-        <div class="scripture-add">
+
+        <!-- Quick Drill -->
+        <div class="quick-drill-bar" id="quick-drill-bar">
+          <select id="quick-drill-plan" class="field-input quick-drill-plan-picker">
+            <option value="">Pick a study plan&hellip;</option>
+          </select>
+          <select id="quick-drill-mode" class="field-input quick-drill-mode-picker">
+            <option value="self-check">Self-Check</option>
+            <option value="fill-blank">Fill Blank</option>
+            <option value="fl-tap">First-Letter Tap</option>
+            <option value="recite">Recite</option>
+            <option value="chunk-order">Chunk Order</option>
+            <option value="chunk-by-chunk">Chunk by Chunk</option>
+            <option value="sequential">Sequential</option>
+            <option value="verse-order">Verse Order</option>
+            <option value="first-letter">First Letter</option>
+            <option value="chunk-recall">Chunk Recall</option>
+            <option value="full-recall">Full Recall</option>
+          </select>
+          <button id="btn-quick-drill" class="btn btn-primary quick-drill-btn">Drill &#9654;</button>
+        </div>
+
+        <!-- Add Verse (collapsed) -->
+        <details class="import-section" id="add-verse-details">
+          <summary class="btn btn-sm btn-secondary">+ Add Verse</summary>
+          <div class="import-section__body scripture-add">
           <div class="field-group">
             <label class="field-label" for="verse-ref">Reference</label>
             <input type="text" id="verse-ref" class="field-input" placeholder="e.g. John 3:16">
@@ -934,7 +959,8 @@
             <textarea id="verse-notes" class="field-input" rows="2" placeholder="Your imagery, scenes, memory aids..."></textarea>
           </div>
           <button id="btn-add-verse" class="btn btn-primary">Add Verse</button>
-        </div>
+          </div>
+        </details>
 
         <!-- Import/Export Tools -->
         <div class="scripture-tools">
@@ -1098,20 +1124,26 @@
             </div>
 
             <div class="drill-mode-select">
-              <label class="field-label">Drill Mode</label>
-              <div class="drill-mode-btns">
-                <button class="btn btn-sm scripture-mode active" data-mode="self-check">Self-Check</button>
-                <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
-                <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
-                <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
-                <button class="btn btn-sm scripture-mode" data-mode="chunk-by-chunk">Chunk by Chunk</button>
-                <button class="btn btn-sm scripture-mode" data-mode="sequential">Sequential</button>
-                <button class="btn btn-sm scripture-mode" data-mode="verse-order">Verse Order</button>
-                <button class="btn btn-sm scripture-mode" data-mode="recite">Recite</button>
-                <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
-                <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
-                <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
-              </div>
+              <label class="field-label">Drill Mode <button id="btn-manage-modes" class="btn btn-xs btn-secondary" style="margin-left:var(--cup-space-xs);font-size:0.75em">Manage</button></label>
+              <!-- Pinned modes rendered by JS -->
+              <div class="drill-mode-btns" id="pinned-mode-btns"></div>
+              <!-- All modes (shown when managing) -->
+              <details id="more-modes-details" style="margin-top:var(--cup-space-xs)">
+                <summary class="btn btn-xs btn-secondary" style="display:inline-block">More modes</summary>
+                <div class="drill-mode-btns" id="all-mode-btns" style="margin-top:var(--cup-space-xs)">
+                  <button class="btn btn-sm scripture-mode active" data-mode="self-check">Self-Check</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="chunk-order">Chunk Order</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="fill-blank">Fill Blank</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="fl-tap">First-Letter Tap</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="chunk-by-chunk">Chunk by Chunk</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="sequential">Sequential</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="verse-order">Verse Order</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="recite">Recite</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="first-letter">First Letter</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="chunk-recall">Chunk Recall</button>
+                  <button class="btn btn-sm scripture-mode" data-mode="full-recall">Full Recall</button>
+                </div>
+              </details>
             </div>
             <div class="drill-verse-select">
               <label class="field-label" for="drill-verse-search">Verse</label>
