@@ -3750,6 +3750,7 @@ function filterPickerOptions(pickerId, query) {
     if (nameEl) nameEl.value = '';
     checkboxes.forEach(function(cb) { cb.checked = false; });
     renderPassageList();
+    populatePassagePicker();
   });
 
   // -- Chapter chunks reset --
