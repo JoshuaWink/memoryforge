@@ -3332,11 +3332,15 @@ function filterPickerOptions(pickerId, query) {
       var plan = document.getElementById('quick-drill-plan');
       var mode = document.getElementById('quick-drill-mode');
       if (!plan || !plan.value) { alert('Pick a study plan first'); return; }
+      var planRef = plan.value;
       var selectedMode = (mode && mode.value) || scriptureDrillMode;
       setDrillMode(selectedMode);
-      setDrillScale('section');
+      setDrillScale('section');            // populates drill-passage-picker
       switchScriptureTab('drill');
-      startPassageDrill(plan.value);
+      // Set picker value AFTER setDrillScale has rebuilt the options
+      var ppicker = document.getElementById('drill-passage-picker');
+      if (ppicker) ppicker.value = planRef;
+      startPassageDrill(planRef);
     });
   }
 
