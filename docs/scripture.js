@@ -3429,8 +3429,13 @@ function filterPickerOptions(pickerId, query) {
     var p = document.getElementById(pickerId);
     if (!p) return;
     var idx = p.selectedIndex;
-    if (idx > 1) {
-      p.selectedIndex = idx - 1;
+    // Walk backwards skipping disabled/optgroup placeholder options
+    var newIdx = idx - 1;
+    while (newIdx >= 0 && (!p.options[newIdx].value || p.options[newIdx].disabled)) {
+      newIdx--;
+    }
+    if (newIdx >= 0 && p.options[newIdx].value) {
+      p.selectedIndex = newIdx;
       if (scriptureDrillScale === 'verse') startScriptureDrill(p.value);
       else startPassageDrill(p.value);
     }
@@ -3448,8 +3453,13 @@ function filterPickerOptions(pickerId, query) {
     var p = document.getElementById(pickerId);
     if (!p) return;
     var idx = p.selectedIndex;
-    if (idx < p.options.length - 1) {
-      p.selectedIndex = idx + 1;
+    // Walk forwards skipping disabled/optgroup placeholder options
+    var newIdx = idx + 1;
+    while (newIdx < p.options.length && (!p.options[newIdx].value || p.options[newIdx].disabled)) {
+      newIdx++;
+    }
+    if (newIdx < p.options.length && p.options[newIdx].value) {
+      p.selectedIndex = newIdx;
       if (scriptureDrillScale === 'verse') startScriptureDrill(p.value);
       else startPassageDrill(p.value);
     } else {
